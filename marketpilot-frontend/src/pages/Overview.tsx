@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Package,
   Calendar as CalendarIcon,
@@ -6,9 +6,17 @@ import {
   CheckCircle,
   Sparkles,
   ArrowRight,
-  ChevronDown
+  ChevronDown,
+  DollarSign,
+  BarChart2,
+  PieChart,
+  ArrowUpRight,
+  Zap,
+  Target,
+  ShieldCheck
 } from 'lucide-react';
 import { MarketingStrategy, Product, TrendSignal } from '../types';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface OverviewProps {
   onNavigate: (page: string) => void;
@@ -25,19 +33,38 @@ export const Overview: React.FC<OverviewProps> = ({
   activeStrategy,
   businessName,
 }) => {
+  const { formatAmount, currencySymbol, currencyConfig } = useCurrency();
+  const [graphTimeframe, setGraphTimeframe] = useState<'30days' | '7days'>('30days');
+
   const heroProduct = products.find((p) => p.margin_tier === 'high') || products[0] || {
-    name: 'Luna Everyday Bag',
-    stock_quantity: 450,
-    profit_margin: '68.5',
-    pain_points: ['Unorganized daily carry'],
+    name: '2-in-1 Rechargeable Hair Remover',
+    stock_quantity: 650,
+    price: 4500,
+    cost_price: 1200,
+    profit_margin: '78.7',
+    pain_points: ['Painful monthly waxing', 'Razor burn and redness'],
   };
 
   const topTrend = trends[0] || {
-    topic: '“What fits inside” short-form videos',
-    source_name: 'TikTok discovery feed',
-    confidence_score: 94,
+    topic: '“30-Second Peach Fuzz Removal Before Makeup”',
+    source_name: 'Google Trends & TikTok',
+    confidence_score: 96,
     platform: 'tiktok',
   };
+
+  // Dynamic graph data tailored for selected currency
+  const isPKR = currencyConfig.code === 'PKR';
+  const weeklyData = [
+    { label: 'Week 1', revenue: isPKR ? 180000 : 1800, profit: isPKR ? 135000 : 1350, spend: isPKR ? 28000 : 280, roas: '4.8x' },
+    { label: 'Week 2', revenue: isPKR ? 240000 : 2400, profit: isPKR ? 182000 : 1820, spend: isPKR ? 35000 : 350, roas: '5.2x' },
+    { label: 'Week 3', revenue: isPKR ? 310000 : 3100, profit: isPKR ? 238000 : 2380, spend: isPKR ? 42000 : 420, roas: '5.6x' },
+    { label: 'Week 4 (Est)', revenue: isPKR ? 420000 : 4200, profit: isPKR ? 325000 : 3250, spend: isPKR ? 55000 : 550, roas: '5.9x' },
+  ];
+
+  const totalRevenue = weeklyData.reduce((acc, curr) => acc + curr.revenue, 0);
+  const totalProfit = weeklyData.reduce((acc, curr) => acc + curr.profit, 0);
+  const totalSpend = weeklyData.reduce((acc, curr) => acc + curr.spend, 0);
+  const maxRevenue = Math.max(...weeklyData.map((d) => d.revenue));
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -45,134 +72,298 @@ export const Overview: React.FC<OverviewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-            SATURDAY, 22 AUGUST 2026
+            EXECUTIVE MARKETING COMMAND CENTER
           </small>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-brand-ink tracking-tight mt-1">
-            Good morning, {businessName || 'Sarah'} <em className="not-italic text-brand-green">✦</em>
+            Good day, {businessName || 'GlowSilk Beauty'} <em className="not-italic text-brand-green">✦</em>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Your best marketing opportunities and high-margin inventory are ready for review.
+            Your real-time sales velocity, live market trend signals, and AI campaign execution at a glance.
           </p>
         </div>
-        <button className="self-start sm:self-auto bg-white border border-brand-line text-slate-600 text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-sm hover:bg-slate-50">
-          <span>This week: 18–24 Aug</span>
-          <ChevronDown size={14} />
-        </button>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => onNavigate('planner')}
+            className="bg-brand-green hover:bg-emerald-700 text-white text-xs font-extrabold px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
+          >
+            <Sparkles size={13} />
+            <span>Generate New Plan</span>
+          </button>
+        </div>
       </div>
 
-      {/* Top 4 Metric Cards */}
+      {/* Top 4 KPI Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <article className="bg-white border border-brand-line rounded-xl p-4 relative shadow-card">
+        <article className="bg-white border border-brand-line rounded-2xl p-4 relative shadow-card">
+          <i className="not-italic absolute right-3.5 top-3.5 w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center font-bold">
+            <TrendingUp size={15} />
+          </i>
+          <span className="block text-slate-400 text-[10px] font-bold mt-2 mb-1">Monthly Sales Revenue</span>
+          <b className="block font-display font-extrabold text-2xl text-brand-ink">
+            {formatAmount(totalRevenue)}
+          </b>
+          <small className="text-[10px] text-emerald-700 font-extrabold flex items-center gap-0.5 mt-1">
+            <ArrowUpRight size={12} />
+            <span>+24.5% vs last month</span>
+          </small>
+        </article>
+
+        <article className="bg-white border border-brand-line rounded-2xl p-4 relative shadow-card">
+          <i className="not-italic absolute right-3.5 top-3.5 w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center font-bold">
+            <DollarSign size={15} />
+          </i>
+          <span className="block text-slate-400 text-[10px] font-bold mt-2 mb-1">Estimated Net Profit</span>
+          <b className="block font-display font-extrabold text-2xl text-emerald-700">
+            {formatAmount(totalProfit)}
+          </b>
+          <small className="text-[10px] text-slate-500 font-bold block mt-1">
+            Avg Profit Margin: <strong className="text-emerald-700">74.2%</strong>
+          </small>
+        </article>
+
+        <article className="bg-white border border-brand-line rounded-2xl p-4 relative shadow-card">
           <i className="not-italic absolute right-3.5 top-3.5 w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center">
             <Package size={15} />
           </i>
-          <span className="block text-slate-400 text-[10px] font-bold mt-3 mb-1">Active products</span>
+          <span className="block text-slate-400 text-[10px] font-bold mt-2 mb-1">Hero Inventory Units</span>
           <b className="block font-display font-extrabold text-2xl text-brand-ink">
-            {products.length || 24}
+            {heroProduct.stock_quantity || 650}
           </b>
           <small className="text-[10px] text-slate-400 font-bold block mt-1">
-            <strong className="text-brand-green">+3</strong> added this month
+            <strong className="text-brand-green">{products.length || 1}</strong> active product lines
           </small>
         </article>
 
-        <article className="bg-white border border-brand-line rounded-xl p-4 relative shadow-card">
+        <article className="bg-white border border-brand-line rounded-2xl p-4 relative shadow-card">
           <i className="not-italic absolute right-3.5 top-3.5 w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center">
-            <CalendarIcon size={15} />
+            <Zap size={15} />
           </i>
-          <span className="block text-slate-400 text-[10px] font-bold mt-3 mb-1">Upcoming content</span>
-          <b className="block font-display font-extrabold text-2xl text-brand-ink">12</b>
-          <small className="text-[10px] text-slate-400 font-bold block mt-1">
-            <strong className="text-brand-green">8</strong> needs review
-          </small>
-        </article>
-
-        <article className="bg-white border border-brand-line rounded-xl p-4 relative shadow-card">
-          <i className="not-italic absolute right-3.5 top-3.5 w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center">
-            <TrendingUp size={15} />
-          </i>
-          <span className="block text-slate-400 text-[10px] font-bold mt-3 mb-1">Trend signals found</span>
+          <span className="block text-slate-400 text-[10px] font-bold mt-2 mb-1">Live Trend Signals</span>
           <b className="block font-display font-extrabold text-2xl text-brand-ink">
-            {trends.length || 7}
-          </b>
-          <small className="text-[10px] text-slate-400 font-bold block mt-1">
-            <strong className="text-brand-green">3</strong> high relevance
-          </small>
-        </article>
-
-        <article className="bg-white border border-brand-line rounded-xl p-4 relative shadow-card">
-          <i className="not-italic absolute right-3.5 top-3.5 w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center">
-            <CheckCircle size={15} />
-          </i>
-          <span className="block text-slate-400 text-[10px] font-bold mt-3 mb-1">Plans awaiting approval</span>
-          <b className="block font-display font-extrabold text-2xl text-brand-ink">
-            {activeStrategy ? 1 : 3}
+            {trends.length || 9}
           </b>
           <small className="text-[10px] text-emerald-700 font-bold block mt-1">
-            Due today
+            Google & Reddit Ingested
           </small>
         </article>
       </div>
 
-      {/* Two Column: Today's Priority & Trend Intelligence */}
+      {/* Interactive Performance Graph & Channel Revenue Split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Today's Priority Card (7 cols) */}
+        {/* Main Sales & Profit Velocity Graph (8 cols) */}
+        <article className="lg:col-span-8 bg-white border border-brand-line rounded-2xl p-6 shadow-card space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-line pb-4">
+            <div>
+              <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase flex items-center gap-1">
+                <BarChart2 size={12} className="text-brand-green" /> REVENUE & PROFIT MARGIN VELOCITY
+              </small>
+              <h2 className="text-base font-display font-bold text-brand-ink mt-0.5">
+                Campaign Sales Growth & ROAS Curve
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 font-bold">Currency: {currencyConfig.code}</span>
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                <button
+                  onClick={() => setGraphTimeframe('30days')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] transition-all ${
+                    graphTimeframe === '30days' ? 'bg-white text-brand-green shadow-sm' : 'text-slate-500'
+                  }`}
+                >
+                  4 Weeks
+                </button>
+                <button
+                  onClick={() => setGraphTimeframe('7days')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] transition-all ${
+                    graphTimeframe === '7days' ? 'bg-white text-brand-green shadow-sm' : 'text-slate-500'
+                  }`}
+                >
+                  Recent
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bar Chart Visualization */}
+          <div className="space-y-4 pt-2">
+            <div className="grid grid-cols-4 gap-4 h-48 items-end border-b border-slate-100 pb-3">
+              {weeklyData.map((d, i) => {
+                const heightPct = Math.round((d.revenue / maxRevenue) * 100);
+                const profitHeightPct = Math.round((d.profit / maxRevenue) * 100);
+
+                return (
+                  <div key={i} className="flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+                    <div className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      {formatAmount(d.revenue)}
+                    </div>
+                    <div className="w-full max-w-[50px] flex items-end justify-center gap-1 h-full">
+                      {/* Revenue Bar */}
+                      <div
+                        style={{ height: `${heightPct}%` }}
+                        className="w-1/2 bg-emerald-600 rounded-t-lg transition-all group-hover:bg-emerald-700"
+                        title={`Revenue: ${formatAmount(d.revenue)}`}
+                      />
+                      {/* Net Profit Bar */}
+                      <div
+                        style={{ height: `${profitHeightPct}%` }}
+                        className="w-1/2 bg-emerald-300 rounded-t-lg transition-all group-hover:bg-emerald-400"
+                        title={`Net Profit: ${formatAmount(d.profit)}`}
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500">{d.label}</span>
+                    <span className="text-[9px] text-emerald-700 font-extrabold bg-emerald-50 px-1.5 py-0.5 rounded">
+                      {d.roas} ROAS
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Chart Legend & Summary Stats */}
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-1 text-xs">
+              <div className="flex items-center gap-4 text-[11px]">
+                <span className="flex items-center gap-1.5 text-slate-600 font-bold">
+                  <i className="w-3 h-3 rounded bg-emerald-600 not-italic inline-block" /> Total Revenue
+                </span>
+                <span className="flex items-center gap-1.5 text-slate-600 font-bold">
+                  <i className="w-3 h-3 rounded bg-emerald-300 not-italic inline-block" /> Net Profit
+                </span>
+              </div>
+
+              <div className="text-[11px] text-slate-500 font-medium">
+                Total Ad Spend: <b>{formatAmount(totalSpend)}</b> · Blended ROAS: <b className="text-emerald-700">5.4x</b>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        {/* Marketing Channel Breakdown (4 cols) */}
+        <article className="lg:col-span-4 bg-white border border-brand-line rounded-2xl p-6 shadow-card flex flex-col justify-between">
+          <div>
+            <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase flex items-center gap-1">
+              <PieChart size={12} className="text-brand-green" /> REVENUE BY CHANNEL
+            </small>
+            <h2 className="text-base font-display font-bold text-brand-ink mt-0.5 mb-4">
+              Channel Contribution
+            </h2>
+
+            {/* Channel Bars */}
+            <div className="space-y-3.5">
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-bold text-brand-ink">TikTok Video Ads & Organic</span>
+                  <span className="font-extrabold text-emerald-700">45%</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className="bg-emerald-600 h-2 rounded-full" style={{ width: '45%' }} />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-bold text-brand-ink">Instagram Reels & Carousels</span>
+                  <span className="font-extrabold text-emerald-700">30%</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className="bg-emerald-500 h-2 rounded-full" style={{ width: '30%' }} />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-bold text-brand-ink">Email VIP Retention Drops</span>
+                  <span className="font-extrabold text-emerald-700">18%</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className="bg-emerald-400 h-2 rounded-full" style={{ width: '18%' }} />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-bold text-brand-ink">WhatsApp Direct Reorders</span>
+                  <span className="font-extrabold text-emerald-700">7%</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className="bg-emerald-300 h-2 rounded-full" style={{ width: '7%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-brand-line mt-4">
+            <button
+              onClick={() => onNavigate('briefs')}
+              className="w-full text-center text-xs text-brand-green font-extrabold hover:underline"
+            >
+              View Channel Briefs & ROAS Targets →
+            </button>
+          </div>
+        </article>
+      </div>
+
+      {/* Two Column: Today's Strategic Priority & Trend Intelligence */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Today's Strategic Priority Card (7 cols) */}
         <article className="lg:col-span-7 bg-white border border-brand-line rounded-2xl p-5 md:p-6 shadow-card flex flex-col justify-between">
           <div>
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-                  TODAY'S STRATEGIC PRIORITY
+                  TODAY'S STRATEGIC HERO PRIORITY
                 </small>
                 <h2 className="text-lg font-display font-bold text-brand-ink mt-0.5">
-                  Make the {heroProduct.name} your hero product.
+                  Accelerate the {heroProduct.name}
                 </h2>
               </div>
               <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-1 rounded-md">
-                92% match
+                {heroProduct.profit_margin || '78.7'}% Margin
               </span>
             </div>
 
             {/* Product info banner */}
-            <div className="flex items-center gap-3.5 p-3 rounded-xl bg-slate-50 border border-slate-100 my-4">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#4c3529] to-[#9c7962] text-[#eee3d6] flex flex-col items-center justify-center font-display font-extrabold text-[9px] leading-tight text-center">
+            <div className="flex items-center gap-3.5 p-3 rounded-xl bg-slate-50 border border-slate-100 my-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-950 text-white flex flex-col items-center justify-center font-display font-extrabold text-[9px] leading-tight text-center">
                 <span>HERO</span>
-                <small className="text-[7px] font-sans opacity-80">item</small>
+                <small className="text-[7px] font-sans opacity-80">SKU</small>
               </div>
-              <div>
-                <span className="text-[9px] text-slate-400 font-bold uppercase block">Recommended Product</span>
-                <h3 className="text-sm font-bold text-brand-ink m-0">{heroProduct.name}</h3>
-                <small className="text-[10px] text-emerald-700 font-bold">
-                  ● In stock · {heroProduct.stock_quantity || 450} units · {heroProduct.profit_margin || '68'}% margin
+              <div className="min-w-0 flex-1">
+                <span className="text-[9px] text-slate-400 font-bold uppercase block">Prioritized Inventory</span>
+                <h3 className="text-sm font-bold text-brand-ink truncate">{heroProduct.name}</h3>
+                <small className="text-[10px] text-emerald-700 font-bold block">
+                  Price: {formatAmount(heroProduct.price || 4500)} · In stock: {heroProduct.stock_quantity || 650} units
                 </small>
               </div>
             </div>
 
-            {/* AI Grounded Reason */}
+            {/* AI Strategic Rationale */}
             <div className="bg-[#f5f8f7] border border-[#e4eae8] rounded-xl p-3.5 flex gap-2.5 my-3">
               <Sparkles size={16} className="text-brand-green shrink-0 mt-0.5" />
               <div className="text-[11px] leading-relaxed">
-                <strong className="text-brand-ink font-bold block mb-0.5">Why this product today?</strong>
+                <strong className="text-brand-ink font-bold block mb-0.5">Why this hero focus today?</strong>
                 <p className="text-slate-600 m-0">
-                  High stock velocity, high profit margin tier, and addresses customer pain points ({heroProduct.pain_points?.[0] || 'daily friction'}) aligned with emerging trend signals.
+                  Surging search momentum in live Google Trends & Reddit beauty routines paired with healthy inventory stock and maximum unit profit margin.
                 </p>
               </div>
             </div>
 
             {/* Organic vs Paid split breakdown */}
-            <div className="grid grid-cols-2 gap-3 my-4">
+            <div className="grid grid-cols-2 gap-3 my-3">
               <div className="border-l-2 border-brand-green pl-2.5 py-0.5">
                 <small className="text-[8px] font-extrabold text-brand-green tracking-wider uppercase block">
-                  ORGANIC FOCUS
+                  ORGANIC VIRAL HOOK
                 </small>
-                <b className="text-xs text-brand-ink block my-0.5">Instagram Reel & Carousel</b>
-                <span className="text-[10px] text-slate-400 truncate block">“Everything I carry in one routine”</span>
+                <b className="text-xs text-brand-ink block my-0.5">TikTok & Reels Demo</b>
+                <span className="text-[10px] text-slate-400 truncate block">“Before vs after foundation glide”</span>
               </div>
-              <div className="border-l-2 border-brand-blue pl-2.5 py-0.5">
-                <small className="text-[8px] font-extrabold text-brand-blue tracking-wider uppercase block">
+              <div className="border-l-2 border-emerald-600 pl-2.5 py-0.5">
+                <small className="text-[8px] font-extrabold text-emerald-700 tracking-wider uppercase block">
                   PAID ACQUISITION
                 </small>
                 <b className="text-xs text-brand-ink block my-0.5">Meta & TikTok Ad</b>
-                <span className="text-[10px] text-slate-400 truncate block">Direct response conversion angle</span>
+                <span className="text-[10px] text-slate-400 truncate block">Painless trimmer vs salon waxing</span>
               </div>
             </div>
           </div>
@@ -182,172 +373,69 @@ export const Overview: React.FC<OverviewProps> = ({
               onClick={() => onNavigate('planner')}
               className="text-xs font-extrabold text-brand-green hover:underline flex items-center gap-1"
             >
-              <span>View full strategy rationale</span>
+              <span>View Full Strategy Plan</span>
               <ArrowRight size={13} />
             </button>
             <button
               onClick={() => onNavigate('studio')}
-              className="bg-brand-green text-white text-[11px] font-extrabold px-3 py-1.5 rounded-lg shadow-sm hover:bg-brand-green-dark"
+              className="bg-brand-green text-white text-[11px] font-extrabold px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-700 transition-all"
             >
               Open Studio
             </button>
           </footer>
         </article>
 
-        {/* Trend Intelligence List (5 cols) */}
+        {/* Trend Intelligence Feed (5 cols) */}
         <article className="lg:col-span-5 bg-white border border-brand-line rounded-2xl p-5 md:p-6 shadow-card flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div>
                 <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-                  TREND INTELLIGENCE
+                  LIVE TREND SIGNALS
                 </small>
-                <h2 className="text-lg font-display font-bold text-brand-ink">Signals worth using</h2>
+                <h2 className="text-base font-display font-bold text-brand-ink">Breakout Topics</h2>
               </div>
               <button
                 onClick={() => onNavigate('trends')}
                 className="text-xs text-brand-green font-bold hover:underline"
               >
-                View all →
+                View all ({trends.length}) →
               </button>
             </div>
 
-            <div className="space-y-2.5 divide-y divide-slate-100">
-              <div className="pt-2 flex items-center gap-2.5">
-                <i className="not-italic w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center text-xs font-extrabold">
-                  ↗
-                </i>
-                <div className="min-w-0 flex-1">
-                  <b className="text-xs text-brand-ink block truncate">{topTrend.topic}</b>
-                  <span className="text-[10px] text-slate-400 block">{topTrend.source_name} · 94% confidence</span>
+            <div className="space-y-2 divide-y divide-slate-100">
+              {trends.slice(0, 3).map((t, idx) => (
+                <div
+                  key={t.id || idx}
+                  onClick={() => onNavigate('trends')}
+                  className="pt-2.5 flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 p-1 rounded-lg transition-colors"
+                >
+                  <i className="not-italic w-7 h-7 rounded-lg bg-emerald-100 text-brand-green grid place-items-center text-xs font-extrabold shrink-0">
+                    {t.platform === 'tiktok' ? '↗' : t.platform === 'google_trends' ? '🔍' : '⌁'}
+                  </i>
+                  <div className="min-w-0 flex-1">
+                    <b className="text-xs text-brand-ink block truncate">{t.topic}</b>
+                    <span className="text-[10px] text-slate-400 block">{t.source_name} · {t.confidence_score}% confidence</span>
+                  </div>
+                  <em className="not-italic text-[8px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full shrink-0">
+                    Verified
+                  </em>
                 </div>
-                <em className="not-italic text-[8px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                  High
-                </em>
-              </div>
-
-              <div className="pt-2.5 flex items-center gap-2.5">
-                <i className="not-italic w-7 h-7 rounded-lg bg-blue-50 text-brand-blue grid place-items-center text-xs font-extrabold">
-                  #
-                </i>
-                <div className="min-w-0 flex-1">
-                  <b className="text-xs text-brand-ink block truncate">Back-to-routine packing hacks</b>
-                  <span className="text-[10px] text-slate-400 block">Instagram · collected 5h ago</span>
-                </div>
-                <em className="not-italic text-[8px] font-extrabold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                  Medium
-                </em>
-              </div>
-
-              <div className="pt-2.5 flex items-center gap-2.5">
-                <i className="not-italic w-7 h-7 rounded-lg bg-purple-50 text-purple-700 grid place-items-center text-xs font-extrabold">
-                  ⌁
-                </i>
-                <div className="min-w-0 flex-1">
-                  <b className="text-xs text-brand-ink block truncate">Functional product comparisons</b>
-                  <span className="text-[10px] text-slate-400 block">Meta Creative Center · today</span>
-                </div>
-                <em className="not-italic text-[8px] font-extrabold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                  Medium
-                </em>
-              </div>
+              ))}
             </div>
           </div>
 
-          <p className="text-[10px] bg-slate-50 text-slate-600 p-2.5 rounded-lg border border-slate-100 mt-4 m-0">
-            ✓ All signals verify source evidence and confidence score before injection into AI plans.
-          </p>
-        </article>
-      </div>
-
-      {/* Content Calendar Row */}
-      <article className="bg-white border border-brand-line rounded-2xl p-5 md:p-6 shadow-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-          <div>
-            <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-              CONTENT CALENDAR
-            </small>
-            <h2 className="text-lg font-display font-bold text-brand-ink">This week’s plan</h2>
-          </div>
-          <div className="flex items-center gap-3 text-xs text-slate-500">
-            <span className="flex items-center gap-1.5">
-              <i className="w-2 h-2 rounded-full bg-brand-green not-italic"></i> Organic
-            </span>
-            <span className="flex items-center gap-1.5">
-              <i className="w-2 h-2 rounded-full bg-brand-blue not-italic"></i> Paid
-            </span>
+          <div className="pt-3 border-t border-brand-line mt-3">
             <button
-              onClick={() => onNavigate('calendar')}
-              className="text-xs font-extrabold text-brand-green hover:underline ml-2"
+              onClick={() => onNavigate('trends')}
+              className="w-full text-center text-xs text-brand-green font-extrabold hover:underline flex items-center justify-center gap-1"
             >
-              Open calendar →
+              <span>⚡ Ingest New Trends in Real-Time</span>
+              <ArrowRight size={12} />
             </button>
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">MON <b>18</b></span>
-            <p className="p-2 rounded-md text-[10px] font-bold mt-2 bg-slate-50 text-slate-400 border border-dashed border-slate-200 text-center">
-              No plan
-            </p>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">TUE <b>19</b></span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-pale text-brand-green leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">ORGANIC · REEL</small>
-              {heroProduct.name}
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Awareness</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">WED <b>20</b></span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-blue-pale text-brand-blue leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">PAID · META</small>
-              Direct Acquisition
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Conversion</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block flex items-center gap-1">
-              THU <b className="bg-brand-green text-white w-4 h-4 rounded-full text-[10px] grid place-items-center">21</b>
-            </span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-pale text-brand-green leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">ORGANIC · TIKTOK</small>
-              What fits inside?
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Consideration</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">FRI <b>22</b></span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-pale text-brand-green leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">ORGANIC · STORY</small>
-              Customer review
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Trust</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">SAT <b>23</b></span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-blue-pale text-brand-blue leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">PAID · META</small>
-              VIP Retargeting
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Conversion</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">SUN <b>24</b></span>
-            <p className="p-2 rounded-md text-[10px] font-bold mt-2 bg-slate-50 text-slate-400 border border-dashed border-slate-200 text-center">
-              No plan
-            </p>
-          </div>
-        </div>
-      </article>
+        </article>
+      </div>
     </div>
   );
 };
