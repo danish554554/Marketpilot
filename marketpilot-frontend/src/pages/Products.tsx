@@ -132,56 +132,72 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {products.map((prod) => (
-                <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-brand-ink">
-                    {prod.name}
-                    {prod.pain_points?.[0] && (
-                      <small className="block text-[10px] text-slate-400 font-normal mt-0.5">
-                        Solves: {prod.pain_points[0]}
-                      </small>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 font-bold text-slate-700">
-                    {formatAmount(prod.price)}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-500">
-                    {prod.cost_price ? formatAmount(prod.cost_price) : '—'}
-                  </td>
-                  <td className="py-3.5 px-4 font-extrabold text-emerald-700">
-                    {prod.profit_margin ? `${prod.profit_margin}%` : '—'}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full capitalize ${
-                        prod.margin_tier === 'high'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : prod.margin_tier === 'medium'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {prod.margin_tier || 'normal'}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 font-bold text-slate-700">
-                    {prod.stock_quantity > 0 ? (
-                      <span className="text-emerald-700">{prod.stock_quantity} units</span>
-                    ) : (
-                      <span className="text-rose-600">Out of Stock</span>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center">
+                    <Package size={32} className="mx-auto text-slate-300 mb-2" />
+                    <p className="text-sm font-bold text-slate-700">No products added yet</p>
+                    <p className="text-xs text-slate-400 mb-3">Add your first product to calculate margins and generate campaigns.</p>
                     <button
-                      onClick={() => handleDelete(prod.id)}
-                      className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
-                      title="Delete Product"
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-brand-green text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-700 transition-all"
                     >
-                      <Trash2 size={14} />
+                      + Add Product
                     </button>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                products.map((prod) => (
+                  <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-brand-ink">
+                      {prod.name}
+                      {prod.pain_points?.[0] && (
+                        <small className="block text-[10px] text-slate-400 font-normal mt-0.5">
+                          Solves: {prod.pain_points[0]}
+                        </small>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 font-bold text-slate-700">
+                      {formatAmount(prod.price)}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500">
+                      {prod.cost_price ? formatAmount(prod.cost_price) : '—'}
+                    </td>
+                    <td className="py-3.5 px-4 font-extrabold text-emerald-700">
+                      {prod.profit_margin ? `${prod.profit_margin}%` : '—'}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full capitalize ${
+                          prod.margin_tier === 'high'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : prod.margin_tier === 'medium'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {prod.margin_tier || 'normal'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-bold text-slate-700">
+                      {prod.stock_quantity > 0 ? (
+                        <span className="text-emerald-700">{prod.stock_quantity} units</span>
+                      ) : (
+                        <span className="text-rose-600">Out of Stock</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => handleDelete(prod.id)}
+                        className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
+                        title="Delete Product"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

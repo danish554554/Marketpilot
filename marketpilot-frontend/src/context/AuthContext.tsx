@@ -54,9 +54,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       localStorage.setItem('marketpilot_token', 'demo-jwt-' + Date.now());
     }
+    const derivedBiz = localStorage.getItem('marketpilot_biz') || (email.includes('@') ? email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) + ' E-Commerce' : 'My Store');
     localStorage.setItem('marketpilot_email', email);
-    localStorage.setItem('marketpilot_biz', 'GlowSilk Beauty');
-    setUser({ email, businessName: 'GlowSilk Beauty' });
+    localStorage.setItem('marketpilot_biz', derivedBiz);
+    setUser({ email, businessName: derivedBiz });
     setIsAuthenticated(true);
   }, []);
 

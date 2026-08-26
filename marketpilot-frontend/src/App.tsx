@@ -46,129 +46,46 @@ export function App() {
 
         if (wsRes.status === 'fulfilled' && wsRes.value?.business_name) {
           setBusinessName(wsRes.value.business_name);
+        } else {
+          const savedBiz = localStorage.getItem('marketpilot_biz');
+          if (savedBiz) setBusinessName(savedBiz);
         }
 
-        if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value) && prodRes.value.length > 0) {
+        if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
           setProducts(prodRes.value);
         } else {
-          // Fallback configured specifically for 2-in-1 Rechargeable Hair Remover
-          setProducts([
-            {
-              id: 'p1',
-              workspace_id: 'ws1',
-              name: '2-in-1 Rechargeable Hair Remover',
-              description: 'Painless dual-head USB rechargeable facial fuzz and eyebrow precision trimmer designed for sensitive skin.',
-              sku: 'GLOW-2IN1-PRO',
-              price: 39.99,
-              cost_price: 8.50,
-              profit_margin: '78.7',
-              margin_tier: 'high',
-              stock_quantity: 650,
-              status: 'active',
-              priority: 'high',
-              features: [
-                'Interchangeable precision heads: facial peach fuzz & eyebrow detailing',
-                'Hypoallergenic stainless steel blades (zero redness or razor burn)',
-                'USB fast rechargeable battery (60 min continuous runtime)',
-                'Discreet lipstick-sized portable design with built-in LED light'
-              ],
-              pain_points: [
-                'Painful and expensive monthly salon waxing',
-                'Razor bumps and cuts from traditional disposable razors',
-                'Blunt dermaplaning blades irritating sensitive skin',
-                'Flaky makeup application caused by unaddressed peach fuzz'
-              ],
-              created_at: '2026-08-22',
-              updated_at: '2026-08-22',
-            }
-          ]);
+          setProducts([]);
         }
 
-        if (trendRes.status === 'fulfilled' && Array.isArray(trendRes.value) && trendRes.value.length > 0) {
+        if (trendRes.status === 'fulfilled' && Array.isArray(trendRes.value)) {
           setTrends(trendRes.value);
         } else {
-          // Fallback trend signals matched to beauty & female grooming
-          setTrends([
-            {
-              id: 't1',
-              topic: '“30-Second Peach Fuzz Removal Before Makeup”',
-              headline: 'Viral "Smooth Base" Routine Demos Surge on TikTok & Reels',
-              summary: 'Short-form videos showing close-up before & after makeup gliding smoothly over hair-free skin are driving massive conversion.',
-              platform: 'tiktok',
-              category: 'Beauty & Skincare',
-              source_name: 'TikTok Beauty Discover Feed',
-              source_url: 'https://tiktok.com',
-              collection_date: '2026-08-22',
-              confidence_score: 96,
-              suggested_angles: ['The secret to non-cakey foundation', 'Zero pain hair removal in 30 seconds'],
-              is_active: true,
-              created_at: '2026-08-22',
-              updated_at: '2026-08-22',
-            },
-            {
-              id: 't2',
-              topic: 'Painless Home Dermaplaning vs Salon Waxing',
-              headline: 'Cost-of-Living Beauty Swaps Trend on Instagram',
-              summary: 'Creators comparing $100 salon waxing to reusable rechargeable electric trimmers with zero pain.',
-              platform: 'instagram',
-              category: 'Grooming & Wellness',
-              source_name: 'Instagram Explore Insights',
-              source_url: 'https://instagram.com',
-              collection_date: '2026-08-22',
-              confidence_score: 91,
-              suggested_angles: ['Why I stopped waxing my upper lip', 'Salon results at home without the pain'],
-              is_active: true,
-              created_at: '2026-08-22',
-              updated_at: '2026-08-22',
-            },
-            {
-              id: 't3',
-              topic: 'Eyebrow Shaping Hacks for Busy Mornings',
-              headline: 'Quick Micro-Trimming Demos on Meta Reels',
-              summary: 'Micro-precision attachment demos showing effortless eyebrow arches without tweezing tears.',
-              platform: 'facebook',
-              category: 'Beauty Tips',
-              source_name: 'Meta Ads Creative Center',
-              source_url: 'https://facebook.com',
-              collection_date: '2026-08-22',
-              confidence_score: 89,
-              suggested_angles: ['Shape your brows in 60 seconds without tweezers'],
-              is_active: true,
-              created_at: '2026-08-22',
-              updated_at: '2026-08-22',
-            }
-          ]);
+          setTrends([]);
         }
 
         if (stratRes.status === 'fulfilled' && stratRes.value) {
           setActiveStrategy(stratRes.value);
+        } else {
+          setActiveStrategy(null);
         }
 
         if (bkRes.status === 'fulfilled' && bkRes.value) {
           setBrandKit(bkRes.value);
         } else {
           setBrandKit({
-            id: 'bk1',
-            workspace_id: 'ws1',
-            brand_voice: ['Gentle & Reassuring', 'Empowering', 'Relatable', 'Clean & Aesthetic'],
-            prohibited_words: ['painful waxing', 'miracle cure', 'ugly body hair', 'shameful', 'cheap plastic'],
+            id: 'bk-default',
+            workspace_id: 'ws-default',
+            brand_voice: ['Authentic', 'Engaging', 'Professional', 'Value-Driven'],
+            prohibited_words: ['guaranteed 100%', 'miracle', 'cure-all', 'cheap knockoff'],
             approved_cta_examples: [
-              'Get painless smooth skin today',
-              'Shop the 2-in-1 Precision Remover',
-              'Upgrade your glow routine with 15% off'
+              'Shop Now & Save Today',
+              'Explore the Collection',
+              'Order on WhatsApp'
             ],
-            primary_color_hex: '#e11d48',
-            created_at: '2026-08-22',
-            updated_at: '2026-08-22',
+            primary_color_hex: '#165823',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           });
-        }
-
-        if (stratRes.status === 'fulfilled' && stratRes.value) {
-          setActiveStrategy(stratRes.value);
-        }
-
-        if (bkRes.status === 'fulfilled' && bkRes.value) {
-          setBrandKit(bkRes.value);
         }
       } catch (err) {
         console.error('Initialization error:', err);

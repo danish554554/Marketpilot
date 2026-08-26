@@ -25,19 +25,8 @@ export const Overview: React.FC<OverviewProps> = ({
   activeStrategy,
   businessName,
 }) => {
-  const heroProduct = products.find((p) => p.margin_tier === 'high') || products[0] || {
-    name: 'Luna Everyday Bag',
-    stock_quantity: 450,
-    profit_margin: '68.5',
-    pain_points: ['Unorganized daily carry'],
-  };
-
-  const topTrend = trends[0] || {
-    topic: '“What fits inside” short-form videos',
-    source_name: 'TikTok discovery feed',
-    confidence_score: 94,
-    platform: 'tiktok',
-  };
+  const heroProduct = products.find((p) => p.margin_tier === 'high') || products[0];
+  const topTrend = trends[0];
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -117,65 +106,81 @@ export const Overview: React.FC<OverviewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Today's Priority Card (7 cols) */}
         <article className="lg:col-span-7 bg-white border border-brand-line rounded-2xl p-5 md:p-6 shadow-card flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-                  TODAY'S STRATEGIC PRIORITY
-                </small>
-                <h2 className="text-lg font-display font-bold text-brand-ink mt-0.5">
-                  Make the {heroProduct.name} your hero product.
-                </h2>
+          {heroProduct ? (
+            <div>
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
+                    TODAY'S STRATEGIC PRIORITY
+                  </small>
+                  <h2 className="text-lg font-display font-bold text-brand-ink mt-0.5">
+                    Make the {heroProduct.name} your hero product.
+                  </h2>
+                </div>
+                <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-1 rounded-md">
+                  {heroProduct.profit_margin ? `${heroProduct.profit_margin}% margin` : 'Hero SKU'}
+                </span>
               </div>
-              <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-1 rounded-md">
-                92% match
-              </span>
-            </div>
 
-            {/* Product info banner */}
-            <div className="flex items-center gap-3.5 p-3 rounded-xl bg-slate-50 border border-slate-100 my-4">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#4c3529] to-[#9c7962] text-[#eee3d6] flex flex-col items-center justify-center font-display font-extrabold text-[9px] leading-tight text-center">
-                <span>HERO</span>
-                <small className="text-[7px] font-sans opacity-80">item</small>
+              {/* Product info banner */}
+              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-slate-50 border border-slate-100 my-4">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-800 to-emerald-950 text-white flex flex-col items-center justify-center font-display font-extrabold text-[9px] leading-tight text-center">
+                  <span>HERO</span>
+                  <small className="text-[7px] font-sans opacity-80">item</small>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Recommended Product</span>
+                  <h3 className="text-sm font-bold text-brand-ink truncate">{heroProduct.name}</h3>
+                  <small className="text-[10px] text-emerald-700 font-bold block">
+                    ● In stock · {heroProduct.stock_quantity || 100} units · {heroProduct.profit_margin || '65'}% margin
+                  </small>
+                </div>
               </div>
-              <div>
-                <span className="text-[9px] text-slate-400 font-bold uppercase block">Recommended Product</span>
-                <h3 className="text-sm font-bold text-brand-ink m-0">{heroProduct.name}</h3>
-                <small className="text-[10px] text-emerald-700 font-bold">
-                  ● In stock · {heroProduct.stock_quantity || 450} units · {heroProduct.profit_margin || '68'}% margin
-                </small>
-              </div>
-            </div>
 
-            {/* AI Grounded Reason */}
-            <div className="bg-[#f5f8f7] border border-[#e4eae8] rounded-xl p-3.5 flex gap-2.5 my-3">
-              <Sparkles size={16} className="text-brand-green shrink-0 mt-0.5" />
-              <div className="text-[11px] leading-relaxed">
-                <strong className="text-brand-ink font-bold block mb-0.5">Why this product today?</strong>
-                <p className="text-slate-600 m-0">
-                  High stock velocity, high profit margin tier, and addresses customer pain points ({heroProduct.pain_points?.[0] || 'daily friction'}) aligned with emerging trend signals.
-                </p>
+              {/* AI Grounded Reason */}
+              <div className="bg-[#f5f8f7] border border-[#e4eae8] rounded-xl p-3.5 flex gap-2.5 my-3">
+                <Sparkles size={16} className="text-brand-green shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-relaxed">
+                  <strong className="text-brand-ink font-bold block mb-0.5">Why this product today?</strong>
+                  <p className="text-slate-600 m-0">
+                    High stock velocity, high profit margin tier, and addresses customer pain points ({heroProduct.pain_points?.[0] || 'daily customer friction'}) aligned with emerging trend signals.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            {/* Organic vs Paid split breakdown */}
-            <div className="grid grid-cols-2 gap-3 my-4">
-              <div className="border-l-2 border-brand-green pl-2.5 py-0.5">
-                <small className="text-[8px] font-extrabold text-brand-green tracking-wider uppercase block">
-                  ORGANIC FOCUS
-                </small>
-                <b className="text-xs text-brand-ink block my-0.5">Instagram Reel & Carousel</b>
-                <span className="text-[10px] text-slate-400 truncate block">“Everything I carry in one routine”</span>
-              </div>
-              <div className="border-l-2 border-brand-blue pl-2.5 py-0.5">
-                <small className="text-[8px] font-extrabold text-brand-blue tracking-wider uppercase block">
-                  PAID ACQUISITION
-                </small>
-                <b className="text-xs text-brand-ink block my-0.5">Meta & TikTok Ad</b>
-                <span className="text-[10px] text-slate-400 truncate block">Direct response conversion angle</span>
+              {/* Organic vs Paid split breakdown */}
+              <div className="grid grid-cols-2 gap-3 my-4">
+                <div className="border-l-2 border-brand-green pl-2.5 py-0.5">
+                  <small className="text-[8px] font-extrabold text-brand-green tracking-wider uppercase block">
+                    ORGANIC FOCUS
+                  </small>
+                  <b className="text-xs text-brand-ink block my-0.5">Instagram Reel & Carousel</b>
+                  <span className="text-[10px] text-slate-400 truncate block">“Problem-solution routine breakdown”</span>
+                </div>
+                <div className="border-l-2 border-brand-blue pl-2.5 py-0.5">
+                  <small className="text-[8px] font-extrabold text-brand-blue tracking-wider uppercase block">
+                    PAID ACQUISITION
+                  </small>
+                  <b className="text-xs text-brand-ink block my-0.5">Meta & TikTok Ad</b>
+                  <span className="text-[10px] text-slate-400 truncate block">Direct response conversion angle</span>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="py-8 text-center space-y-3">
+              <Package size={32} className="mx-auto text-slate-300" />
+              <h3 className="font-bold text-sm text-brand-ink">No Products in Inventory Yet</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Add your catalog products with retail & cost prices to let the AI strategist calculate profit margins and viral hooks.
+              </p>
+              <button
+                onClick={() => onNavigate('products')}
+                className="bg-brand-green text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm hover:bg-emerald-700 transition-all"
+              >
+                + Add Your First Product
+              </button>
+            </div>
+          )}
 
           <footer className="pt-3 border-t border-brand-line flex items-center justify-between mt-2">
             <button
@@ -208,50 +213,42 @@ export const Overview: React.FC<OverviewProps> = ({
                 onClick={() => onNavigate('trends')}
                 className="text-xs text-brand-green font-bold hover:underline"
               >
-                View all →
+                View all ({trends.length}) →
               </button>
             </div>
 
-            <div className="space-y-2.5 divide-y divide-slate-100">
-              <div className="pt-2 flex items-center gap-2.5">
-                <i className="not-italic w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center text-xs font-extrabold">
-                  ↗
-                </i>
-                <div className="min-w-0 flex-1">
-                  <b className="text-xs text-brand-ink block truncate">{topTrend.topic}</b>
-                  <span className="text-[10px] text-slate-400 block">{topTrend.source_name} · 94% confidence</span>
-                </div>
-                <em className="not-italic text-[8px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                  High
-                </em>
+            {trends.length > 0 ? (
+              <div className="space-y-2.5 divide-y divide-slate-100">
+                {trends.slice(0, 3).map((t, idx) => (
+                  <div
+                    key={t.id || idx}
+                    onClick={() => onNavigate('trends')}
+                    className="pt-2 flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 p-1 rounded-lg transition-colors"
+                  >
+                    <i className="not-italic w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center text-xs font-extrabold shrink-0">
+                      ↗
+                    </i>
+                    <div className="min-w-0 flex-1">
+                      <b className="text-xs text-brand-ink block truncate">{t.topic}</b>
+                      <span className="text-[10px] text-slate-400 block">{t.source_name} · {t.confidence_score}% confidence</span>
+                    </div>
+                    <em className="not-italic text-[8px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full shrink-0">
+                      High
+                    </em>
+                  </div>
+                ))}
               </div>
-
-              <div className="pt-2.5 flex items-center gap-2.5">
-                <i className="not-italic w-7 h-7 rounded-lg bg-blue-50 text-brand-blue grid place-items-center text-xs font-extrabold">
-                  #
-                </i>
-                <div className="min-w-0 flex-1">
-                  <b className="text-xs text-brand-ink block truncate">Back-to-routine packing hacks</b>
-                  <span className="text-[10px] text-slate-400 block">Instagram · collected 5h ago</span>
-                </div>
-                <em className="not-italic text-[8px] font-extrabold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                  Medium
-                </em>
+            ) : (
+              <div className="py-6 text-center space-y-2">
+                <p className="text-xs text-slate-500">No trend signals ingested yet.</p>
+                <button
+                  onClick={() => onNavigate('trends')}
+                  className="text-xs text-brand-green font-bold hover:underline"
+                >
+                  ⚡ Click to ingest live Google & Reddit trends
+                </button>
               </div>
-
-              <div className="pt-2.5 flex items-center gap-2.5">
-                <i className="not-italic w-7 h-7 rounded-lg bg-purple-50 text-purple-700 grid place-items-center text-xs font-extrabold">
-                  ⌁
-                </i>
-                <div className="min-w-0 flex-1">
-                  <b className="text-xs text-brand-ink block truncate">Functional product comparisons</b>
-                  <span className="text-[10px] text-slate-400 block">Meta Creative Center · today</span>
-                </div>
-                <em className="not-italic text-[8px] font-extrabold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                  Medium
-                </em>
-              </div>
-            </div>
+            )}
           </div>
 
           <p className="text-[10px] bg-slate-50 text-slate-600 p-2.5 rounded-lg border border-slate-100 mt-4 m-0">
