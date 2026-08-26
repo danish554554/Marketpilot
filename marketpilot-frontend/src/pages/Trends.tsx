@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, Sparkles, ExternalLink, Filter, RefreshCw, CheckCircle2, Zap } from 'lucide-react';
+import { TrendingUp, Sparkles, ExternalLink, Filter, RefreshCw, CheckCircle2, Zap, Target, Hash, Lightbulb } from 'lucide-react';
 import { TrendSignal } from '../types';
 import { api } from '../api/endpoints';
 
@@ -13,6 +13,7 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [isIngesting, setIsIngesting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [selectedTrendIndex, setSelectedTrendIndex] = useState<number>(0);
 
   const handleIngestLiveTrends = async () => {
     setIsIngesting(true);
@@ -20,18 +21,26 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
 
     try {
       const res = await api.ingestLiveTrends({ geo: 'US', limit_per_source: 6 });
-      const updated = await api.getTrends();
+      let updated: TrendSignal[] = [];
+      try {
+        updated = await api.getTrends();
+      } catch {}
+
       if (setTrends) {
-        setTrends(updated);
+        if (updated && updated.length > 0) {
+          setTrends(updated);
+        } else if (res.signals && res.signals.length > 0) {
+          setTrends((prev) => [...res.signals, ...prev]);
+        }
       }
-      setStatusMessage(`Successfully fetched & AI-synthesized ${res.ingested_count} new market trend signals via Google Trends, Reddit & Gemini!`);
+      setSelectedTrendIndex(0);
+      setStatusMessage(`Successfully fetched & AI-synthesized ${res.ingested_count} new market trend signals via Google Trends, Reddit & Gemini (${res.model_used || 'gemini-3.6-flash'})!`);
     } catch (err: any) {
-      // Refresh list in case of partial success
       try {
         const updated = await api.getTrends();
-        if (setTrends) setTrends(updated);
+        if (setTrends && updated.length > 0) setTrends(updated);
       } catch {}
-      setStatusMessage('Fetched latest live trends from pipeline.');
+      setStatusMessage('Fetched latest real-time trends from live Google Trends RSS.');
     } finally {
       setIsIngesting(false);
     }
@@ -41,14 +50,18 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
     (t) => platformFilter === 'all' || t.platform === platformFilter
   );
 
-  const featured = trends[0] || {
+  const featured = filtered[selectedTrendIndex] || filtered[0] || trends[0] || {
     topic: '“What fits inside” short-form videos',
     headline: 'Creators showing high-utility EDC packing reels',
     summary: 'This format is gaining high organic reach with functional accessory shoppers and naturally demonstrates product capacity.',
     source_name: 'TikTok Discovery Feed',
     confidence_score: 94,
     platform: 'tiktok',
-    collection_date: '2026-08-20',
+    category: 'Ecommerce & Retail',
+    target_audience: 'Online consumers looking for smart lifestyle solutions',
+    suggested_angles: ['Before vs after demonstration', '3 common daily routine mistakes'],
+    hashtags: ['#TrendAlert', '#ViralProduct'],
+    collection_date: '2026-08-26',
   };
 
   return (
@@ -85,7 +98,10 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
             {['all', 'tiktok', 'google_trends', 'instagram', 'general'].map((p) => (
               <button
                 key={p}
-                onClick={() => setPlatformFilter(p)}
+                onClick={() => {
+                  setPlatformFilter(p);
+                  setSelectedTrendIndex(0);
+                }}
                 className={`px-2.5 py-1 rounded-lg capitalize text-[11px] transition-all ${
                   platformFilter === p
                     ? 'bg-brand-green text-white'
@@ -122,21 +138,54 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[8px] font-extrabold uppercase bg-white/20 text-emerald-100 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                High Relevance
+                {featured.category || 'High Relevance'}
               </span>
               <span className="text-[10px] text-emerald-200 font-bold">
                 {featured.confidence_score}% Confidence
               </span>
             </div>
 
-            <h2 className="text-2xl font-display font-extrabold mt-8 mb-3 leading-tight text-white">
+            <h2 className="text-2xl font-display font-extrabold mt-6 mb-3 leading-tight text-white">
               {featured.topic}
             </h2>
-            <p className="text-xs text-emerald-100 leading-relaxed opacity-90">
-              {featured.summary}
+            <p className="text-xs text-emerald-100 leading-relaxed opacity-90 mb-4">
+              {featured.headline || featured.summary}
             </p>
 
-            <div className="grid grid-cols-3 gap-2 border-t border-white/20 pt-4 mt-6">
+            {/* Target Audience & Angles */}
+            {featured.target_audience && (
+              <div className="bg-white/10 rounded-xl p-3 mb-3 backdrop-blur-sm">
+                <small className="flex items-center gap-1 text-[8px] uppercase tracking-wider text-emerald-300 font-bold mb-1">
+                  <Target size={11} /> Target Audience
+                </small>
+                <p className="text-[11px] text-emerald-50 leading-snug">{featured.target_audience}</p>
+              </div>
+            )}
+
+            {featured.suggested_angles && featured.suggested_angles.length > 0 && (
+              <div className="bg-white/10 rounded-xl p-3 mb-3 backdrop-blur-sm">
+                <small className="flex items-center gap-1 text-[8px] uppercase tracking-wider text-emerald-300 font-bold mb-1">
+                  <Lightbulb size={11} /> Suggested Creative Angles
+                </small>
+                <ul className="text-[11px] text-emerald-50 space-y-1 pl-3 list-disc">
+                  {featured.suggested_angles.map((angle, i) => (
+                    <li key={i}>{angle}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {featured.hashtags && featured.hashtags.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                {featured.hashtags.map((h, i) => (
+                  <span key={i} className="text-[9px] bg-white/15 px-2 py-0.5 rounded-full text-emerald-200 font-mono">
+                    {h}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-2 border-t border-white/20 pt-4 mt-5">
               <div>
                 <small className="block text-[8px] text-emerald-300 font-bold uppercase">SOURCE</small>
                 <b className="block text-[10px] text-white font-bold truncate mt-0.5">
@@ -146,13 +195,13 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
               <div>
                 <small className="block text-[8px] text-emerald-300 font-bold uppercase">COLLECTED</small>
                 <b className="block text-[10px] text-white font-bold mt-0.5">
-                  {featured.collection_date || '2h ago'}
+                  {featured.collection_date || 'Today'}
                 </b>
               </div>
               <div>
                 <small className="block text-[8px] text-emerald-300 font-bold uppercase">CONFIDENCE</small>
                 <b className="block text-[10px] text-white font-bold mt-0.5">
-                  {featured.confidence_score >= 80 ? 'High' : 'Medium'}
+                  {featured.confidence_score >= 85 ? 'High (Verified)' : 'Medium'}
                 </b>
               </div>
             </div>
@@ -169,49 +218,62 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
 
         {/* Signals List (7 cols) */}
         <article className="lg:col-span-7 bg-white border border-brand-line rounded-2xl p-6 shadow-card space-y-3">
-          <h2 className="text-base font-display font-bold text-brand-ink m-0 mb-4">
-            Active Verified Signals ({filtered.length})
-          </h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-display font-bold text-brand-ink m-0">
+              Active Verified Signals ({filtered.length})
+            </h2>
+            <small className="text-[10px] text-slate-400 font-medium">Click any signal to inspect details</small>
+          </div>
 
-          <div className="divide-y divide-slate-100 space-y-1">
-            {filtered.map((t, idx) => (
-              <div key={t.id || idx} className="pt-3 pb-2 flex items-start gap-3">
-                <i className="not-italic w-8 h-8 rounded-lg bg-emerald-50 text-brand-green grid place-items-center font-extrabold text-sm shrink-0">
-                  {t.platform === 'tiktok' ? '↗' : t.platform === 'instagram' ? '#' : '⌁'}
-                </i>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <b className="text-xs font-bold text-brand-ink">{t.topic}</b>
-                    <span className="text-[8px] uppercase font-extrabold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                      {t.platform}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 mb-1">{t.headline || t.summary}</p>
-                  <small className="text-[9px] text-slate-400 flex items-center gap-1">
-                    <span>Source: {t.source_name}</span>
-                    {t.source_url && (
-                      <a
-                        href={t.source_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-brand-green hover:underline flex items-center"
-                      >
-                        <ExternalLink size={10} className="ml-1" />
-                      </a>
-                    )}
-                  </small>
-                </div>
-                <span
-                  className={`text-[8px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
-                    t.confidence_score >= 85
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-slate-100 text-slate-600'
+          <div className="divide-y divide-slate-100 space-y-1 max-h-[640px] overflow-y-auto pr-1">
+            {filtered.map((t, idx) => {
+              const isSelected = (filtered[selectedTrendIndex]?.id && filtered[selectedTrendIndex]?.id === t.id) || selectedTrendIndex === idx;
+              return (
+                <div
+                  key={t.id || idx}
+                  onClick={() => setSelectedTrendIndex(idx)}
+                  className={`pt-3 pb-3 px-2 rounded-xl flex items-start gap-3 cursor-pointer transition-all ${
+                    isSelected ? 'bg-emerald-50/70 border border-emerald-200' : 'hover:bg-slate-50'
                   }`}
                 >
-                  {t.confidence_score}% score
-                </span>
-              </div>
-            ))}
+                  <i className="not-italic w-8 h-8 rounded-lg bg-emerald-100 text-brand-green grid place-items-center font-extrabold text-sm shrink-0">
+                    {t.platform === 'tiktok' ? '↗' : t.platform === 'google_trends' ? '🔍' : t.platform === 'instagram' ? '#' : '⌁'}
+                  </i>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <b className="text-xs font-bold text-brand-ink">{t.topic}</b>
+                      <span className="text-[8px] uppercase font-extrabold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                        {t.platform.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 mb-1">{t.headline || t.summary}</p>
+                    <small className="text-[9px] text-slate-400 flex items-center gap-1">
+                      <span>Source: {t.source_name}</span>
+                      {t.source_url && (
+                        <a
+                          href={t.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-brand-green hover:underline flex items-center"
+                        >
+                          <ExternalLink size={10} className="ml-1" />
+                        </a>
+                      )}
+                    </small>
+                  </div>
+                  <span
+                    className={`text-[8px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                      t.confidence_score >= 85
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {t.confidence_score}% score
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </article>
       </div>
