@@ -354,7 +354,7 @@ export function App() {
           )}
 
           {activePage === 'calendar' && (
-            <Calendar onNavigate={setActivePage} />
+            <Calendar onNavigate={setActivePage} activeStrategy={activeStrategy} />
           )}
 
           {activePage === 'studio' && (
