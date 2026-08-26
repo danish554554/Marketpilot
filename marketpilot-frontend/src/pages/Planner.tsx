@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, CheckCircle2, DollarSign, Layers, ArrowRight, TrendingUp, Lightbulb, Target } from 'lucide-react';
 import { MarketingStrategy, Product, TrendSignal } from '../types';
 import { api } from '../api/endpoints';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface PlannerProps {
   products: Product[];
@@ -18,9 +19,10 @@ export const Planner: React.FC<PlannerProps> = ({
   setActiveStrategy,
   onNavigate,
 }) => {
+  const { formatAmount, currencySymbol, currencyConfig } = useCurrency();
   const [timeframe, setTimeframe] = useState<'weekly' | 'monthly'>('monthly');
   const [objective, setObjective] = useState('increase_product_awareness');
-  const [budget, setBudget] = useState('15000');
+  const [budget, setBudget] = useState(currencyConfig.code === 'PKR' ? '50000' : '1500');
   const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id || '');
   const [selectedTrendId, setSelectedTrendId] = useState<string>('');
   const [includeTrends, setIncludeTrends] = useState(true);
@@ -280,16 +282,16 @@ export const Planner: React.FC<PlannerProps> = ({
 
           <div>
             <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
-              Paid Acquisition Budget (USD)
+              Paid Acquisition Budget ({currencyConfig.code})
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">$</span>
+              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">{currencySymbol}</span>
               <input
                 type="number"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                placeholder="15000"
-                className="w-full text-xs pl-8 pr-3 py-2.5 rounded-lg border border-brand-line bg-white focus:outline-none focus:border-brand-green"
+                placeholder={currencyConfig.code === 'PKR' ? '50000' : '1500'}
+                className="w-full text-xs pl-10 pr-3 py-2.5 rounded-lg border border-brand-line bg-white focus:outline-none focus:border-brand-green"
               />
             </div>
           </div>

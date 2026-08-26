@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Package, Plus, Upload, Trash2, DollarSign, AlertCircle } from 'lucide-react';
 import { Product } from '../types';
 import { api } from '../api/endpoints';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface ProductsProps {
   products: Product[];
@@ -9,6 +10,7 @@ interface ProductsProps {
 }
 
 export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
+  const { formatAmount, currencySymbol, currencyConfig } = useCurrency();
   const [showAddModal, setShowAddModal] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -141,10 +143,10 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
                     )}
                   </td>
                   <td className="py-3.5 px-4 font-bold text-slate-700">
-                    ${prod.price}
+                    {formatAmount(prod.price)}
                   </td>
                   <td className="py-3.5 px-4 text-slate-500">
-                    ${prod.cost_price || '—'}
+                    {prod.cost_price ? formatAmount(prod.cost_price) : '—'}
                   </td>
                   <td className="py-3.5 px-4 font-extrabold text-emerald-700">
                     {prod.profit_margin ? `${prod.profit_margin}%` : '—'}
@@ -191,7 +193,7 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
           <div className="bg-white rounded-2xl p-6 md:p-8 max-w-[460px] w-full relative shadow-2xl border border-brand-line">
             <h2 className="text-lg font-display font-bold text-brand-ink mb-1">Add New Product</h2>
             <p className="text-xs text-slate-500 mb-4">
-              Enter pricing and cost details so the AI Strategist can optimize profit margins.
+              Enter pricing and cost details in <b>{currencyConfig.code} ({currencySymbol})</b> so the AI Strategist can optimize profit margins.
             </p>
 
             <form onSubmit={handleAddProduct} className="space-y-3">
@@ -202,33 +204,33 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Luna Everyday Bag"
+                  placeholder="e.g. 2-in-1 Rechargeable Hair Remover"
                   className="w-full text-xs p-2.5 rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-600 mb-1">Retail Price ($)</label>
+                  <label className="block text-[10px] font-bold text-slate-600 mb-1">Retail Price ({currencySymbol})</label>
                   <input
                     type="number"
                     step="0.01"
                     required
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="120.00"
+                    placeholder={currencyConfig.code === 'PKR' ? '4500' : '39.99'}
                     className="w-full text-xs p-2.5 rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-600 mb-1">Cost Price ($)</label>
+                  <label className="block text-[10px] font-bold text-slate-600 mb-1">Cost Price ({currencySymbol})</label>
                   <input
                     type="number"
                     step="0.01"
                     required
                     value={costPrice}
                     onChange={(e) => setCostPrice(e.target.value)}
-                    placeholder="35.00"
+                    placeholder={currencyConfig.code === 'PKR' ? '1200' : '8.50'}
                     className="w-full text-xs p-2.5 rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
                   />
                 </div>
