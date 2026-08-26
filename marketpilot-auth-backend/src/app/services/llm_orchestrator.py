@@ -23,7 +23,7 @@ class LLMOrchestrator:
     guardrail validation, and audit persistence.
     """
 
-    MODEL_NAME = "gemini-2.5-flash"
+    MODEL_NAME = "gemini-3.6-flash"
     FALLBACK_MODEL_NAME = "marketpilot-deterministic-v1"
 
     @classmethod

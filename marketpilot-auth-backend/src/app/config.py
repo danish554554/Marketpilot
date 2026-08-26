@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Google Gemini AI Provider Configuration
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.6-flash"
 
     @property
     def cors_origins(self) -> list[str]:
