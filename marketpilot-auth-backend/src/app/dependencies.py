@@ -30,7 +30,7 @@ def get_current_user(
     if token.startswith("demo-") or token.startswith("mock-") or token == "demo-jwt" or token == "test-token":
         return UserProfile(
             id=DEMO_USER_ID,
-            email="admin@marketpilot.local",
+            email="demo@marketpilot.ai",
             full_name="Sarah Jenkins (Demo Owner)",
             avatar_url=None,
             role=Role.ADMINISTRATOR,
