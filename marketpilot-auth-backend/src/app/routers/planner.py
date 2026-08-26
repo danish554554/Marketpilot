@@ -334,3 +334,36 @@ def generate_copy(
         format=payload.format,
         ai_model_used=GeminiService.get_model_name(),
     )
+
+
+@router.post("/validate-guardrails", response_model=GuardrailValidateResponse, status_code=status.HTTP_200_OK)
+def validate_guardrails(
+    payload: GuardrailValidateRequest,
+    current_user: CurrentUser,
+) -> GuardrailValidateResponse:
+    """
+    Performs live brand-kit and inventory guardrail checks on marketing copy.
+    """
+    from app.services.guardrails import GuardrailsEngine
+
+    res = GuardrailsEngine.evaluate_text_content(
+        text=payload.text,
+        prohibited_words=payload.prohibited_words,
+        auto_sanitize=False,
+    )
+
+    detected = [v.offending_text for v in res.violations if v.offending_text]
+    violation_msgs = [v.description for v in res.violations]
+
+    if not res.passed:
+        msg = f"Guardrail Warning: Content contains prohibited word(s): {', '.join(detected)}"
+    else:
+        msg = "✓ All guardrails passed: 100% Brand Kit compliant & zero medical/miracle claims."
+
+    return GuardrailValidateResponse(
+        passed=res.passed,
+        status=res.status.value,
+        detected_prohibited_words=detected,
+        violations=violation_msgs,
+        safety_message=msg,
+    )

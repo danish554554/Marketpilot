@@ -174,6 +174,15 @@ export const api = {
     const res = await apiClient.post('/planner/generate-copy', params);
     return res.data;
   },
+  validateGuardrails: async (params: {
+    text: string;
+    prohibited_words: string[];
+    product_name?: string;
+    product_stock?: number;
+  }): Promise<{ passed: boolean; status: string; detected_prohibited_words: string[]; violations: string[]; safety_message: string }> => {
+    const res = await apiClient.post('/planner/validate-guardrails', params);
+    return res.data;
+  },
 
   // Reporting & Export
   getWorkspaceHealth: async (): Promise<WorkspaceHealthReport> => {

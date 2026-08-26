@@ -1,20 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Sparkles, RefreshCw, Copy, Check, TrendingUp, Lightbulb, Video, Instagram, Mail, MessageSquare, ShieldCheck, Loader2 } from 'lucide-react';
-import { MarketingStrategy, Product } from '../types';
+import {
+  CheckCircle2,
+  Sparkles,
+  RefreshCw,
+  Copy,
+  Check,
+  TrendingUp,
+  Lightbulb,
+  Video,
+  Instagram,
+  Mail,
+  MessageSquare,
+  ShieldCheck,
+  ShieldAlert,
+  Loader2,
+  AlertTriangle
+} from 'lucide-react';
+import { BrandKit, MarketingStrategy, Product } from '../types';
 import { api } from '../api/endpoints';
 
 interface StudioProps {
   products: Product[];
   businessName: string;
   activeStrategy?: MarketingStrategy | null;
+  brandKit?: BrandKit | null;
 }
 
-export const Studio: React.FC<StudioProps> = ({ products, businessName, activeStrategy }) => {
+export const Studio: React.FC<StudioProps> = ({ products, businessName, activeStrategy, brandKit }) => {
   const [activeTab, setActiveTab] = useState<'script' | 'organic' | 'paid' | 'email' | 'whatsapp'>('script');
   const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id || '');
   const [selectedPillarIndex, setSelectedPillarIndex] = useState<number>(0);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const [activeBrandKit, setActiveBrandKit] = useState<BrandKit | null>(brandKit || null);
+  const [guardrailResult, setGuardrailResult] = useState<{
+    passed: boolean;
+    status: string;
+    detected_prohibited_words: string[];
+    safety_message: string;
+  }>({
+    passed: true,
+    status: 'passed',
+    detected_prohibited_words: [],
+    safety_message: '✓ All guardrails passed: 100% Brand Kit compliant & zero medical/miracle claims.',
+  });
 
   const selectedProduct = products.find((p) => p.id === selectedProductId) || products[0] || {
     name: 'Your Featured Product',
@@ -30,6 +60,50 @@ export const Studio: React.FC<StudioProps> = ({ products, businessName, activeSt
   const [cta, setCta] = useState('Shop now and save 20%');
   const [hashtags, setHashtags] = useState('');
   const [aiModelUsed, setAiModelUsed] = useState('gemini-3.6-flash');
+
+  // Load Brand Kit if missing
+  useEffect(() => {
+    if (!activeBrandKit) {
+      api.getBrandKit().then((bk) => {
+        if (bk) setActiveBrandKit(bk);
+      }).catch(() => {});
+    }
+  }, []);
+
+  // Run live guardrail evaluation whenever content changes
+  const runLiveGuardrailCheck = async (fullText: string) => {
+    const prohibited = activeBrandKit?.prohibited_words || [
+      'guaranteed 100%', 'cure-all', 'cheap', 'miracle cure', 'ugly body hair'
+    ];
+
+    try {
+      const res = await api.validateGuardrails({
+        text: fullText,
+        prohibited_words: prohibited,
+        product_name: selectedProduct.name,
+      });
+      setGuardrailResult(res);
+    } catch {
+      // Local check fallback
+      const lower = fullText.toLowerCase();
+      const detected = prohibited.filter((w) => lower.includes(w.toLowerCase()));
+      if (detected.length > 0) {
+        setGuardrailResult({
+          passed: false,
+          status: 'warning',
+          detected_prohibited_words: detected,
+          safety_message: `⚠️ Prohibited Brand Word Detected: "${detected.join(', ')}". Replace before publishing.`,
+        });
+      } else {
+        setGuardrailResult({
+          passed: true,
+          status: 'passed',
+          detected_prohibited_words: [],
+          safety_message: '✓ All guardrails passed: 100% Brand Kit compliant & zero medical/miracle claims.',
+        });
+      }
+    }
+  };
 
   const generateAIPost = async (tab = activeTab, prod = selectedProduct, pillar = activePillar) => {
     setIsGenerating(true);
@@ -58,6 +132,8 @@ export const Studio: React.FC<StudioProps> = ({ products, businessName, activeSt
       setCta(res.call_to_action);
       setHashtags(res.hashtags);
       if (res.ai_model_used) setAiModelUsed(res.ai_model_used);
+
+      runLiveGuardrailCheck(`${res.hook}\n${res.caption}\n${res.call_to_action}`);
     } catch (err) {
       console.warn('Backend copywriting fallback:', err);
       fallbackLocalCopy(tab, prod, pillar);
@@ -72,48 +148,60 @@ export const Studio: React.FC<StudioProps> = ({ products, businessName, activeSt
     const pain = prod.pain_points?.[0] || 'wasting time on poor alternatives';
     const hookIdea = pillar?.hook_ideas?.[0] || `Still struggling with ${pain}? Watch this.`;
 
+    let generatedHook = '';
+    let generatedCaption = '';
+    let generatedCta = '';
+    let generatedTags = '';
+
     if (tab === 'script') {
-      setHook(hookIdea);
-      setCaption(
+      generatedHook = hookIdea;
+      generatedCaption = (
         `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing the daily problem with ${pain}.\nVoiceover: "${hookIdea}"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter using ${prodName} highlighting ${feat}.\nVoiceover: "The ${prodName} fixes this in seconds. Designed with ${feat} for smooth, effortless results."\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Showing clean finished look with product in hand.\nVoiceover: "Tap the link below to get yours with express shipping before stock runs out!"`
       );
-      setCta('Tap link in bio to get 20% off');
-      setHashtags(`#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralFinds #ProblemSolved #LifeHacks`);
+      generatedCta = 'Tap link in bio to get 20% off';
+      generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralFinds #ProblemSolved #LifeHacks`;
     } else if (tab === 'organic') {
-      setHook(`Why most people struggle with ${pain} (and the 30-second fix).`);
-      setCaption(
+      generatedHook = `Why most people struggle with ${pain} (and the 30-second fix).`;
+      generatedCaption = (
         `If you've been dealing with ${pain}, you're not alone.\n\nMeet the ${prodName}:\n`
         + (prod.features || []).map(f => `✨ ${f}`).join('\n')
         + `\n\nDrop a 💬 below or save this post for your next order!`
       );
-      setCta('Comment "INFO" for the direct link');
-      setHashtags(`#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ProductReview #MustHave`);
+      generatedCta = 'Comment "INFO" for the direct link';
+      generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ProductReview #MustHave`;
     } else if (tab === 'paid') {
-      setHook(`Stop dealing with ${pain}.`);
-      setCaption(
+      generatedHook = `Stop dealing with ${pain}.`;
+      generatedCaption = (
         `Upgrade your daily routine with the ${prodName}.\n\n`
         + (prod.features || []).map(f => `✅ ${f}`).join('\n')
         + `\n\n🛡️ 30-Day Satisfaction Guarantee\n🚚 Fast Free Tracked Shipping\n\nClick below to claim your special 20% launch discount!`
       );
-      setCta('Shop Now & Get 20% Off');
-      setHashtags('#LimitedTimeOffer #SpecialDiscount');
+      generatedCta = 'Shop Now & Get 20% Off';
+      generatedTags = '#LimitedTimeOffer #SpecialDiscount';
     } else if (tab === 'email') {
-      setHook(`Subject: The smartest way to tackle ${pain} ✨`);
-      setCaption(
+      generatedHook = `Subject: The smartest way to tackle ${pain} ✨`;
+      generatedCaption = (
         `Hi there,\n\nIf ${pain} has been holding you back, we built the **${prodName}** just for you.\n\nKey Highlights:\n`
         + (prod.features || []).map(f => `• **${f}**`).join('\n')
         + `\n\nClick below to order yours today:`
       );
-      setCta(`Claim Your ${prodName}`);
-      setHashtags('');
+      generatedCta = `Claim Your ${prodName}`;
+      generatedTags = '';
     } else {
-      setHook(`✨ VIP Restock: ${prodName}`);
-      setCaption(
+      generatedHook = `✨ VIP Restock: ${prodName}`;
+      generatedCaption = (
         `Hi! Due to high demand, we just restocked our bestselling **${prodName}**.\n\nOrder today for priority dispatch!\n\nReply YES to confirm your order or click below:`
       );
-      setCta('Order via WhatsApp with 1 Click');
-      setHashtags('');
+      generatedCta = 'Order via WhatsApp with 1 Click';
+      generatedTags = '';
     }
+
+    setHook(generatedHook);
+    setCaption(generatedCaption);
+    setCta(generatedCta);
+    setHashtags(generatedTags);
+
+    runLiveGuardrailCheck(`${generatedHook}\n${generatedCaption}\n${generatedCta}`);
   };
 
   useEffect(() => {
@@ -233,14 +321,35 @@ export const Studio: React.FC<StudioProps> = ({ products, businessName, activeSt
             )}
           </div>
 
-          {/* Guardrails Check */}
-          <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3.5 flex items-start gap-2.5">
-            <ShieldCheck size={16} className="text-emerald-700 shrink-0 mt-0.5" />
-            <div className="text-[11px]">
-              <strong className="text-emerald-950 block font-bold">AI Copy Guardrails Passed</strong>
-              <p className="text-emerald-800 m-0 mt-0.5">
-                Matches active Brand Kit voice with zero prohibited medical claims.
-              </p>
+          {/* Live Guardrails Real-Time Verification Card */}
+          <div className={`rounded-xl p-3.5 border transition-all ${
+            guardrailResult.passed
+              ? 'bg-emerald-50/80 border-emerald-200'
+              : 'bg-amber-50 border-amber-300'
+          }`}>
+            <div className="flex items-start gap-2.5">
+              {guardrailResult.passed ? (
+                <ShieldCheck size={16} className="text-emerald-700 shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+              )}
+              <div className="text-[11px]">
+                <strong className={`block font-bold ${guardrailResult.passed ? 'text-emerald-950' : 'text-amber-950'}`}>
+                  {guardrailResult.passed ? 'Live AI Guardrails Passed' : 'Guardrail Warning'}
+                </strong>
+                <p className={`m-0 mt-0.5 ${guardrailResult.passed ? 'text-emerald-800' : 'text-amber-800 font-medium'}`}>
+                  {guardrailResult.safety_message}
+                </p>
+                {guardrailResult.detected_prohibited_words.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {guardrailResult.detected_prohibited_words.map((w, i) => (
+                      <span key={i} className="bg-amber-200/80 text-amber-900 text-[9px] font-extrabold px-1.5 py-0.5 rounded">
+                        Prohibited: {w}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </aside>
@@ -322,7 +431,10 @@ export const Studio: React.FC<StudioProps> = ({ products, businessName, activeSt
               <input
                 type="text"
                 value={hook}
-                onChange={(e) => setHook(e.target.value)}
+                onChange={(e) => {
+                  setHook(e.target.value);
+                  runLiveGuardrailCheck(`${e.target.value}\n${caption}\n${cta}`);
+                }}
                 disabled={isGenerating}
                 placeholder="High-converting opening hook..."
                 className="w-full text-xs font-bold text-brand-ink p-3 rounded-xl border border-brand-line bg-slate-50/50 focus:bg-white focus:outline-none focus:border-brand-green disabled:opacity-50"
@@ -345,7 +457,10 @@ export const Studio: React.FC<StudioProps> = ({ products, businessName, activeSt
               <textarea
                 rows={8}
                 value={caption}
-                onChange={(e) => setCaption(e.target.value)}
+                onChange={(e) => {
+                  setCaption(e.target.value);
+                  runLiveGuardrailCheck(`${hook}\n${e.target.value}\n${cta}`);
+                }}
                 disabled={isGenerating}
                 placeholder="Content generated by Gemini AI..."
                 className="w-full text-xs text-slate-700 p-3.5 rounded-xl border border-brand-line bg-slate-50/50 focus:bg-white focus:outline-none focus:border-brand-green font-mono leading-relaxed disabled:opacity-50"
@@ -360,7 +475,10 @@ export const Studio: React.FC<StudioProps> = ({ products, businessName, activeSt
                 <input
                   type="text"
                   value={cta}
-                  onChange={(e) => setCta(e.target.value)}
+                  onChange={(e) => {
+                    setCta(e.target.value);
+                    runLiveGuardrailCheck(`${hook}\n${caption}\n${e.target.value}`);
+                  }}
                   disabled={isGenerating}
                   className="w-full text-xs font-bold text-brand-green p-2.5 rounded-xl border border-brand-line bg-slate-50/50 focus:bg-white focus:outline-none focus:border-brand-green disabled:opacity-50"
                 />

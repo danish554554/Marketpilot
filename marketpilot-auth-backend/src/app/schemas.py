@@ -1173,6 +1173,21 @@ class CopyGenerationResponse(BaseModel):
     ai_model_used: str = "gemini-3.6-flash"
 
 
+class GuardrailValidateRequest(BaseModel):
+    text: str
+    prohibited_words: list[str] = Field(default_factory=list)
+    product_name: str | None = None
+    product_stock: int | None = None
+
+
+class GuardrailValidateResponse(BaseModel):
+    passed: bool
+    status: str
+    detected_prohibited_words: list[str] = Field(default_factory=list)
+    violations: list[str] = Field(default_factory=list)
+    safety_message: str
+
+
 
 
 
