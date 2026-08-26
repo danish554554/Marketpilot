@@ -57,10 +57,14 @@ export const Overview: React.FC<OverviewProps> = ({
           </i>
           <span className="block text-slate-400 text-[10px] font-bold mt-3 mb-1">Active products</span>
           <b className="block font-display font-extrabold text-2xl text-brand-ink">
-            {products.length || 24}
+            {products.length}
           </b>
           <small className="text-[10px] text-slate-400 font-bold block mt-1">
-            <strong className="text-brand-green">+3</strong> added this month
+            {products.length > 0 ? (
+              <><strong className="text-brand-green">+{products.length}</strong> in inventory</>
+            ) : (
+              <span className="text-slate-400">0 added yet</span>
+            )}
           </small>
         </article>
 
@@ -69,9 +73,15 @@ export const Overview: React.FC<OverviewProps> = ({
             <CalendarIcon size={15} />
           </i>
           <span className="block text-slate-400 text-[10px] font-bold mt-3 mb-1">Upcoming content</span>
-          <b className="block font-display font-extrabold text-2xl text-brand-ink">12</b>
+          <b className="block font-display font-extrabold text-2xl text-brand-ink">
+            {activeStrategy?.pillars ? activeStrategy.pillars.length : 0}
+          </b>
           <small className="text-[10px] text-slate-400 font-bold block mt-1">
-            <strong className="text-brand-green">8</strong> needs review
+            {activeStrategy?.pillars ? (
+              <><strong className="text-brand-green">{activeStrategy.pillars.length}</strong> scheduled drops</>
+            ) : (
+              <span className="text-slate-400">0 scheduled</span>
+            )}
           </small>
         </article>
 
@@ -81,10 +91,14 @@ export const Overview: React.FC<OverviewProps> = ({
           </i>
           <span className="block text-slate-400 text-[10px] font-bold mt-3 mb-1">Trend signals found</span>
           <b className="block font-display font-extrabold text-2xl text-brand-ink">
-            {trends.length || 7}
+            {trends.length}
           </b>
           <small className="text-[10px] text-slate-400 font-bold block mt-1">
-            <strong className="text-brand-green">3</strong> high relevance
+            {trends.length > 0 ? (
+              <><strong className="text-brand-green">{trends.filter(t => t.confidence_score >= 90).length}</strong> high relevance</>
+            ) : (
+              <span className="text-slate-400">Ready to ingest</span>
+            )}
           </small>
         </article>
 
@@ -94,10 +108,10 @@ export const Overview: React.FC<OverviewProps> = ({
           </i>
           <span className="block text-slate-400 text-[10px] font-bold mt-3 mb-1">Plans awaiting approval</span>
           <b className="block font-display font-extrabold text-2xl text-brand-ink">
-            {activeStrategy ? 1 : 3}
+            {activeStrategy ? 1 : 0}
           </b>
           <small className="text-[10px] text-emerald-700 font-bold block mt-1">
-            Due today
+            {activeStrategy ? 'Active strategy' : 'None pending'}
           </small>
         </article>
       </div>
