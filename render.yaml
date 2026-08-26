@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: marketpilot-api
+    env: python
+    rootDir: marketpilot-auth-backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --app-dir src --host 0.0.0.0 --port $PORT
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: FRONTEND_ORIGINS
+        value: "*"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PASSWORD_RESET_REDIRECT_URL
+        value: "http://localhost:3000"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: "gemini-3.6-flash"
