@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     supabase_service_role_key: str | None = None
     password_reset_redirect_url: AnyHttpUrl
 
+    # Google Gemini AI Provider Configuration
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
+
     @property
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.frontend_origins.split(",") if origin.strip()]

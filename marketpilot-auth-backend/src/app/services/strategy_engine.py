@@ -24,6 +24,7 @@ from app.schemas import (
     TrendSignal,
 )
 from app.services.context_builder import build_structured_context
+from app.services.gemini_service import GeminiService
 from app.services.guardrails import GuardrailsEngine
 from app.supabase_client import get_service_client
 
@@ -178,133 +179,184 @@ class StrategyEngine:
         pillars: list[CampaignPillarResponse] = []
         now_str = "2026-08-21T12:00:00Z"
         strategy_id = uuid4()
-
-        # Pillar 1: Hero Product Organic Awareness & Education
         hero_p = filtered_prods[0] if filtered_prods else None
         trend1 = context.matched_trends[0] if (request.include_trends and context.matched_trends) else None
-        if hero_p:
-            p1_angle = f"Position {hero_p.name} as the category standard through educational storytelling and feature spotlighting."
-            p1_hooks = [
-                f"Why everyone in {context.industry} is talking about {hero_p.name}",
-                f"3 mistakes you are making with your daily routine (and how {hero_p.name} fixes them)",
-                f"The real reason {hero_p.name} sells out so fast",
-            ]
-            p1 = CampaignPillarResponse(
-                id=uuid4(),
-                strategy_id=strategy_id,
-                pillar_name=f"Hero Spotlight: {hero_p.name} Educational Funnel",
-                objective=primary_goal,
-                channel_type="organic",
-                platform=CampaignChannel.instagram,
-                focus_product_id=hero_p.id,
-                product_name=hero_p.name,
-                offer_id=None,
-                trend_signal_id=trend1.id if trend1 else None,
-                trend_topic=trend1.topic if trend1 else None,
-                creative_angle=p1_angle,
-                hook_ideas=p1_hooks,
-                suggested_ctas=[cta, "Save this post for later"],
-                content_formats=["carousel", "educational_reel", "story_poll"],
-                estimated_effort="medium",
-                rationale=f"Hero product with {hero_p.profit_margin or 60}% margin and {hero_p.stock_quantity} available units. Builds organic authority without ad spend.",
-                order_index=1,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-            pillars.append(p1)
 
-        # Pillar 2: Paid Direct-Response & Conversion Booster
-        second_p = filtered_prods[1] if len(filtered_prods) > 1 else hero_p
-        offer1 = context.active_offers[0] if context.active_offers else None
-        if second_p:
-            p2_angle = f"High-converting direct response addressing customer pain point: '{second_p.pain_points[0] if second_p.pain_points else 'daily hassle'}'."
-            p2_hooks = [
-                f"Tired of dealing with {second_p.pain_points[0] if second_p.pain_points else 'subpar alternatives'}?",
-                f"Watch what happens when you switch to {second_p.name}",
-                f"Limited stock remaining: Get yours before it's gone",
-            ]
-            p2 = CampaignPillarResponse(
+        # Attempt Gemini AI dynamic strategy generation
+        gemini_pillars_raw = None
+        if GeminiService.is_available():
+            gemini_pillars_raw = GeminiService.generate_strategy_pillars(
+                context=context,
+                timeframe=request.timeframe.value,
+                primary_goal=primary_goal.value,
+                hero_product=hero_p,
+                trends=context.matched_trends if request.include_trends else [],
+            )
+
+        if gemini_pillars_raw and len(gemini_pillars_raw) >= 4:
+            for idx, gp in enumerate(gemini_pillars_raw[:4]):
+                obj_val = gp.get("objective", primary_goal.value)
+                try:
+                    obj_enum = MarketingObjective(obj_val)
+                except ValueError:
+                    obj_enum = primary_goal
+
+                plat_val = gp.get("platform", "instagram")
+                try:
+                    plat_enum = CampaignChannel(plat_val)
+                except ValueError:
+                    plat_enum = CampaignChannel.instagram
+
+                pil = CampaignPillarResponse(
+                    id=uuid4(),
+                    strategy_id=strategy_id,
+                    pillar_name=gp.get("pillar_name", f"Pillar {idx + 1}"),
+                    objective=obj_enum,
+                    channel_type=gp.get("channel_type", "organic"),
+                    platform=plat_enum,
+                    focus_product_id=hero_p.id if hero_p else None,
+                    product_name=gp.get("product_name", hero_p.name if hero_p else None),
+                    offer_id=context.active_offers[0].id if context.active_offers else None,
+                    offer_title=context.active_offers[0].title if context.active_offers else None,
+                    trend_signal_id=trend1.id if (trend1 and idx == 2) else None,
+                    trend_topic=trend1.topic if (trend1 and idx == 2) else None,
+                    creative_angle=gp.get("creative_angle", "AI-optimized creative angle"),
+                    hook_ideas=gp.get("hook_ideas", ["Engaging hook idea"]),
+                    suggested_ctas=gp.get("suggested_ctas", [cta]),
+                    content_formats=gp.get("content_formats", ["post_caption"]),
+                    estimated_effort=gp.get("estimated_effort", "medium"),
+                    rationale=gp.get("rationale", "Generated by Google Gemini AI."),
+                    order_index=idx + 1,
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+                pillars.append(pil)
+        else:
+            # Deterministic fallback pillars
+            # Pillar 1: Hero Product Organic Awareness & Education
+            if hero_p:
+                p1_angle = f"Position {hero_p.name} as the category standard through educational storytelling and feature spotlighting."
+                p1_hooks = [
+                    f"Why everyone in {context.industry} is talking about {hero_p.name}",
+                    f"3 mistakes you are making with your daily routine (and how {hero_p.name} fixes them)",
+                    f"The real reason {hero_p.name} sells out so fast",
+                ]
+                p1 = CampaignPillarResponse(
+                    id=uuid4(),
+                    strategy_id=strategy_id,
+                    pillar_name=f"Hero Spotlight: {hero_p.name} Educational Funnel",
+                    objective=primary_goal,
+                    channel_type="organic",
+                    platform=CampaignChannel.instagram,
+                    focus_product_id=hero_p.id,
+                    product_name=hero_p.name,
+                    offer_id=None,
+                    trend_signal_id=trend1.id if trend1 else None,
+                    trend_topic=trend1.topic if trend1 else None,
+                    creative_angle=p1_angle,
+                    hook_ideas=p1_hooks,
+                    suggested_ctas=[cta, "Save this post for later"],
+                    content_formats=["carousel", "educational_reel", "story_poll"],
+                    estimated_effort="medium",
+                    rationale=f"Hero product with {hero_p.profit_margin or 60}% margin and {hero_p.stock_quantity} available units. Builds organic authority without ad spend.",
+                    order_index=1,
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+                pillars.append(p1)
+
+            # Pillar 2: Paid Direct-Response & Conversion Booster
+            second_p = filtered_prods[1] if len(filtered_prods) > 1 else hero_p
+            offer1 = context.active_offers[0] if context.active_offers else None
+            if second_p:
+                p2_angle = f"High-converting direct response addressing customer pain point: '{second_p.pain_points[0] if second_p.pain_points else 'daily hassle'}'."
+                p2_hooks = [
+                    f"Tired of dealing with {second_p.pain_points[0] if second_p.pain_points else 'subpar alternatives'}?",
+                    f"Watch what happens when you switch to {second_p.name}",
+                    f"Limited stock remaining: Get yours before it's gone",
+                ]
+                p2 = CampaignPillarResponse(
+                    id=uuid4(),
+                    strategy_id=strategy_id,
+                    pillar_name=f"Direct Response: {second_p.name} Acquisition Engine",
+                    objective=MarketingObjective.INCREASE_SALES,
+                    channel_type="paid" if (budget_breakdown.paid_budget and budget_breakdown.paid_budget > 0) else "organic",
+                    platform=CampaignChannel.tiktok,
+                    focus_product_id=second_p.id,
+                    product_name=second_p.name,
+                    offer_id=offer1.id if offer1 else None,
+                    offer_title=offer1.title if offer1 else None,
+                    trend_signal_id=None,
+                    creative_angle=p2_angle,
+                    hook_ideas=p2_hooks,
+                    suggested_ctas=[cta, "Claim exclusive pricing today"],
+                    content_formats=["short_form_ugc_script", "comparison_ad", "retargeting_card"],
+                    estimated_effort="high",
+                    rationale=f"Targets conversion-ready prospects using targeted paid budget allocation ({budget_breakdown.paid_percentage}% of total budget).",
+                    order_index=2,
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+                pillars.append(p2)
+
+            # Pillar 3: Trend Momentum & Community Engagement
+            trend_pillar = context.matched_trends[1] if len(context.matched_trends) > 1 else (context.matched_trends[0] if context.matched_trends else None)
+            if trend_pillar and request.include_trends:
+                p3_angle = f"Ride the cultural momentum of '{trend_pillar.topic}' ({trend_pillar.confidence_score}% confidence score)."
+                p3_hooks = trend_pillar.suggested_angles or [
+                    f"The new trend transforming {context.industry} in 2026",
+                    f"How {context.business_name} is adopting {trend_pillar.topic}",
+                ]
+                p3 = CampaignPillarResponse(
+                    id=uuid4(),
+                    strategy_id=strategy_id,
+                    pillar_name=f"Trend Velocity: {trend_pillar.topic}",
+                    objective=MarketingObjective.INCREASE_ENGAGEMENT,
+                    channel_type="organic",
+                    platform=CampaignChannel.tiktok if trend_pillar.platform.value == "tiktok" else CampaignChannel.instagram,
+                    focus_product_id=hero_p.id if hero_p else None,
+                    product_name=hero_p.name if hero_p else None,
+                    offer_id=None,
+                    trend_signal_id=trend_pillar.id,
+                    trend_topic=trend_pillar.topic,
+                    creative_angle=p3_angle,
+                    hook_ideas=p3_hooks,
+                    suggested_ctas=[cta, "Comment your thoughts below"],
+                    content_formats=["viral_sound_short", "trend_breakdown", "behind_the_scenes"],
+                    estimated_effort="medium",
+                    rationale=f"Leverages verified market trend '{trend_pillar.topic}' from {trend_pillar.source_name} to capture low-cost algorithmic reach.",
+                    order_index=3,
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+                pillars.append(p3)
+
+            # Pillar 4: Retention, Loyalty & VIP Cross-Sell
+            p4 = CampaignPillarResponse(
                 id=uuid4(),
                 strategy_id=strategy_id,
-                pillar_name=f"Direct Response: {second_p.name} Acquisition Engine",
+                pillar_name="Customer Retention & VIP Community Engagement",
                 objective=MarketingObjective.INCREASE_SALES,
-                channel_type="paid" if (budget_breakdown.paid_budget and budget_breakdown.paid_budget > 0) else "organic",
-                platform=CampaignChannel.tiktok,
-                focus_product_id=second_p.id,
-                product_name=second_p.name,
+                channel_type="organic",
+                platform=CampaignChannel.whatsapp if context.country == "PK" else CampaignChannel.email,
+                focus_product_id=None,
                 offer_id=offer1.id if offer1 else None,
                 offer_title=offer1.title if offer1 else None,
                 trend_signal_id=None,
-                creative_angle=p2_angle,
-                hook_ideas=p2_hooks,
-                suggested_ctas=[cta, "Claim exclusive pricing today"],
-                content_formats=["short_form_ugc_script", "comparison_ad", "retargeting_card"],
-                estimated_effort="high",
-                rationale=f"Targets conversion-ready prospects using targeted paid budget allocation ({budget_breakdown.paid_percentage}% of total budget).",
-                order_index=2,
+                creative_angle=f"Nurture existing customer relationships with exclusive updates, early access, and tailored {context.industry} guides.",
+                hook_ideas=[
+                    "A special thank you for being a valued client",
+                    "Early access: New arrivals before anyone else",
+                ],
+                suggested_ctas=["Join VIP list", "Reply to chat with our team"],
+                content_formats=["newsletter_broadcast", "direct_broadcast_message"],
+                estimated_effort="low",
+                rationale="Maximizes customer lifetime value (LTV) and drives repeat purchases with minimal acquisition friction.",
+                order_index=4,
                 created_at=now_str,
                 updated_at=now_str,
             )
-            pillars.append(p2)
-
-        # Pillar 3: Trend Momentum & Community Engagement
-        trend_pillar = context.matched_trends[1] if len(context.matched_trends) > 1 else (context.matched_trends[0] if context.matched_trends else None)
-        if trend_pillar and request.include_trends:
-            p3_angle = f"Ride the cultural momentum of '{trend_pillar.topic}' ({trend_pillar.confidence_score}% confidence score)."
-            p3_hooks = trend_pillar.suggested_angles or [
-                f"The new trend transforming {context.industry} in 2026",
-                f"How {context.business_name} is adopting {trend_pillar.topic}",
-            ]
-            p3 = CampaignPillarResponse(
-                id=uuid4(),
-                strategy_id=strategy_id,
-                pillar_name=f"Trend Velocity: {trend_pillar.topic}",
-                objective=MarketingObjective.INCREASE_ENGAGEMENT,
-                channel_type="organic",
-                platform=CampaignChannel.tiktok if trend_pillar.platform.value == "tiktok" else CampaignChannel.instagram,
-                focus_product_id=hero_p.id if hero_p else None,
-                product_name=hero_p.name if hero_p else None,
-                offer_id=None,
-                trend_signal_id=trend_pillar.id,
-                trend_topic=trend_pillar.topic,
-                creative_angle=p3_angle,
-                hook_ideas=p3_hooks,
-                suggested_ctas=[cta, "Comment your thoughts below"],
-                content_formats=["viral_sound_short", "trend_breakdown", "behind_the_scenes"],
-                estimated_effort="medium",
-                rationale=f"Leverages verified market trend '{trend_pillar.topic}' from {trend_pillar.source_name} to capture low-cost algorithmic reach.",
-                order_index=3,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-            pillars.append(p3)
-
-        # Pillar 4: Retention, Loyalty & VIP Cross-Sell
-        p4 = CampaignPillarResponse(
-            id=uuid4(),
-            strategy_id=strategy_id,
-            pillar_name="Customer Retention & VIP Community Engagement",
-            objective=MarketingObjective.INCREASE_SALES,
-            channel_type="organic",
-            platform=CampaignChannel.whatsapp if context.country == "PK" else CampaignChannel.email,
-            focus_product_id=None,
-            offer_id=offer1.id if offer1 else None,
-            offer_title=offer1.title if offer1 else None,
-            trend_signal_id=None,
-            creative_angle=f"Nurture existing customer relationships with exclusive updates, early access, and tailored {context.industry} guides.",
-            hook_ideas=[
-                "A special thank you for being a valued client",
-                "Early access: New arrivals before anyone else",
-            ],
-            suggested_ctas=["Join VIP list", "Reply to chat with our team"],
-            content_formats=["newsletter_broadcast", "direct_broadcast_message"],
-            estimated_effort="low",
-            rationale="Maximizes customer lifetime value (LTV) and drives repeat purchases with minimal acquisition friction.",
-            order_index=4,
-            created_at=now_str,
-            updated_at=now_str,
-        )
-        pillars.append(p4)
+            pillars.append(p4)
 
         # Sanitize any prohibited words across all pillars
         for pil in pillars:

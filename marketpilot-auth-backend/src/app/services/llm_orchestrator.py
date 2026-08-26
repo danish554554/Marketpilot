@@ -12,6 +12,7 @@ from app.schemas import (
     StrategicRecommendation,
     StructuredContext,
 )
+from app.services.gemini_service import GeminiService
 from app.services.guardrails import GuardrailsEngine
 from app.supabase_client import get_service_client
 
@@ -22,7 +23,8 @@ class LLMOrchestrator:
     guardrail validation, and audit persistence.
     """
 
-    MODEL_NAME = "marketpilot-v1-engine"
+    MODEL_NAME = "gemini-2.5-flash"
+    FALLBACK_MODEL_NAME = "marketpilot-deterministic-v1"
 
     @classmethod
     def assemble_prompt(
@@ -263,7 +265,25 @@ class LLMOrchestrator:
         start_time = time.perf_counter()
 
         system_instruction, raw_prompt_str = cls.assemble_prompt(context, request)
-        raw_recommendations = cls._generate_grounded_recommendations(context, request)
+
+        # Attempt real Gemini AI generation first
+        active_model = cls.MODEL_NAME
+        raw_recommendations = None
+
+        if GeminiService.is_available():
+            raw_recommendations = GeminiService.generate_recommendations(
+                context=context,
+                request=request,
+                system_instruction=system_instruction,
+                user_prompt_str=raw_prompt_str,
+            )
+            active_model = GeminiService.get_model_name()
+
+        # Graceful fallback to deterministic generator if Gemini was unavailable or returned None
+        if not raw_recommendations:
+            raw_recommendations = cls._generate_grounded_recommendations(context, request)
+            if not GeminiService.is_available():
+                active_model = cls.FALLBACK_MODEL_NAME
 
         # Evaluate against guardrails
         validated_recs, guardrail_res = GuardrailsEngine.evaluate_batch(
@@ -301,7 +321,7 @@ class LLMOrchestrator:
                 "guardrail_status": guardrail_res.status.value,
                 "guardrail_violations": [v.model_dump(mode="json") for v in guardrail_res.violations],
                 "execution_latency_ms": latency_ms,
-                "model_name": cls.MODEL_NAME,
+                "model_name": active_model,
             }
             client.table("ai_generation_logs").insert(log_payload).execute()
         except Exception:
@@ -315,6 +335,6 @@ class LLMOrchestrator:
             recommendations=validated_recs,
             guardrail_evaluation=guardrail_res,
             execution_latency_ms=latency_ms,
-            model_name=cls.MODEL_NAME,
+            model_name=active_model,
             created_at=created_at_str,
         )
