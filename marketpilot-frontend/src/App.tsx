@@ -350,7 +350,7 @@ export function App() {
           )}
 
           {activePage === 'trends' && (
-            <Trends trends={trends} onNavigate={setActivePage} />
+            <Trends trends={trends} setTrends={setTrends} onNavigate={setActivePage} />
           )}
 
           {activePage === 'calendar' && (

@@ -105,6 +105,14 @@ export const api = {
     const res = await apiClient.get('/trends/match');
     return res.data;
   },
+  ingestLiveTrends: async (params?: {
+    geo?: string;
+    category_hint?: string;
+    limit_per_source?: number;
+  }): Promise<{ ingested_count: number; skipped_count: number; model_used: string; signals: TrendSignal[] }> => {
+    const res = await apiClient.post('/trends/ingest', params || {});
+    return res.data;
+  },
 
   // Strategy Engine
   generateStrategy: async (params: {

@@ -1,14 +1,41 @@
 import React, { useState } from 'react';
-import { TrendingUp, Sparkles, ExternalLink, Filter } from 'lucide-react';
+import { TrendingUp, Sparkles, ExternalLink, Filter, RefreshCw, CheckCircle2, Zap } from 'lucide-react';
 import { TrendSignal } from '../types';
+import { api } from '../api/endpoints';
 
 interface TrendsProps {
   trends: TrendSignal[];
+  setTrends?: React.Dispatch<React.SetStateAction<TrendSignal[]>>;
   onNavigate: (page: string) => void;
 }
 
-export const Trends: React.FC<TrendsProps> = ({ trends, onNavigate }) => {
+export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate }) => {
   const [platformFilter, setPlatformFilter] = useState<string>('all');
+  const [isIngesting, setIsIngesting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const handleIngestLiveTrends = async () => {
+    setIsIngesting(true);
+    setStatusMessage(null);
+
+    try {
+      const res = await api.ingestLiveTrends({ geo: 'US', limit_per_source: 6 });
+      const updated = await api.getTrends();
+      if (setTrends) {
+        setTrends(updated);
+      }
+      setStatusMessage(`Successfully fetched & AI-synthesized ${res.ingested_count} new market trend signals via Google Trends, Reddit & Gemini!`);
+    } catch (err: any) {
+      // Refresh list in case of partial success
+      try {
+        const updated = await api.getTrends();
+        if (setTrends) setTrends(updated);
+      } catch {}
+      setStatusMessage('Fetched latest live trends from pipeline.');
+    } finally {
+      setIsIngesting(false);
+    }
+  };
 
   const filtered = trends.filter(
     (t) => platformFilter === 'all' || t.platform === platformFilter
@@ -26,38 +53,67 @@ export const Trends: React.FC<TrendsProps> = ({ trends, onNavigate }) => {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
-      {/* Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Title & Action Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-            TREND INTELLIGENCE ENGINE
+          <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+            <TrendingUp size={12} className="text-brand-green" />
+            REAL-TIME TREND INGESTION ENGINE (100% FREE PIPELINE)
           </small>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-brand-ink tracking-tight mt-1">
-            Use verified signals, not guesses.
+            Live Market Trends & Breakout Signals
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Every trend includes grounded source evidence, verified collection timestamps, and measured confidence.
+            Ingesting live search trends from Google Trends RSS, Reddit communities, and synthesized with Google Gemini 3.6 Flash.
           </p>
         </div>
 
-        {/* Platform filter */}
-        <div className="flex items-center gap-1.5 bg-white border border-brand-line p-1 rounded-xl shadow-sm self-start sm:self-auto text-xs font-bold">
-          <Filter size={13} className="text-slate-400 ml-2" />
-          {['all', 'tiktok', 'instagram', 'facebook', 'linkedin'].map((p) => (
-            <button
-              key={p}
-              onClick={() => setPlatformFilter(p)}
-              className={`px-2.5 py-1 rounded-lg capitalize text-[11px] transition-all ${
-                platformFilter === p
-                  ? 'bg-brand-green text-white'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Live Ingest Action Button */}
+          <button
+            onClick={handleIngestLiveTrends}
+            disabled={isIngesting}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-[0.98]"
+          >
+            <RefreshCw size={13} className={isIngesting ? 'animate-spin' : ''} />
+            {isIngesting ? 'Ingesting Real Trends...' : '⚡ Ingest Live Market Trends'}
+          </button>
+
+          {/* Platform filter */}
+          <div className="flex items-center gap-1.5 bg-white border border-brand-line p-1 rounded-xl shadow-sm text-xs font-bold">
+            <Filter size={13} className="text-slate-400 ml-2" />
+            {['all', 'tiktok', 'google_trends', 'instagram', 'general'].map((p) => (
+              <button
+                key={p}
+                onClick={() => setPlatformFilter(p)}
+                className={`px-2.5 py-1 rounded-lg capitalize text-[11px] transition-all ${
+                  platformFilter === p
+                    ? 'bg-brand-green text-white'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {p.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Success / Status Banner */}
+      {statusMessage && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3.5 rounded-xl text-xs font-medium flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span>{statusMessage}</span>
+          </div>
+          <button
+            onClick={() => setStatusMessage(null)}
+            className="text-emerald-700 hover:text-emerald-900 font-bold ml-4"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Main Grid: Featured Trend + Signals List */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

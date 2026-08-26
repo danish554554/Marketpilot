@@ -6,12 +6,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.dependencies import CurrentUser, require_roles
 from app.schemas import (
     Role,
+    TrendIngestRequest,
+    TrendIngestResponse,
     TrendMatchResponse,
     TrendPlatform,
     TrendSignal,
     TrendSignalCreateRequest,
     TrendSignalUpdateRequest,
 )
+from app.services.trend_ingest_service import TrendIngestService
 from app.supabase_client import get_service_client
 
 router = APIRouter(prefix="/trends", tags=["Trend Intelligence"])
@@ -103,6 +106,40 @@ def match_workspace_trends(current_user: CurrentUser) -> TrendMatchResponse:
         )
     except HTTPException:
         raise
+    except Exception as exc:
+        raise _storage_error(exc) from exc
+
+
+@router.post("/ingest", response_model=TrendIngestResponse)
+def ingest_live_market_trends(
+    current_user: CurrentUser,
+    payload: TrendIngestRequest | None = None,
+) -> TrendIngestResponse:
+    """
+    Automated real trend-data ingestion:
+    Fetches trending signals from free Google Trends RSS & Reddit feeds,
+    enriches them with Google Gemini AI, deduplicates, and saves them to the database.
+    """
+    req = payload or TrendIngestRequest()
+    category_hint = req.category_hint
+
+    # Default category to workspace industry if unspecified
+    if not category_hint:
+        try:
+            workspace_res = get_service_client().table("business_workspaces").select("industry").eq("owner_id", str(current_user.id)).maybe_single().execute()
+            if workspace_res and workspace_res.data:
+                category_hint = workspace_res.data.get("industry")
+        except Exception:
+            pass
+
+    try:
+        result = TrendIngestService.ingest_live_trends(
+            geo=req.geo,
+            category_hint=category_hint,
+            subreddits=req.subreddits,
+            limit_per_source=req.limit_per_source,
+        )
+        return TrendIngestResponse.model_validate(result)
     except Exception as exc:
         raise _storage_error(exc) from exc
 

@@ -644,6 +644,21 @@ class TrendMatchResponse(BaseModel):
     trends: list[TrendSignal]
 
 
+class TrendIngestRequest(BaseModel):
+    geo: str = "US"
+    category_hint: str | None = None
+    subreddits: list[str] | None = None
+    limit_per_source: int = Field(default=6, ge=1, le=20)
+
+
+class TrendIngestResponse(BaseModel):
+    ingested_count: int
+    skipped_count: int
+    model_used: str
+    signals: list[TrendSignal]
+
+
+
 # ==========================================
 # Module 6: LLM Orchestration & Guardrails
 # ==========================================

@@ -269,3 +269,83 @@ class GeminiService:
         except Exception as exc:
             logger.warning(f"Gemini strategy generation error: {exc}")
             return None
+
+    @classmethod
+    def synthesize_trend_signals(
+        cls,
+        raw_signals: list[dict],
+        category_hint: str | None = None,
+    ) -> list[dict] | None:
+        """
+        Takes raw scraped/RSS trends (titles, summaries, URLs) and uses Google Gemini
+        to synthesize them into verified, structured TrendSignal records with confidence
+        scores, suggested marketing angles, target audience, and hashtags.
+        """
+        client = cls.get_client()
+        if not client:
+            return None
+
+        model_name = cls.get_model_name()
+        system_instruction = (
+            "You are MarketPilot Trend Intelligence Engine. "
+            "Analyze the provided raw viral/market trend signals. "
+            "For each raw signal, normalize and enrich it with:\n"
+            "1. topic: concise 3-7 word catchy trend title.\n"
+            "2. headline: 1-sentence executive summary of the consumer/market behavior.\n"
+            "3. summary: 2-3 sentence explanation of why this trend is moving and how brands can leverage it.\n"
+            "4. platform: 'tiktok' | 'instagram' | 'facebook' | 'linkedin' | 'x' | 'youtube' | 'google_trends' | 'general'\n"
+            "5. category: specific e-commerce category (e.g. 'Beauty', 'Fashion', 'Tech', 'Ecommerce', 'Health', 'Home', 'Retail').\n"
+            "6. target_audience: description of the primary consumer demographic.\n"
+            "7. suggested_angles: array of 2-3 actionable marketing/content hook angles.\n"
+            "8. hashtags: array of 2-5 relevant hashtags starting with #.\n"
+            "9. confidence_score: integer between 70 and 99 representing trend virality/confidence.\n"
+            "10. source_name: original source name.\n"
+            "11. source_url: original source URL or verified fallback URL.\n"
+            "Output pure JSON array."
+        )
+
+        user_prompt = (
+            f"Category Focus: {category_hint or 'E-commerce & Retail'}\n"
+            f"Raw Ingested Signals:\n{json.dumps(raw_signals, indent=2)}\n\n"
+            "Generate JSON array matching schema:\n"
+            "[\n"
+            "  {\n"
+            "    \"topic\": \"string\",\n"
+            "    \"headline\": \"string\",\n"
+            "    \"summary\": \"string\",\n"
+            "    \"platform\": \"tiktok | instagram | google_trends | general\",\n"
+            "    \"category\": \"string\",\n"
+            "    \"target_audience\": \"string\",\n"
+            "    \"suggested_angles\": [\"string\", \"string\"],\n"
+            "    \"hashtags\": [\"#trend1\", \"#trend2\"],\n"
+            "    \"confidence_score\": 85,\n"
+            "    \"source_name\": \"string\",\n"
+            "    \"source_url\": \"https://...\"\n"
+            "  }\n"
+            "]"
+        )
+
+        try:
+            from google.genai import types
+
+            response = client.models.generate_content(
+                model=model_name,
+                contents=user_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json",
+                    temperature=0.4,
+                ),
+            )
+
+            if not response or not response.text:
+                return None
+
+            data = json.loads(response.text)
+            if isinstance(data, list) and len(data) > 0:
+                return data
+            return None
+        except Exception as exc:
+            logger.warning(f"Gemini trend synthesis error: {exc}")
+            return None
+
