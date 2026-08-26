@@ -1151,6 +1151,28 @@ class WorkspaceBackupExport(BaseModel):
     ai_logs_count: int = 0
 
 
+class CopyGenerationRequest(BaseModel):
+    product_name: str
+    product_description: str | None = None
+    product_features: list[str] = Field(default_factory=list)
+    product_pain_points: list[str] = Field(default_factory=list)
+    channel: str = "tiktok"  # tiktok, instagram, paid, email, whatsapp
+    format: str = "script"  # script, organic, paid, email, whatsapp
+    trend_topic: str | None = None
+    hook_idea: str | None = None
+    custom_instructions: str | None = None
+
+
+class CopyGenerationResponse(BaseModel):
+    hook: str
+    caption: str
+    call_to_action: str
+    hashtags: str
+    channel: str
+    format: str
+    ai_model_used: str = "gemini-3.6-flash"
+
+
 
 
 

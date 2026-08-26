@@ -160,6 +160,20 @@ export const api = {
     const res = await apiClient.patch(`/planner/items/${itemId}`, data);
     return res.data;
   },
+  generateStudioCopy: async (params: {
+    product_name: string;
+    product_description?: string;
+    product_features?: string[];
+    product_pain_points?: string[];
+    channel: string;
+    format: string;
+    trend_topic?: string;
+    hook_idea?: string;
+    custom_instructions?: string;
+  }): Promise<{ hook: string; caption: string; call_to_action: string; hashtags: string; ai_model_used: string }> => {
+    const res = await apiClient.post('/planner/generate-copy', params);
+    return res.data;
+  },
 
   // Reporting & Export
   getWorkspaceHealth: async (): Promise<WorkspaceHealthReport> => {

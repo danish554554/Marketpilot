@@ -349,3 +349,150 @@ class GeminiService:
             logger.warning(f"Gemini trend synthesis error: {exc}")
             return None
 
+    @classmethod
+    def generate_content_copy(
+        cls,
+        product_name: str,
+        product_description: str | None,
+        product_features: list[str],
+        product_pain_points: list[str],
+        channel: str,
+        format_type: str,
+        trend_topic: str | None = None,
+        hook_idea: str | None = None,
+        custom_instructions: str | None = None,
+    ) -> dict[str, str]:
+        """
+        Uses Google Gemini to generate highly persuasive, channel-tailored marketing copy
+        accurately referencing the specific product, its real features, and target pain points.
+        """
+        client = cls.get_client()
+        model_name = cls.get_model_name()
+
+        system_instruction = (
+            "You are an elite direct-response e-commerce copywriter and viral video scriptwriter. "
+            "Write production-ready, highly engaging, conversion-optimized marketing copy. "
+            "IMPORTANT: Strictly speak about the specific product given in the prompt, its real features, and the problems it solves. "
+            "Do NOT confuse it with unrelated products. "
+            "Output pure JSON with exactly 4 keys: 'hook', 'caption', 'call_to_action', 'hashtags'."
+        )
+
+        user_prompt = (
+            f"PRODUCT DETAILS:\n"
+            f"- Product Name: {product_name}\n"
+            f"- Description: {product_description or 'High-quality e-commerce product'}\n"
+            f"- Key Features: {', '.join(product_features) if product_features else 'Premium quality & durable design'}\n"
+            f"- Pain Points It Solves: {', '.join(product_pain_points) if product_pain_points else 'Daily consumer friction'}\n\n"
+            f"CAMPAIGN GOAL & FORMAT:\n"
+            f"- Channel: {channel} (e.g. tiktok, instagram, paid ad, email, whatsapp)\n"
+            f"- Format: {format_type}\n"
+            f"- Live Trend / Angle: {trend_topic or 'Problem-Solution demonstration'}\n"
+            f"- Optional Hook Seed: {hook_idea or 'None'}\n"
+            f"- Custom Notes: {custom_instructions or 'Focus on fast benefits and high clarity'}\n\n"
+            "INSTRUCTIONS FOR FORMAT:\n"
+            "- If format is 'script' or 'tiktok': Write a complete timestamped short-form video script with [HOOK - 0:00 to 0:03], [DEMO & BENEFIT - 0:03 to 0:10], and [CALL TO ACTION - 0:10 to 0:15] with visual & voiceover cues.\n"
+            "- If format is 'organic' or 'instagram': Write an educational carousel/reel caption highlighting why traditional alternatives fail and how this product solves it, with clean bullet points and engagement question.\n"
+            "- If format is 'paid': Write a high-urgency direct-response ad copy with strong hook, comparison against costly alternatives, risk-reversal guarantee, and compelling discount CTA.\n"
+            "- If format is 'email': Write a complete newsletter with Subject Line, story-driven intro, product benefits, and clear CTA button text.\n"
+            "- If format is 'whatsapp': Write a friendly, conversational 1-click VIP restock / flash sale broadcast message.\n\n"
+            "Return JSON matching:\n"
+            "{\n"
+            "  \"hook\": \"string\",\n"
+            "  \"caption\": \"string\",\n"
+            "  \"call_to_action\": \"string\",\n"
+            "  \"hashtags\": \"#Hashtag1 #Hashtag2 ...\"\n"
+            "}"
+        )
+
+        if client:
+            try:
+                from google.genai import types
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=user_prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        response_mime_type="application/json",
+                        temperature=0.7,
+                    ),
+                )
+                if response and response.text:
+                    parsed = json.loads(response.text)
+                    if isinstance(parsed, dict) and "hook" in parsed and "caption" in parsed:
+                        return {
+                            "hook": parsed.get("hook", ""),
+                            "caption": parsed.get("caption", ""),
+                            "call_to_action": parsed.get("call_to_action", "Shop now"),
+                            "hashtags": parsed.get("hashtags", ""),
+                        }
+            except Exception as exc:
+                logger.warning(f"Gemini copy generation API error: {exc}")
+
+        # Intelligent Product-Aware Fallback
+        first_feat = product_features[0] if product_features else "innovative design"
+        first_pain = product_pain_points[0] if product_pain_points else "daily frustration"
+
+        if format_type == "script" or channel == "tiktok":
+            h = hook_idea or f"Still struggling with {first_pain}? Stop and watch this."
+            c = (
+                f"[HOOK - 0:00 to 0:03]\n"
+                f"Visual: Close-up demonstrating the daily problem with {first_pain}.\n"
+                f"Voiceover: \"{h}\"\n\n"
+                f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
+                f"Visual: Presenter using {product_name} showcasing {first_feat}.\n"
+                f"Voiceover: \"The {product_name} fixes this in seconds. Built with {first_feat} so you get effortless results every time.\"\n\n"
+                f"[CALL TO ACTION - 0:10 to 0:15]\n"
+                f"Visual: Finished result with product box in hand.\n"
+                f"Voiceover: \"Tap the link below to get yours with special launch pricing before stock runs out!\""
+            )
+            cta = "Tap link in bio to get 20% off"
+            tags = f"#{product_name.replace(' ', '')} #ViralFinds #ProblemSolved #LifeHacks"
+        elif format_type == "paid":
+            h = f"Why struggle with {first_pain} when you can have this?"
+            c = (
+                f"If you're tired of dealing with {first_pain}, it's time for an upgrade.\n\n"
+                f"Meet the **{product_name}**:\n"
+                + "\n".join([f"✨ {f}" for f in product_features[:4]])
+                + f"\n\n✅ 30-Day Money Back Guarantee\n✅ Fast Tracked Shipping\n\nClick below to claim your exclusive discount today!"
+            )
+            cta = "Shop Now & Claim Discount"
+            tags = "#SpecialOffer #MustHave #TrendingProduct"
+        elif format_type == "email":
+            h = f"Subject: The smarter way to handle {first_pain} ✨"
+            c = (
+                f"Hi there,\n\n"
+                f"If {first_pain} has been slowing you down, we have great news.\n\n"
+                f"We created the **{product_name}** specifically to make your daily routine effortless.\n\n"
+                f"Key Highlights:\n"
+                + "\n".join([f"• **{f}**" for f in product_features[:3]])
+                + f"\n\nClick below to order yours and take advantage of our limited-time offer:"
+            )
+            cta = "Explore the Collection & Save"
+            tags = ""
+        elif format_type == "whatsapp":
+            h = f"✨ VIP Update: {product_name} is in stock!"
+            c = (
+                f"Hi! Quick update on the **{product_name}**.\n\n"
+                f"Due to high demand, we just restocked our latest batch featuring {first_feat}.\n\n"
+                f"Reply to this message with **ORDER** to reserve yours with free priority shipping!"
+            )
+            cta = "Order via WhatsApp"
+            tags = ""
+        else:  # organic / instagram
+            h = f"The 3-step routine change for {first_pain}."
+            c = (
+                f"Most people think dealing with {first_pain} is just unavoidable.\n\n"
+                f"Here is what actually works: Introducing the {product_name}.\n\n"
+                + "\n".join([f"🔹 {f}" for f in product_features[:4]])
+                + f"\n\nSave this post for later or share with a friend who needs this!"
+            )
+            cta = "Drop a 💬 below for the direct link"
+            tags = f"#{product_name.replace(' ', '')} #RoutineUpgrade #ProductDiscovery"
+
+        return {
+            "hook": h,
+            "caption": c,
+            "call_to_action": cta,
+            "hashtags": tags,
+        }
+

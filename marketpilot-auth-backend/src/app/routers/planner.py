@@ -301,3 +301,36 @@ def delete_planner_item(item_id: UUID, current_user: CurrentUser) -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Failed to delete planner item: {str(exc)}",
         ) from exc
+
+
+@router.post("/generate-copy", response_model=CopyGenerationResponse, status_code=status.HTTP_200_OK)
+def generate_copy(
+    payload: CopyGenerationRequest,
+    current_user: CurrentUser,
+) -> CopyGenerationResponse:
+    """
+    Generates rich, product-grounded marketing copy and video scripts using Google Gemini 3.6 Flash.
+    """
+    from app.services.gemini_service import GeminiService
+
+    result = GeminiService.generate_content_copy(
+        product_name=payload.product_name,
+        product_description=payload.product_description,
+        product_features=payload.product_features,
+        product_pain_points=payload.product_pain_points,
+        channel=payload.channel,
+        format_type=payload.format,
+        trend_topic=payload.trend_topic,
+        hook_idea=payload.hook_idea,
+        custom_instructions=payload.custom_instructions,
+    )
+
+    return CopyGenerationResponse(
+        hook=result["hook"],
+        caption=result["caption"],
+        call_to_action=result["call_to_action"],
+        hashtags=result["hashtags"],
+        channel=payload.channel,
+        format=payload.format,
+        ai_model_used=GeminiService.get_model_name(),
+    )
