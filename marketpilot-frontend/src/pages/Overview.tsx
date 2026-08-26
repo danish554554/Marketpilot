@@ -294,7 +294,7 @@ export const Overview: React.FC<OverviewProps> = ({
             <span className="text-[9px] font-extrabold text-slate-400 block">TUE <b>19</b></span>
             <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-pale text-brand-green leading-snug">
               <small className="block text-[7px] font-extrabold tracking-wider uppercase">ORGANIC · REEL</small>
-              {heroProduct.name}
+              {heroProduct?.name || 'Hero Showcase Reel'}
               <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Awareness</em>
             </div>
           </div>
