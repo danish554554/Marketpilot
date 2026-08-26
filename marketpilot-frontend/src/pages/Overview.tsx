@@ -6,7 +6,12 @@ import {
   CheckCircle,
   Sparkles,
   ArrowRight,
-  ChevronDown
+  ChevronDown,
+  Video,
+  Instagram,
+  PlusCircle,
+  Zap,
+  Target
 } from 'lucide-react';
 import { MarketingStrategy, Product, TrendSignal } from '../types';
 
@@ -28,23 +33,34 @@ export const Overview: React.FC<OverviewProps> = ({
   const heroProduct = products.find((p) => p.margin_tier === 'high') || products[0];
   const topTrend = trends[0];
 
+  const todayFormatted = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).toUpperCase();
+
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
       {/* Intro Greeting */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-            SATURDAY, 22 AUGUST 2026
+          <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase flex items-center gap-1">
+            <Zap size={11} className="text-brand-green" /> {todayFormatted}
           </small>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-brand-ink tracking-tight mt-1">
-            Good morning, {businessName || 'Sarah'} <em className="not-italic text-brand-green">✦</em>
+            Good morning, {businessName || 'Store Owner'} <em className="not-italic text-brand-green">✦</em>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Your best marketing opportunities and high-margin inventory are ready for review.
+            Your AI Marketing Copilot has analyzed your products, profit margins, and viral trends for today.
           </p>
         </div>
-        <button className="self-start sm:self-auto bg-white border border-brand-line text-slate-600 text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-sm hover:bg-slate-50">
-          <span>This week: 18–24 Aug</span>
+        <button
+          onClick={() => onNavigate('planner')}
+          className="self-start sm:self-auto bg-white border border-brand-line text-slate-700 text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-sm hover:bg-slate-50"
+        >
+          <Sparkles size={13} className="text-brand-green" />
+          <span>Active Strategy Plan</span>
           <ChevronDown size={14} />
         </button>
       </div>
@@ -116,19 +132,20 @@ export const Overview: React.FC<OverviewProps> = ({
         </article>
       </div>
 
-      {/* Two Column: Today's Priority & Trend Intelligence */}
+      {/* Two Column: Today's Action Center & Trend Intelligence */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Today's Priority Card (7 cols) */}
+        {/* Today's Recommended Post (7 cols) */}
         <article className="lg:col-span-7 bg-white border border-brand-line rounded-2xl p-5 md:p-6 shadow-card flex flex-col justify-between">
           {heroProduct ? (
             <div>
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div>
-                  <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-                    TODAY'S STRATEGIC PRIORITY
+                  <small className="text-[9px] font-extrabold tracking-wider text-emerald-700 uppercase flex items-center gap-1.5">
+                    <Sparkles size={12} className="text-brand-green" />
+                    WHAT TO POST TODAY · AI COPILOT RECOMMENDATION
                   </small>
                   <h2 className="text-lg font-display font-bold text-brand-ink mt-0.5">
-                    Make the {heroProduct.name} your hero product.
+                    Publish a TikTok Video & Instagram Reel for {heroProduct.name}.
                   </h2>
                 </div>
                 <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-1 rounded-md">
@@ -143,10 +160,10 @@ export const Overview: React.FC<OverviewProps> = ({
                   <small className="text-[7px] font-sans opacity-80">item</small>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Recommended Product</span>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Target Product</span>
                   <h3 className="text-sm font-bold text-brand-ink truncate">{heroProduct.name}</h3>
                   <small className="text-[10px] text-emerald-700 font-bold block">
-                    ● In stock · {heroProduct.stock_quantity || 100} units · {heroProduct.profit_margin || '65'}% margin
+                    ● In stock · {heroProduct.stock_quantity || 100} units · {heroProduct.profit_margin || '65'}% margin tier
                   </small>
                 </div>
               </div>
@@ -155,60 +172,62 @@ export const Overview: React.FC<OverviewProps> = ({
               <div className="bg-[#f5f8f7] border border-[#e4eae8] rounded-xl p-3.5 flex gap-2.5 my-3">
                 <Sparkles size={16} className="text-brand-green shrink-0 mt-0.5" />
                 <div className="text-[11px] leading-relaxed">
-                  <strong className="text-brand-ink font-bold block mb-0.5">Why this product today?</strong>
+                  <strong className="text-brand-ink font-bold block mb-0.5">Why this content today?</strong>
                   <p className="text-slate-600 m-0">
-                    High stock velocity, high profit margin tier, and addresses customer pain points ({heroProduct.pain_points?.[0] || 'daily customer friction'}) aligned with emerging trend signals.
+                    High margin profitability tier combined with top consumer pain point: <em>"{heroProduct.pain_points?.[0] || 'daily routine frustration'}"</em>. Direct problem-solution hooks deliver the highest conversion rate today.
                   </p>
                 </div>
               </div>
 
-              {/* Organic vs Paid split breakdown */}
+              {/* Today's Recommended Channels */}
               <div className="grid grid-cols-2 gap-3 my-4">
-                <div className="border-l-2 border-brand-green pl-2.5 py-0.5">
-                  <small className="text-[8px] font-extrabold text-brand-green tracking-wider uppercase block">
-                    ORGANIC FOCUS
+                <div className="border-l-2 border-brand-green pl-2.5 py-1 bg-emerald-50/40 rounded-r-lg">
+                  <small className="text-[8px] font-extrabold text-brand-green tracking-wider uppercase flex items-center gap-1">
+                    <Video size={10} /> TIKTOK VIDEO HOOK
                   </small>
-                  <b className="text-xs text-brand-ink block my-0.5">Instagram Reel & Carousel</b>
-                  <span className="text-[10px] text-slate-400 truncate block">“Problem-solution routine breakdown”</span>
+                  <b className="text-xs text-brand-ink block my-0.5">3-Second Problem Split-Screen</b>
+                  <span className="text-[10px] text-slate-500 truncate block">“Watch this 30-sec demo fix”</span>
                 </div>
-                <div className="border-l-2 border-brand-blue pl-2.5 py-0.5">
-                  <small className="text-[8px] font-extrabold text-brand-blue tracking-wider uppercase block">
-                    PAID ACQUISITION
+                <div className="border-l-2 border-brand-blue pl-2.5 py-1 bg-blue-50/40 rounded-r-lg">
+                  <small className="text-[8px] font-extrabold text-brand-blue tracking-wider uppercase flex items-center gap-1">
+                    <Instagram size={10} /> INSTAGRAM CAROUSEL
                   </small>
-                  <b className="text-xs text-brand-ink block my-0.5">Meta & TikTok Ad</b>
-                  <span className="text-[10px] text-slate-400 truncate block">Direct response conversion angle</span>
+                  <b className="text-xs text-brand-ink block my-0.5">3 Routine Mistakes Breakdown</b>
+                  <span className="text-[10px] text-slate-500 truncate block">Educate & drive DM sales</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="py-8 text-center space-y-3">
-              <Package size={32} className="mx-auto text-slate-300" />
-              <h3 className="font-bold text-sm text-brand-ink">No Products in Inventory Yet</h3>
+            <div className="py-10 text-center space-y-3">
+              <Package size={36} className="mx-auto text-emerald-600" />
+              <h3 className="font-bold text-base text-brand-ink">👋 Welcome! Let's Add Your First Product</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Add your catalog products with retail & cost prices to let the AI strategist calculate profit margins and viral hooks.
+                Add your product with retail & cost price. MarketPilot AI will calculate your margins and tell you exactly what viral video scripts and carousel posts to publish every day!
               </p>
               <button
                 onClick={() => onNavigate('products')}
-                className="bg-brand-green text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm hover:bg-emerald-700 transition-all"
+                className="bg-brand-green text-white text-xs font-extrabold px-5 py-2.5 rounded-xl shadow-sm hover:bg-emerald-700 transition-all inline-flex items-center gap-1.5"
               >
-                + Add Your First Product
+                <PlusCircle size={14} />
+                <span>+ Add Your First Product</span>
               </button>
             </div>
           )}
 
           <footer className="pt-3 border-t border-brand-line flex items-center justify-between mt-2">
             <button
-              onClick={() => onNavigate('planner')}
-              className="text-xs font-extrabold text-brand-green hover:underline flex items-center gap-1"
+              onClick={() => onNavigate('products')}
+              className="text-xs font-extrabold text-slate-500 hover:text-slate-900 flex items-center gap-1"
             >
-              <span>View full strategy rationale</span>
+              <span>Manage Products</span>
               <ArrowRight size={13} />
             </button>
             <button
               onClick={() => onNavigate('studio')}
-              className="bg-brand-green text-white text-[11px] font-extrabold px-3 py-1.5 rounded-lg shadow-sm hover:bg-brand-green-dark"
+              className="bg-brand-green hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-2 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
             >
-              Open Studio
+              <Sparkles size={13} />
+              <span>⚡ Generate & Copy in Studio</span>
             </button>
           </footer>
         </article>
@@ -219,146 +238,55 @@ export const Overview: React.FC<OverviewProps> = ({
             <div className="flex items-center justify-between mb-3">
               <div>
                 <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-                  TREND INTELLIGENCE
+                  ACTIVE MARKET SIGNALS
                 </small>
-                <h2 className="text-lg font-display font-bold text-brand-ink">Signals worth using</h2>
+                <h2 className="text-base font-display font-bold text-brand-ink">
+                  Viral Trends Matching Products
+                </h2>
               </div>
-              <button
-                onClick={() => onNavigate('trends')}
-                className="text-xs text-brand-green font-bold hover:underline"
-              >
-                View all ({trends.length}) →
-              </button>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                Live Ingest
+              </span>
             </div>
 
-            {trends.length > 0 ? (
-              <div className="space-y-2.5 divide-y divide-slate-100">
-                {trends.slice(0, 3).map((t, idx) => (
-                  <div
-                    key={t.id || idx}
-                    onClick={() => onNavigate('trends')}
-                    className="pt-2 flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 p-1 rounded-lg transition-colors"
-                  >
-                    <i className="not-italic w-7 h-7 rounded-lg bg-emerald-50 text-brand-green grid place-items-center text-xs font-extrabold shrink-0">
-                      ↗
-                    </i>
-                    <div className="min-w-0 flex-1">
-                      <b className="text-xs text-brand-ink block truncate">{t.topic}</b>
-                      <span className="text-[10px] text-slate-400 block">{t.source_name} · {t.confidence_score}% confidence</span>
+            <div className="divide-y divide-slate-100">
+              {trends.slice(0, 3).map((trend, i) => (
+                <div key={trend.id || i} className="py-3 flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-extrabold text-[10px] grid place-items-center shrink-0">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs font-bold text-brand-ink truncate">{trend.topic}</h4>
+                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{trend.headline}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                        {trend.confidence_score}% Confidence
+                      </span>
+                      <span className="text-[9px] text-slate-400 capitalize">{trend.platform}</span>
                     </div>
-                    <em className="not-italic text-[8px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full shrink-0">
-                      High
-                    </em>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-6 text-center space-y-2">
-                <p className="text-xs text-slate-500">No trend signals ingested yet.</p>
-                <button
-                  onClick={() => onNavigate('trends')}
-                  className="text-xs text-brand-green font-bold hover:underline"
-                >
-                  ⚡ Click to ingest live Google & Reddit trends
-                </button>
-              </div>
-            )}
+                </div>
+              ))}
+
+              {trends.length === 0 && (
+                <div className="py-6 text-center text-xs text-slate-400">
+                  Click "Trend Intelligence" to ingest live market signals.
+                </div>
+              )}
+            </div>
           </div>
 
-          <p className="text-[10px] bg-slate-50 text-slate-600 p-2.5 rounded-lg border border-slate-100 mt-4 m-0">
-            ✓ All signals verify source evidence and confidence score before injection into AI plans.
-          </p>
+          <footer className="pt-3 border-t border-brand-line flex items-center justify-between mt-2">
+            <button
+              onClick={() => onNavigate('trends')}
+              className="text-xs font-extrabold text-brand-green hover:underline flex items-center gap-1"
+            >
+              <span>Explore all {trends.length} signals</span>
+              <ArrowRight size={13} />
+            </button>
+          </footer>
         </article>
       </div>
-
-      {/* Content Calendar Row */}
-      <article className="bg-white border border-brand-line rounded-2xl p-5 md:p-6 shadow-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-          <div>
-            <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-              CONTENT CALENDAR
-            </small>
-            <h2 className="text-lg font-display font-bold text-brand-ink">This week’s plan</h2>
-          </div>
-          <div className="flex items-center gap-3 text-xs text-slate-500">
-            <span className="flex items-center gap-1.5">
-              <i className="w-2 h-2 rounded-full bg-brand-green not-italic"></i> Organic
-            </span>
-            <span className="flex items-center gap-1.5">
-              <i className="w-2 h-2 rounded-full bg-brand-blue not-italic"></i> Paid
-            </span>
-            <button
-              onClick={() => onNavigate('calendar')}
-              className="text-xs font-extrabold text-brand-green hover:underline ml-2"
-            >
-              Open calendar →
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">MON <b>18</b></span>
-            <p className="p-2 rounded-md text-[10px] font-bold mt-2 bg-slate-50 text-slate-400 border border-dashed border-slate-200 text-center">
-              No plan
-            </p>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">TUE <b>19</b></span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-pale text-brand-green leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">ORGANIC · REEL</small>
-              {heroProduct?.name || 'Hero Showcase Reel'}
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Awareness</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">WED <b>20</b></span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-blue-pale text-brand-blue leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">PAID · META</small>
-              Direct Acquisition
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Conversion</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block flex items-center gap-1">
-              THU <b className="bg-brand-green text-white w-4 h-4 rounded-full text-[10px] grid place-items-center">21</b>
-            </span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-pale text-brand-green leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">ORGANIC · TIKTOK</small>
-              What fits inside?
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Consideration</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">FRI <b>22</b></span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-pale text-brand-green leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">ORGANIC · STORY</small>
-              Customer review
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Trust</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">SAT <b>23</b></span>
-            <div className="p-2 rounded-lg text-[10px] font-bold mt-2 bg-brand-blue-pale text-brand-blue leading-snug">
-              <small className="block text-[7px] font-extrabold tracking-wider uppercase">PAID · META</small>
-              VIP Retargeting
-              <em className="block not-italic text-[8px] font-normal opacity-80 mt-1">Conversion</em>
-            </div>
-          </div>
-
-          <div className="border-l border-brand-line pl-2 min-h-[100px]">
-            <span className="text-[9px] font-extrabold text-slate-400 block">SUN <b>24</b></span>
-            <p className="p-2 rounded-md text-[10px] font-bold mt-2 bg-slate-50 text-slate-400 border border-dashed border-slate-200 text-center">
-              No plan
-            </p>
-          </div>
-        </div>
-      </article>
     </div>
   );
 };
