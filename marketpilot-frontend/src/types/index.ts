@@ -108,11 +108,13 @@ export interface TrendSignal {
   summary: string;
   platform: TrendPlatform;
   category: string;
+  target_audience?: string;
   source_name: string;
   source_url: string;
   collection_date: string;
   confidence_score: number;
   suggested_angles?: string[];
+  hashtags?: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
