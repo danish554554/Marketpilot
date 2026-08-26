@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, CheckCircle2, DollarSign, Layers, ArrowRight } from 'lucide-react';
+import { Sparkles, CheckCircle2, DollarSign, Layers, ArrowRight, TrendingUp, Lightbulb, Target } from 'lucide-react';
 import { MarketingStrategy, Product, TrendSignal } from '../types';
 import { api } from '../api/endpoints';
 
@@ -22,6 +22,8 @@ export const Planner: React.FC<PlannerProps> = ({
   const [objective, setObjective] = useState('increase_product_awareness');
   const [budget, setBudget] = useState('15000');
   const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id || '');
+  const [selectedTrendId, setSelectedTrendId] = useState<string>('');
+  const [includeTrends, setIncludeTrends] = useState(true);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -30,49 +32,58 @@ export const Planner: React.FC<PlannerProps> = ({
     setLoading(true);
 
     try {
+      const selectedTrend = trends.find((t) => t.id === selectedTrendId);
+      const customPrompt = notes + (selectedTrend ? ` Focus especially on the market trend: "${selectedTrend.topic}".` : '');
+
       const result = await api.generateStrategy({
         timeframe,
         primary_goal: objective,
-        include_trends: true,
-        custom_instructions: notes,
+        include_trends: includeTrends,
+        custom_instructions: customPrompt,
       });
       setActiveStrategy(result);
     } catch (err) {
       const prod = products.find((p) => p.id === selectedProductId) || products[0];
+      const trend = trends.find((t) => t.id === selectedTrendId) || trends[0];
+
       const fallbackStrategy: MarketingStrategy = {
         id: 'strat-' + Date.now(),
         workspace_id: 'ws1',
         created_by: 'u1',
-        title: `${timeframe === 'weekly' ? '7-Day Focused Campaign' : '30-Day Growth Strategy'}: ${prod?.name || 'Hero Product'} Acceleration`,
+        title: `${timeframe === 'weekly' ? '7-Day Sprint' : '30-Day Campaign'}: ${prod?.name || 'Hero Product'} Acceleration`,
         timeframe,
         status: 'approved',
-        executive_summary: `Omnichannel marketing campaign prioritizing ${prod?.name || 'hero inventory'} (${prod?.profit_margin || '70'}% margin) with balanced organic community storytelling and paid acquisition.`,
-        target_audience_summary: 'Targeting professionals and students seeking durable, minimalist everyday carry solutions.',
+        executive_summary: `Omnichannel strategy connecting our ${prod?.name || 'hero product'} (${prod?.profit_margin || '78.7'}% profit margin) with real-time market trend signals like "${trend?.topic || 'Peach Fuzz Removal'}" to maximize organic reach and paid ROAS.`,
+        target_audience_summary: trend?.target_audience || 'High-intent digital consumers seeking seamless, painless beauty and grooming solutions.',
         budget_allocation_summary: {
-          total_budget: budget || 15000,
+          total_budget: Number(budget) || 15000,
           currency: 'USD',
           organic_percentage: 60,
           paid_percentage: 40,
         },
         product_priorities_summary: {
-          hero_products: [{ name: prod?.name || 'Luna Everyday Bag', margin_tier: 'high', stock_quantity: 450 }],
+          hero_products: [{ name: prod?.name || '2-in-1 Rechargeable Hair Remover', margin_tier: 'high', stock_quantity: 650 }],
         },
-        strategic_rationale: 'High profit margin and low inventory risk.',
+        strategic_rationale: 'High profit margin combined with surging consumer trend momentum.',
         pillars: [
           {
             id: 'p-1',
             strategy_id: 'strat-1',
-            pillar_name: 'Hero Education & Demonstration',
-            objective: 'Increase Product Awareness',
+            pillar_name: 'Viral Routine & Problem-Solution Hook',
+            objective: 'increase_product_awareness',
             channel_type: 'organic',
-            platform: 'instagram',
-            product_name: prod?.name || 'Luna Everyday Bag',
-            creative_angle: '“Everything I carry in one workday”',
-            hook_ideas: ['Stop struggling with messy bags', 'What actually fits inside?'],
-            suggested_ctas: ['Explore the collection'],
-            content_formats: ['carousel_slides', 'post_caption'],
+            platform: 'tiktok',
+            product_name: prod?.name || '2-in-1 Rechargeable Hair Remover',
+            trend_topic: trend?.topic || '“30-Second Peach Fuzz Removal Before Makeup”',
+            creative_angle: 'Showing close-up before & after foundation glide over hair-free skin vs patchy makeup',
+            hook_ideas: [
+              'Stop applying foundation over peach fuzz — watch this 30-sec prep',
+              'The #1 mistake ruining your smooth base routine',
+            ],
+            suggested_ctas: ['Get the smooth base tool with 20% off'],
+            content_formats: ['short_video_script', 'carousel_slides'],
             estimated_effort: 'medium',
-            rationale: 'Builds high consideration and organic shareability.',
+            rationale: `Directly capitalizes on the "${trend?.topic || 'Peach Fuzz Removal'}" trend to position our device as the essential pre-makeup step.`,
             order_index: 1,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -80,17 +91,21 @@ export const Planner: React.FC<PlannerProps> = ({
           {
             id: 'p-2',
             strategy_id: 'strat-1',
-            pillar_name: 'Direct Response Acquisition',
-            objective: 'Drive Sales & Conversions',
+            pillar_name: 'Pain vs Cost-Saving Comparison Reel',
+            objective: 'increase_sales',
             channel_type: 'paid',
-            platform: 'tiktok',
-            product_name: prod?.name || 'Luna Everyday Bag',
-            creative_angle: 'Fast-paced comparison vs flimsy alternatives',
-            hook_ideas: ['Tired of bags that fall apart?', 'Built for heavy daily wear.'],
-            suggested_ctas: ['Shop now with free shipping'],
+            platform: 'instagram',
+            product_name: prod?.name || '2-in-1 Rechargeable Hair Remover',
+            trend_topic: 'Painless Home Dermaplaning vs Salon Waxing',
+            creative_angle: 'Splitting screen: painful $80 salon waxing vs zero-pain $39.99 rechargeable trimmer at home',
+            hook_ideas: [
+              'Why pay $80 every month when you can do this in 1 minute?',
+              'Zero redness. Zero razor burn. How I retired my disposable blades.',
+            ],
+            suggested_ctas: ['Shop the 2-in-1 Hair Remover today'],
             content_formats: ['short_video_script'],
             estimated_effort: 'low',
-            rationale: 'Leverages high margin to maximize paid ROAS.',
+            rationale: 'Direct-response comparative angle driving high ROAS with clear margin advantages.',
             order_index: 2,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -98,17 +113,21 @@ export const Planner: React.FC<PlannerProps> = ({
           {
             id: 'p-3',
             strategy_id: 'strat-1',
-            pillar_name: 'Trend Velocity & Social Proof',
-            objective: 'Boost Social Engagement',
+            pillar_name: 'Micro-Eyebrow Detailing & Precision Hack',
+            objective: 'increase_engagement',
             channel_type: 'organic',
-            platform: 'tiktok',
-            trend_topic: trends[0]?.topic || '“What fits inside” videos',
-            creative_angle: 'Trend jacking viral packing demonstrations',
-            hook_ideas: ['Packing 6 essentials in 15 seconds', 'My commuter secret weapon'],
-            suggested_ctas: ['Check out the drop'],
-            content_formats: ['short_video_script'],
+            platform: 'instagram',
+            product_name: prod?.name || '2-in-1 Rechargeable Hair Remover',
+            trend_topic: 'Eyebrow Shaping Hacks for Busy Mornings',
+            creative_angle: 'Quick morning GRWM switching from peach fuzz head to precision brow detailer',
+            hook_ideas: [
+              'How I shape my brows in 45 seconds without plucking tears',
+              'The double-headed hack you didn’t know you needed',
+            ],
+            suggested_ctas: ['Discover the dual-head secret'],
+            content_formats: ['carousel_slides', 'post_caption'],
             estimated_effort: 'medium',
-            rationale: 'Captures viral discovery feed momentum.',
+            rationale: 'Highlights product versatility and solves painful plucking pain points.',
             order_index: 3,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -116,17 +135,20 @@ export const Planner: React.FC<PlannerProps> = ({
           {
             id: 'p-4',
             strategy_id: 'strat-1',
-            pillar_name: 'VIP Retention & Early Access',
-            objective: 'Customer Retention & LTV',
+            pillar_name: 'VIP Glow Club & Maintenance Retention',
+            objective: 'increase_sales',
             channel_type: 'organic',
             platform: 'email',
-            product_name: prod?.name || 'Luna Everyday Bag',
-            creative_angle: 'Behind-the-scenes craftsmanship and care tips',
-            hook_ideas: ['How to care for your everyday carry', 'VIP exclusive restock'],
-            suggested_ctas: ['Claim VIP offer'],
-            content_formats: ['email_newsletter', 'direct_message'],
+            product_name: prod?.name || '2-in-1 Rechargeable Hair Remover',
+            creative_angle: 'Dermatologist hygiene tips & exclusive bundle deals for head replacements',
+            hook_ideas: [
+              '3 dermatologist tips to prevent breakouts after facial grooming',
+              'VIP exclusive: Replacement precision head drop',
+            ],
+            suggested_ctas: ['Read the Glow Guide & Save 15%'],
+            content_formats: ['email_newsletter'],
             estimated_effort: 'low',
-            rationale: 'Maximizes repeat purchase rate.',
+            rationale: 'Boosts customer LTV and builds repeat consumable purchases.',
             order_index: 4,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -145,31 +167,36 @@ export const Planner: React.FC<PlannerProps> = ({
     <div className="space-y-6 max-w-[1400px] mx-auto">
       {/* Title */}
       <div>
-        <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-          AI STRATEGY PLANNER
+        <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+          <Sparkles size={12} className="text-brand-green" />
+          AI STRATEGY & CAMPAIGN PLANNER
         </small>
         <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-brand-ink tracking-tight mt-1">
-          Build a strategy your team can execute.
+          Turn Live Trends & Products into Actionable Strategy
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Choose the context. MarketPilot AI turns your real profit margins, stock, and trend signals into an explainable organic and paid plan.
+          Google Gemini 3.6 Flash synthesizes your real products, profit margins, and live market trends into grounded campaign pillars.
         </p>
       </div>
 
-      {/* Main Grid: Form + Strategy Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Form (5 cols) */}
+        {/* Strategy Configuration Form (5 cols) */}
         <form
           onSubmit={handleGenerate}
           className="lg:col-span-5 bg-white border border-brand-line rounded-2xl p-6 shadow-card space-y-4"
         >
-          <h2 className="text-base font-display font-bold text-brand-ink m-0">Plan Details</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-display font-bold text-brand-ink">Strategy Parameters</h2>
+            <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
+              Gemini 3.6 Flash
+            </span>
+          </div>
 
           <div>
-            <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1.5">
-              Plan Duration
+            <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
+              Timeframe Duration
             </label>
-            <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
+            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => setTimeframe('weekly')}
@@ -179,7 +206,7 @@ export const Planner: React.FC<PlannerProps> = ({
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                7 days
+                7 Days Sprint
               </button>
               <button
                 type="button"
@@ -190,30 +217,30 @@ export const Planner: React.FC<PlannerProps> = ({
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                30 days
+                30 Days Campaign
               </button>
             </div>
           </div>
 
           <div>
             <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
-              Primary Objective
+              Primary Goal
             </label>
             <select
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
               className="w-full text-xs p-2.5 rounded-lg border border-brand-line bg-white focus:outline-none focus:border-brand-green"
             >
-              <option value="increase_product_awareness">Increase Product Awareness & Reach</option>
+              <option value="increase_product_awareness">Increase Product Awareness & Viral Reach</option>
               <option value="increase_sales">Drive Direct Sales & Conversions</option>
-              <option value="increase_engagement">Boost Social Engagement & Trust</option>
+              <option value="increase_engagement">Boost Social Engagement & Relatability</option>
               <option value="launch_new_product">Launch New Product Line</option>
             </select>
           </div>
 
           <div>
             <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
-              Products to Prioritise
+              Hero Product Focus
             </label>
             <select
               value={selectedProductId}
@@ -222,38 +249,60 @@ export const Planner: React.FC<PlannerProps> = ({
             >
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.margin_tier?.toUpperCase()} margin · {p.stock_quantity} in stock)
+                  {p.name} ({p.profit_margin || '78.7'}% profit margin)
                 </option>
               ))}
-              {products.length === 0 && <option value="">All active products</option>}
+              {products.length === 0 && <option value="">2-in-1 Rechargeable Hair Remover</option>}
+            </select>
+          </div>
+
+          {/* Live Trend Selection / Auto-match */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-extrabold text-slate-600 uppercase flex items-center gap-1">
+                <TrendingUp size={11} className="text-brand-green" /> Incorporate Live Trend
+              </label>
+              <span className="text-[9px] text-emerald-600 font-bold">{trends.length} active signals</span>
+            </div>
+            <select
+              value={selectedTrendId}
+              onChange={(e) => setSelectedTrendId(e.target.value)}
+              className="w-full text-xs p-2.5 rounded-lg border border-brand-line bg-white focus:outline-none focus:border-brand-green"
+            >
+              <option value="">⚡ Auto-match best live trends ({trends.length} available)</option>
+              {trends.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.topic} ({t.platform} · {t.confidence_score}% confidence)
+                </option>
+              ))}
             </select>
           </div>
 
           <div>
             <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
-              Available Paid Budget
+              Paid Acquisition Budget (USD)
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">USD</span>
+              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">$</span>
               <input
                 type="number"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                placeholder="5000"
-                className="w-full text-xs pl-12 pr-3 py-2.5 rounded-lg border border-brand-line bg-white focus:outline-none focus:border-brand-green"
+                placeholder="15000"
+                className="w-full text-xs pl-8 pr-3 py-2.5 rounded-lg border border-brand-line bg-white focus:outline-none focus:border-brand-green"
               />
             </div>
           </div>
 
           <div>
             <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
-              Campaign Notes & Constraints
+              Campaign Notes & Custom Instructions
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add specific launch details, seasonal offers, or customer segment focus..."
+              placeholder="e.g., Focus on before/after routines, holiday discounts, or specific influencer hooks..."
               className="w-full text-xs p-2.5 rounded-lg border border-brand-line bg-white focus:outline-none focus:border-brand-green resize-none"
             />
           </div>
@@ -261,10 +310,10 @@ export const Planner: React.FC<PlannerProps> = ({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-green hover:bg-brand-green-dark text-white font-extrabold text-xs py-3 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            className="w-full bg-brand-green hover:bg-emerald-700 text-white font-extrabold text-xs py-3 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
             <Sparkles size={14} />
-            <span>{loading ? 'Synthesizing grounded strategy...' : '✦ Generate strategy'}</span>
+            <span>{loading ? 'Synthesizing with Gemini AI...' : '✦ Generate AI Strategy Plan'}</span>
           </button>
         </form>
 
@@ -273,58 +322,87 @@ export const Planner: React.FC<PlannerProps> = ({
           <div>
             <div className="flex items-center justify-between mb-4">
               <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-                STRATEGY PREVIEW
+                STRATEGY BLUEPRINT
               </small>
               <span
                 className={`text-[9px] font-extrabold px-2.5 py-1 rounded-md ${
                   activeStrategy ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                {activeStrategy ? 'Strategy active & approved' : 'Ready to generate'}
+                {activeStrategy ? '✓ AI Strategy Active' : 'Ready to generate'}
               </span>
             </div>
 
             {activeStrategy ? (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-display font-bold text-brand-ink m-0">
+                  <h3 className="text-lg font-display font-extrabold text-brand-ink m-0">
                     {activeStrategy.title}
                   </h3>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
                     {activeStrategy.executive_summary}
                   </p>
                 </div>
 
                 {/* Pillars Grid */}
-                <div className="space-y-3 pt-2">
-                  <h4 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-                    Formulated Campaign Pillars ({activeStrategy.pillars?.length || 4})
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                      Generated Action Pillars ({activeStrategy.pillars?.length || 4})
+                    </h4>
+                    <span className="text-[10px] text-slate-400 font-medium">Click Open in Studio to generate copy</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
                     {(activeStrategy.pillars || []).map((pillar, idx) => (
                       <div
                         key={pillar.id || idx}
-                        className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs flex flex-col justify-between"
+                        className="bg-slate-50 border border-slate-200/90 hover:border-emerald-300 rounded-xl p-3.5 text-xs flex flex-col justify-between transition-all"
                       >
                         <div>
-                          <div className="flex items-center justify-between gap-1 mb-1">
-                            <span className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white text-slate-600 border border-slate-200">
+                          <div className="flex items-center justify-between gap-1 mb-1.5">
+                            <span className="text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200">
                               {pillar.platform} · {pillar.channel_type}
                             </span>
-                            <span className="text-[9px] font-bold text-brand-green">
+                            <span className="text-[9px] font-extrabold text-brand-green">
                               Pillar {idx + 1}
                             </span>
                           </div>
-                          <b className="block text-brand-ink text-[12px] font-bold mb-1">
+
+                          <b className="block text-brand-ink text-[12px] font-bold mb-1 leading-snug">
                             {pillar.pillar_name}
                           </b>
-                          <p className="text-[10px] text-slate-500 line-clamp-2 m-0">
-                            {pillar.creative_angle}
+
+                          {/* Grounded Trend Tag */}
+                          {pillar.trend_topic && (
+                            <div className="mb-2 bg-emerald-100/70 border border-emerald-200/60 rounded-md px-2 py-1 flex items-center gap-1 text-[10px] text-emerald-900 font-semibold">
+                              <TrendingUp size={11} className="text-emerald-700 shrink-0" />
+                              <span className="truncate">Trend: {pillar.trend_topic}</span>
+                            </div>
+                          )}
+
+                          <p className="text-[11px] text-slate-600 leading-snug mb-2">
+                            <b>Angle:</b> {pillar.creative_angle}
                           </p>
+
+                          {/* Viral Hook Ideas */}
+                          {pillar.hook_ideas && pillar.hook_ideas.length > 0 && (
+                            <div className="bg-white rounded-lg p-2 border border-slate-100 mb-2">
+                              <small className="flex items-center gap-1 text-[8px] uppercase tracking-wider text-slate-500 font-bold mb-1">
+                                <Lightbulb size={10} className="text-amber-500" /> Hook Ideas
+                              </small>
+                              <ul className="text-[10px] text-slate-600 space-y-0.5 pl-3 list-disc">
+                                {pillar.hook_ideas.map((hook, i) => (
+                                  <li key={i}>{hook}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
-                        <small className="block text-[9px] text-slate-400 mt-2">
-                          CTA: {pillar.suggested_ctas?.[0] || 'Shop now'}
-                        </small>
+
+                        <div className="border-t border-slate-200/60 pt-2 mt-2 flex items-center justify-between text-[9px] text-slate-500">
+                          <span className="truncate">CTA: <b>{pillar.suggested_ctas?.[0] || 'Shop now'}</b></span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -336,10 +414,10 @@ export const Planner: React.FC<PlannerProps> = ({
                   ✦
                 </div>
                 <h2 className="text-lg font-display font-bold text-brand-ink">
-                  Your plan will be grounded in your actual business context.
+                  Your plan will be grounded in live trends & profit margins.
                 </h2>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Products, stock velocity, profit margin tiers, target audience, trend signals, Brand Kit voice, offers, and budget boundaries are synthesized before recommendations are made.
+                  Select your product and live trend on the left. Gemini 3.6 Flash will formulate high-converting TikTok scripts, Instagram reels, and email funnels.
                 </p>
               </div>
             )}
@@ -347,17 +425,17 @@ export const Planner: React.FC<PlannerProps> = ({
 
           <footer className="border-t border-brand-line pt-4 mt-6 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-[10px] text-slate-500">
-              <span className="bg-slate-100 px-2 py-1 rounded-full">{products.length || 24} active products</span>
-              <span className="bg-slate-100 px-2 py-1 rounded-full">{trends.length || 7} trend signals</span>
-              <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full font-bold">Brand Kit grounded</span>
+              <span className="bg-slate-100 px-2 py-1 rounded-full">{products.length || 1} product</span>
+              <span className="bg-slate-100 px-2 py-1 rounded-full">{trends.length} live trends</span>
+              <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full font-bold">Gemini AI Grounded</span>
             </div>
 
             {activeStrategy && (
               <button
                 onClick={() => onNavigate('studio')}
-                className="text-xs font-extrabold text-brand-green hover:underline flex items-center gap-1"
+                className="text-xs font-extrabold text-brand-green hover:underline flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200"
               >
-                <span>Open in Content Studio</span>
+                <span>Generate Full Content in Studio</span>
                 <ArrowRight size={13} />
               </button>
             )}
