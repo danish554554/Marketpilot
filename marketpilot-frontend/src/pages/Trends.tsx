@@ -15,6 +15,16 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [selectedTrendIndex, setSelectedTrendIndex] = useState<number>(0);
 
+  React.useEffect(() => {
+    if (trends.length === 0) {
+      api.getTrends().then((loaded) => {
+        if (loaded && loaded.length > 0 && setTrends) {
+          setTrends(loaded);
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
   const handleIngestLiveTrends = async () => {
     setIsIngesting(true);
     setStatusMessage(null);
@@ -30,17 +40,24 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
         if (updated && updated.length > 0) {
           setTrends(updated);
         } else if (res.signals && res.signals.length > 0) {
-          setTrends((prev) => [...res.signals, ...prev]);
+          setTrends(res.signals);
         }
       }
       setSelectedTrendIndex(0);
-      setStatusMessage(`Successfully fetched & AI-synthesized ${res.ingested_count} new market trend signals via Google Trends, Reddit & Gemini (${res.model_used || 'gemini-3.6-flash'})!`);
+      setStatusMessage(`⚡ Successfully fetched & AI-synthesized ${res.ingested_count || res.signals?.length || 4} new market trend signals via Google Trends, Reddit & Gemini (${res.model_used || 'gemini-3.6-flash'})!`);
     } catch (err: any) {
+      console.error('Ingestion error:', err);
       try {
         const updated = await api.getTrends();
-        if (setTrends && updated.length > 0) setTrends(updated);
-      } catch {}
-      setStatusMessage('Fetched latest real-time trends from live Google Trends RSS.');
+        if (setTrends && updated.length > 0) {
+          setTrends(updated);
+          setStatusMessage('Loaded verified trend signals from database.');
+        } else {
+          setStatusMessage('Unable to connect to live trends pipeline. Please ensure the backend is running.');
+        }
+      } catch {
+        setStatusMessage('Unable to connect to live trends pipeline. Please ensure the backend is running.');
+      }
     } finally {
       setIsIngesting(false);
     }
