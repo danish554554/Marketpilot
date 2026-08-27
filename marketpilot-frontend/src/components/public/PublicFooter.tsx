@@ -24,31 +24,37 @@ export function PublicFooter() {
               <li><Link to="/features" className="text-gray-400 hover:text-white transition-colors text-sm">Features</Link></li>
               <li><Link to="/pricing" className="text-gray-400 hover:text-white transition-colors text-sm">Pricing</Link></li>
               <li><Link to="/how-it-works" className="text-gray-400 hover:text-white transition-colors text-sm">How It Works</Link></li>
+              <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors text-sm">Contact Sales</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-bold text-lg mb-4 text-white">Company</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">About</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Blog</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Careers</a></li>
+              <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors text-sm">About Us</Link></li>
+              <li><Link to="/blog" className="text-gray-400 hover:text-white transition-colors text-sm">Blog & Playbooks</Link></li>
+              <li><Link to="/careers" className="text-gray-400 hover:text-white transition-colors text-sm">Careers</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-bold text-lg mb-4 text-white">Legal</h3>
+            <h3 className="font-bold text-lg mb-4 text-white">Legal & Trust</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</a></li>
+              <li><Link to="/privacy" className="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</Link></li>
+              <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-500 text-sm text-center md:text-left">
-            &copy; 2026 MarketPilot AI. All rights reserved.
+        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
+          <p className="text-center md:text-left">
+            &copy; 2026 MarketPilot AI. All rights reserved. Powered by Google Gemini 3.6 Flash.
           </p>
+          <div className="flex items-center gap-4 mt-4 md:mt-0">
+            <Link to="/privacy" className="hover:text-gray-300">Privacy</Link>
+            <Link to="/terms" className="hover:text-gray-300">Terms</Link>
+            <Link to="/contact" className="hover:text-gray-300">Enterprise</Link>
+          </div>
         </div>
       </div>
     </footer>

@@ -101,7 +101,12 @@ export function PricingPage() {
                 ))}
               </ul>
               {plan.name === 'Enterprise' ? (
-                <a href="#" className="block text-center border-2 border-brand-line text-brand-ink font-bold py-3 rounded-xl hover:bg-brand-canvas transition">{plan.cta}</a>
+                <Link
+                  to="/contact"
+                  className="block text-center border-2 border-brand-line text-brand-ink font-bold py-3 rounded-xl hover:bg-brand-canvas transition"
+                >
+                  {plan.cta}
+                </Link>
               ) : (
                 <Link
                   to="/signup"
