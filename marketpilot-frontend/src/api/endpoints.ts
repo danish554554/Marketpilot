@@ -19,8 +19,20 @@ export const api = {
     const res = await apiClient.post('/auth/login', { email, password });
     return res.data;
   },
-  register: async (email: string, password: string, fullName: string) => {
-    const res = await apiClient.post('/auth/register', { email, password, full_name: fullName });
+  register: async (email: string, password: string, businessName: string, fullName?: string) => {
+    const res = await apiClient.post('/auth/register', {
+      email,
+      password,
+      full_name: fullName || businessName,
+      business_name: businessName,
+    });
+    return res.data;
+  },
+  logout: async (accessToken: string, refreshToken?: string) => {
+    const res = await apiClient.post('/auth/logout', {
+      access_token: accessToken,
+      refresh_token: refreshToken || accessToken,
+    });
     return res.data;
   },
   verifyOtp: async (email: string, token: string) => {

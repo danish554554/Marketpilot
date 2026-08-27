@@ -112,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email,
           password,
           full_name: nameToSend,
+          business_name: cleanBiz,
         }),
       });
     } catch (err) {
@@ -154,7 +155,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(true);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    const token = localStorage.getItem('marketpilot_token');
+    const refreshToken = localStorage.getItem('marketpilot_refresh_token');
+
+    if (token) {
+      try {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            access_token: token,
+            refresh_token: refreshToken || token,
+          }),
+        });
+      } catch (err) {
+        console.warn('Backend session revocation notification failed:', err);
+      }
+    }
+
     localStorage.removeItem('marketpilot_token');
     localStorage.removeItem('marketpilot_refresh_token');
     localStorage.removeItem('marketpilot_email');

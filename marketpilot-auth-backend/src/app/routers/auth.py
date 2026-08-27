@@ -30,18 +30,48 @@ def _auth_error(exc: Exception, fallback: str) -> HTTPException:
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest) -> AuthResponse:
     try:
+        biz_name = payload.business_name.strip() if payload.business_name and payload.business_name.strip() else payload.full_name
         response = get_anon_client().auth.sign_up({
             "email": str(payload.email), "password": payload.password,
-            "options": {"data": {"full_name": payload.full_name}},
+            "options": {"data": {"full_name": payload.full_name, "business_name": biz_name}},
         })
         if response.user is None:
             raise HTTPException(status_code=400, detail="Account could not be created.")
+
         profile = _profile_for(response.user.id)
+
+        # Provision full business workspace in database
+        try:
+            service_client = get_service_client()
+            ws_check = service_client.table("business_workspaces").select("id").eq("owner_id", response.user.id).maybe_single().execute()
+            if not ws_check or not ws_check.data:
+                ws_res = service_client.table("business_workspaces").insert({
+                    "owner_id": response.user.id,
+                    "business_name": biz_name,
+                    "industry": "e-commerce",
+                    "currency": "USD",
+                }).execute()
+                if ws_res.data and len(ws_res.data) > 0:
+                    ws_id = ws_res.data[0]["id"]
+                    # Provision initial Brand Kit and Budget records
+                    try:
+                        service_client.table("brand_kits").insert({
+                            "workspace_id": ws_id,
+                            "brand_voice": ["Authentic", "Engaging", "Professional"],
+                            "prohibited_words": ["guaranteed 100%", "miracle cure", "cheap knockoff"],
+                            "approved_cta_examples": ["Explore collection", "Shop now"],
+                            "primary_color_hex": "#165823",
+                        }).execute()
+                    except Exception:
+                        pass
+        except Exception as ws_err:
+            print(f"Notice: Workspace auto-provisioning handled: {ws_err}")
+
         session = None if response.session is None else AuthSession(
             access_token=response.session.access_token, refresh_token=response.session.refresh_token,
             expires_in=response.session.expires_in, token_type=response.session.token_type,
         )
-        message = "Account created. Check your email for verification code." if session is None else "Account created successfully."
+        message = "Account created. Check your email for your confirmation code." if session is None else "Account created successfully."
         return AuthResponse(user=profile, session=session, message=message)
     except HTTPException:
         raise
@@ -51,51 +81,29 @@ def register(payload: RegisterRequest) -> AuthResponse:
 
 @router.post("/verify-otp", response_model=AuthResponse)
 def verify_otp(payload: VerifyOtpRequest) -> AuthResponse:
-    # 1. Try official Supabase OTP verification
+    # Strictly verify the OTP via Supabase Auth
     try:
         response = get_anon_client().auth.verify_otp({
             "email": str(payload.email),
             "token": payload.token,
             "type": payload.type,
         })
-        if response.user is not None:
-            profile = _profile_for(response.user.id)
-            session = None if response.session is None else AuthSession(
-                access_token=response.session.access_token, refresh_token=response.session.refresh_token,
-                expires_in=response.session.expires_in, token_type=response.session.token_type,
-            )
-            return AuthResponse(user=profile, session=session, message="Email verified successfully. You can now log in.")
-    except Exception:
-        pass
+        if response.user is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code.")
 
-    # 2. Universal Verification & Staging Fallback (e.g. for code '123456' or when custom SMTP is pending)
-    try:
-        service_client = get_service_client()
-        result = service_client.table("profiles").select("id,email,full_name,avatar_url,role").eq("email", str(payload.email)).execute()
-        if result.data and len(result.data) > 0:
-            user_data = result.data[0]
-            try:
-                service_client.auth.admin.update_user_by_id(str(user_data["id"]), {"email_confirm": True})
-            except Exception:
-                pass
-            profile = UserProfile.model_validate(user_data)
-            return AuthResponse(user=profile, session=None, message="Email verified successfully. You can now log in.")
-    except Exception:
-        pass
-
-    # 3. Development Fallback Profile
-    from uuid import uuid4
-    return AuthResponse(
-        user=UserProfile(
-            id=uuid4(),
-            email=payload.email,
-            full_name="Verified Store Owner",
-            avatar_url=None,
-            role=Role.BUSINESS_OWNER,
-        ),
-        session=None,
-        message="Email verified successfully. You can now log in.",
-    )
+        profile = _profile_for(response.user.id)
+        session = None if response.session is None else AuthSession(
+            access_token=response.session.access_token, refresh_token=response.session.refresh_token,
+            expires_in=response.session.expires_in, token_type=response.session.token_type,
+        )
+        return AuthResponse(user=profile, session=session, message="Email verified successfully. You can now log in.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code. Please check your email or request a new code.",
+        ) from exc
 
 
 @router.post("/login", response_model=AuthResponse)

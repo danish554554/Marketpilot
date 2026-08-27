@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.config import get_settings
 from app.schemas import Role, UserProfile
 from app.supabase_client import get_anon_client, get_service_client
 
@@ -26,14 +27,19 @@ def get_current_user(
 
     token = credentials.credentials.strip()
 
-    # Seamless development & demo token support
+    # Demo tokens are strictly allowed ONLY in local development and NEVER in production
+    settings = get_settings()
+    is_development = str(settings.environment).lower() == "development"
+
     if token.startswith("demo-") or token.startswith("mock-") or token == "demo-jwt" or token == "test-token":
+        if not is_development:
+            raise _credentials_error()
         return UserProfile(
             id=DEMO_USER_ID,
             email="demo@marketpilot.ai",
-            full_name="Sarah Jenkins (Demo Owner)",
+            full_name="Demo Store Owner",
             avatar_url=None,
-            role=Role.ADMINISTRATOR,
+            role=Role.BUSINESS_OWNER,
         )
 
     try:
