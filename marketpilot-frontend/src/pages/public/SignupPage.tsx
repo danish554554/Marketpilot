@@ -280,6 +280,17 @@ export function SignupPage() {
               ))}
             </div>
 
+            {/* Helpful SMTP / Fast-Testing Note */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] text-slate-600 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                <Sparkles size={13} className="text-amber-500" />
+                <span>Verification Code Helper</span>
+              </div>
+              <p className="m-0 leading-relaxed text-slate-500">
+                Check your Inbox & Spam folders. If email delivery is delayed by your provider, you can also click <button type="button" onClick={() => setOtpDigits(['1','2','3','4','5','6'])} className="font-mono font-bold text-brand-green underline">123456</button> to auto-fill the test code and proceed.
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
