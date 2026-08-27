@@ -23,6 +23,10 @@ export const api = {
     const res = await apiClient.post('/auth/register', { email, password, full_name: fullName });
     return res.data;
   },
+  verifyOtp: async (email: string, token: string) => {
+    const res = await apiClient.post('/auth/verify-otp', { email, token });
+    return res.data;
+  },
   requestPasswordReset: async (email: string) => {
     const res = await apiClient.post('/auth/password-reset', { email });
     return res.data;

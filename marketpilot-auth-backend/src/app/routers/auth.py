@@ -4,6 +4,7 @@ from app.dependencies import CurrentUser
 from app.schemas import (
     AuthResponse, AuthSession, LoginRequest, LogoutRequest, MessageResponse,
     PasswordResetEmailRequest, PasswordUpdateRequest, RegisterRequest, UserProfile,
+    VerifyOtpRequest,
 )
 from app.supabase_client import get_anon_client, get_service_client
 
@@ -40,12 +41,34 @@ def register(payload: RegisterRequest) -> AuthResponse:
             access_token=response.session.access_token, refresh_token=response.session.refresh_token,
             expires_in=response.session.expires_in, token_type=response.session.token_type,
         )
-        message = "Account created. Check your email to confirm it." if session is None else "Account created successfully."
+        message = "Account created. Check your email for verification code." if session is None else "Account created successfully."
         return AuthResponse(user=profile, session=session, message=message)
     except HTTPException:
         raise
     except Exception as exc:
         raise _auth_error(exc, "Unable to create account.") from exc
+
+
+@router.post("/verify-otp", response_model=AuthResponse)
+def verify_otp(payload: VerifyOtpRequest) -> AuthResponse:
+    try:
+        response = get_anon_client().auth.verify_otp({
+            "email": str(payload.email),
+            "token": payload.token,
+            "type": payload.type,
+        })
+        if response.user is None:
+            raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
+        profile = _profile_for(response.user.id)
+        session = None if response.session is None else AuthSession(
+            access_token=response.session.access_token, refresh_token=response.session.refresh_token,
+            expires_in=response.session.expires_in, token_type=response.session.token_type,
+        )
+        return AuthResponse(user=profile, session=session, message="Email verified successfully. You can now log in.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code. Please try again.") from exc
 
 
 @router.post("/login", response_model=AuthResponse)

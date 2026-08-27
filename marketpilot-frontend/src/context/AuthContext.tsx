@@ -130,20 +130,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const data = await res.json();
     const token = data.session?.access_token || data.access_token;
+    const savedName = data.user?.full_name || nameToSend;
+    localStorage.setItem('marketpilot_email', email);
+    localStorage.setItem('marketpilot_biz', cleanBiz);
+    localStorage.setItem('marketpilot_full_name', savedName);
+
+    // If session is returned (e.g. email confirmations disabled on Supabase), save token
     if (token) {
       localStorage.setItem('marketpilot_token', token);
       if (data.session?.refresh_token) {
         localStorage.setItem('marketpilot_refresh_token', data.session.refresh_token);
       }
     }
-
-    const savedName = data.user?.full_name || nameToSend;
-    localStorage.setItem('marketpilot_email', email);
-    localStorage.setItem('marketpilot_biz', cleanBiz);
-    localStorage.setItem('marketpilot_full_name', savedName);
-
-    setUser({ email, fullName: savedName, businessName: cleanBiz });
-    setIsAuthenticated(true);
   }, []);
 
   // Explicit demo mode (only when user deliberately requests it)

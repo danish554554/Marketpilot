@@ -14,8 +14,14 @@ class Role(StrEnum):
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=10, max_length=128)
+    password: str = Field(min_length=6, max_length=128)
     full_name: str = Field(min_length=1, max_length=120)
+
+
+class VerifyOtpRequest(BaseModel):
+    email: EmailStr
+    token: str = Field(min_length=4, max_length=10)
+    type: str = "signup"
 
 
 class LoginRequest(BaseModel):

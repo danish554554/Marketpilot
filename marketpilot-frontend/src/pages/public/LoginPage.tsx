@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
 
 export function LoginPage() {
   const { login, enterDemoMode } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState((location.state as any)?.email || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState((location.state as any)?.message || '');
 
   const handleDemo = () => {
     setEmail('admin@marketpilot.local');
@@ -49,6 +51,16 @@ export function LoginPage() {
           <h1 className="text-2xl font-display font-bold text-brand-ink mb-2">Welcome back</h1>
           <p className="text-sm text-brand-muted">Log in to your marketing command center</p>
         </div>
+
+        {successMessage && !error && (
+          <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-start gap-2.5 leading-relaxed">
+            <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-brand-green" />
+            <div>
+              <strong className="font-bold block mb-0.5">Verification Successful</strong>
+              <span>{successMessage}</span>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-start gap-2.5 leading-relaxed">
