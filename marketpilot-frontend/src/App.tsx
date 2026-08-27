@@ -148,7 +148,7 @@ export function App() {
           )}
 
           {activePage === 'studio' && (
-            <Studio products={products} businessName={businessName} activeStrategy={activeStrategy} brandKit={brandKit} />
+            <Studio products={products} businessName={businessName} activeStrategy={activeStrategy} brandKit={brandKit} trends={trends} />
           )}
 
           {activePage === 'products' && (
