@@ -126,6 +126,7 @@ export function App() {
               trends={trends}
               activeStrategy={activeStrategy}
               businessName={businessName}
+              brandKit={brandKit}
             />
           )}
 

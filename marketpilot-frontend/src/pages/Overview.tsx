@@ -1,19 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Package,
   Calendar as CalendarIcon,
   TrendingUp,
   CheckCircle,
+  CheckCircle2,
+  Circle,
   Sparkles,
   ArrowRight,
   ChevronDown,
+  ChevronUp,
   Video,
   Instagram,
   PlusCircle,
   Zap,
-  Target
+  Target,
+  Palette,
+  DollarSign,
+  Flame,
+  Check
 } from 'lucide-react';
-import { MarketingStrategy, Product, TrendSignal } from '../types';
+import { BrandKit, MarketingStrategy, Product, TrendSignal } from '../types';
 
 interface OverviewProps {
   onNavigate: (page: string) => void;
@@ -21,6 +28,7 @@ interface OverviewProps {
   trends: TrendSignal[];
   activeStrategy: MarketingStrategy | null;
   businessName: string;
+  brandKit?: BrandKit | null;
 }
 
 export const Overview: React.FC<OverviewProps> = ({
@@ -29,7 +37,10 @@ export const Overview: React.FC<OverviewProps> = ({
   trends,
   activeStrategy,
   businessName,
+  brandKit,
 }) => {
+  const [checklistOpen, setChecklistOpen] = useState(true);
+
   const heroProduct = products.find((p) => p.margin_tier === 'high') || products[0];
   const topTrend = trends[0];
 
@@ -39,6 +50,61 @@ export const Overview: React.FC<OverviewProps> = ({
     month: 'long',
     year: 'numeric',
   }).toUpperCase();
+
+  // 5-Step Guided Onboarding Journey State
+  const steps = [
+    {
+      id: 1,
+      title: 'Create Workspace',
+      desc: `Workspace “${businessName || 'My Store'}” is active and ready.`,
+      completed: true,
+      actionText: 'View Settings',
+      page: 'overview',
+    },
+    {
+      id: 2,
+      title: 'Add Brand Kit',
+      desc: brandKit?.brand_voice?.length
+        ? `${brandKit.brand_voice.length} voice traits & guardrails configured.`
+        : 'Set your brand tone and prohibited words to guard AI copy.',
+      completed: Boolean(brandKit?.brand_voice && brandKit.brand_voice.length > 0),
+      actionText: 'Configure Brand Kit',
+      page: 'brand',
+    },
+    {
+      id: 3,
+      title: 'Add / Import Products',
+      desc: products.length > 0
+        ? `${products.length} product${products.length > 1 ? 's' : ''} in inventory with profit margins calculated.`
+        : 'Add your catalogue items with retail and cost prices.',
+      completed: products.length > 0,
+      actionText: '+ Add Products',
+      page: 'products',
+    },
+    {
+      id: 4,
+      title: 'Set Budget & Offers',
+      desc: activeStrategy?.budget_allocation_summary?.organic_percentage
+        ? `Allocated: Organic (${activeStrategy.budget_allocation_summary.organic_percentage}%) / Paid (${activeStrategy.budget_allocation_summary.paid_percentage}%).`
+        : 'Define monthly ad spend and promotional discounts.',
+      completed: Boolean(activeStrategy?.budget_allocation_summary || activeStrategy?.pillars?.some(p => p.channel_type === 'paid')),
+      actionText: 'Set Budget & Strategy',
+      page: 'planner',
+    },
+    {
+      id: 5,
+      title: 'Generate First Plan',
+      desc: activeStrategy
+        ? `Active strategy “${activeStrategy.title || '4-Week Strategy'}” with ${activeStrategy.pillars?.length || 0} scheduled drops.`
+        : 'Use Gemini 3.6 Flash to create your 4-week multi-channel plan.',
+      completed: Boolean(activeStrategy),
+      actionText: '⚡ Generate Plan',
+      page: 'planner',
+    },
+  ];
+
+  const completedCount = steps.filter((s) => s.completed).length;
+  const progressPercent = Math.round((completedCount / steps.length) * 100);
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -64,6 +130,93 @@ export const Overview: React.FC<OverviewProps> = ({
           <ChevronDown size={14} />
         </button>
       </div>
+
+      {/* 5-Step Guided Onboarding Progress Checklist */}
+      <section className="bg-white border border-brand-line rounded-2xl p-5 md:p-6 shadow-card space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2 py-0.5 rounded-md flex items-center gap-1">
+                <Sparkles size={11} className="text-emerald-700" />
+                ONBOARDING ROADMAP
+              </span>
+              <span className="text-xs font-extrabold text-brand-ink">
+                {completedCount} of {steps.length} Steps Completed ({progressPercent}%)
+              </span>
+            </div>
+            <h2 className="text-base sm:text-lg font-display font-bold text-brand-ink mt-1">
+              Setup Your AI Marketing Engine
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Mini Progress Bar */}
+            <div className="w-32 sm:w-44 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="bg-brand-green h-full rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <button
+              onClick={() => setChecklistOpen(!checklistOpen)}
+              className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1"
+            >
+              <span>{checklistOpen ? 'Collapse' : 'Expand'}</span>
+              {checklistOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
+        </div>
+
+        {checklistOpen && (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pt-1">
+            {steps.map((step) => (
+              <div
+                key={step.id}
+                className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all ${
+                  step.completed
+                    ? 'bg-emerald-50/40 border-emerald-200/80'
+                    : 'bg-slate-50/60 border-slate-200/70 hover:border-slate-300'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                      step.completed ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      Step {step.id}
+                    </span>
+                    {step.completed ? (
+                      <CheckCircle2 size={16} className="text-brand-green shrink-0" />
+                    ) : (
+                      <Circle size={16} className="text-slate-300 shrink-0" />
+                    )}
+                  </div>
+                  <h3 className={`text-xs font-bold ${step.completed ? 'text-emerald-950' : 'text-brand-ink'}`}>
+                    {step.title}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                    {step.desc}
+                  </p>
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-slate-200/50">
+                  <button
+                    onClick={() => onNavigate(step.page)}
+                    className={`text-[11px] font-extrabold flex items-center gap-1 transition-all ${
+                      step.completed
+                        ? 'text-emerald-800 hover:text-emerald-950'
+                        : 'text-brand-green hover:underline'
+                    }`}
+                  >
+                    <span>{step.actionText}</span>
+                    <ArrowRight size={11} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Top 4 Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
