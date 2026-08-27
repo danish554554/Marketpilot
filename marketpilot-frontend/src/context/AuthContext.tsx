@@ -12,6 +12,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, businessName: string, fullName?: string) => Promise<void>;
+  updateBusinessName: (newBusinessName: string) => void;
   logout: () => void;
 }
 
@@ -37,13 +38,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser({
         email: savedEmail,
         fullName: savedName || '',
-        businessName: savedBiz || 'My Business',
+        businessName: savedBiz || 'GlowSilk Beauty',
       });
       setIsAuthenticated(true);
     }
   }, []);
 
+  const updateBusinessName = useCallback((newBusinessName: string) => {
+    if (!newBusinessName || !newBusinessName.trim()) return;
+    const cleanName = newBusinessName.trim();
+    localStorage.setItem('marketpilot_biz', cleanName);
+    setUser((prev) => (prev ? { ...prev, businessName: cleanName } : null));
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
+    const savedBiz = localStorage.getItem('marketpilot_biz');
+
     try {
       const res = await fetch('http://127.0.0.1:8000/api/v1/auth/login', {
         method: 'POST',
@@ -61,13 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const fullName = data.user?.full_name || '';
-        const derivedBiz = localStorage.getItem('marketpilot_biz') || fullName || (email.split('@')[0] + ' E-Commerce');
+        // Never override an existing business name with a generic user full_name or email
+        const finalBiz = savedBiz || (fullName && !fullName.toLowerCase().includes('admin') ? fullName : 'GlowSilk Beauty');
 
         localStorage.setItem('marketpilot_email', email);
-        localStorage.setItem('marketpilot_biz', derivedBiz);
+        localStorage.setItem('marketpilot_biz', finalBiz);
         if (fullName) localStorage.setItem('marketpilot_full_name', fullName);
 
-        setUser({ email, fullName, businessName: derivedBiz });
+        setUser({ email, fullName, businessName: finalBiz });
         setIsAuthenticated(true);
         return;
       }
@@ -78,15 +89,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Demo/offline fallback token
     const demoToken = 'demo-jwt-' + Date.now();
     localStorage.setItem('marketpilot_token', demoToken);
-    const derivedBiz = localStorage.getItem('marketpilot_biz') || (email.includes('@') ? email.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) + ' E-Commerce' : 'My Store');
+    const finalBiz = savedBiz || 'GlowSilk Beauty';
     localStorage.setItem('marketpilot_email', email);
-    localStorage.setItem('marketpilot_biz', derivedBiz);
-    setUser({ email, businessName: derivedBiz });
+    localStorage.setItem('marketpilot_biz', finalBiz);
+    setUser({ email, businessName: finalBiz });
     setIsAuthenticated(true);
   }, []);
 
   const register = useCallback(async (email: string, password: string, businessName: string, fullName?: string) => {
-    const nameToSend = fullName?.trim() || businessName?.trim() || email.split('@')[0];
+    const cleanBiz = businessName.trim() || 'GlowSilk Beauty';
+    const nameToSend = fullName?.trim() || cleanBiz;
     try {
       const res = await fetch('http://127.0.0.1:8000/api/v1/auth/register', {
         method: 'POST',
@@ -109,10 +121,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const savedName = data.user?.full_name || nameToSend;
         localStorage.setItem('marketpilot_email', email);
-        localStorage.setItem('marketpilot_biz', businessName || savedName);
+        localStorage.setItem('marketpilot_biz', cleanBiz);
         localStorage.setItem('marketpilot_full_name', savedName);
 
-        setUser({ email, fullName: savedName, businessName: businessName || savedName });
+        setUser({ email, fullName: savedName, businessName: cleanBiz });
         setIsAuthenticated(true);
         return;
       }
@@ -124,9 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const demoToken = 'demo-jwt-' + Date.now();
     localStorage.setItem('marketpilot_token', demoToken);
     localStorage.setItem('marketpilot_email', email);
-    localStorage.setItem('marketpilot_biz', businessName || nameToSend);
+    localStorage.setItem('marketpilot_biz', cleanBiz);
     localStorage.setItem('marketpilot_full_name', nameToSend);
-    setUser({ email, fullName: nameToSend, businessName: businessName || nameToSend });
+    setUser({ email, fullName: nameToSend, businessName: cleanBiz });
     setIsAuthenticated(true);
   }, []);
 
@@ -134,14 +146,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('marketpilot_token');
     localStorage.removeItem('marketpilot_refresh_token');
     localStorage.removeItem('marketpilot_email');
-    localStorage.removeItem('marketpilot_biz');
     localStorage.removeItem('marketpilot_full_name');
+    // We do NOT clear marketpilot_biz so the user's workspace brand remains intact on their machine
     setUser(null);
     setIsAuthenticated(false);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, register, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, register, updateBusinessName, logout }}>
       {children}
     </AuthContext.Provider>
   );

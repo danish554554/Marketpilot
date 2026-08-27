@@ -15,17 +15,19 @@ import { ExportCenter } from './pages/ExportCenter';
 import { BrandKit as BrandKitType, MarketingStrategy, Product, TrendSignal } from './types';
 import { api } from './api/endpoints';
 import { getAuthToken } from './api/client';
+import { useAuth } from './context/AuthContext';
 
 export function App() {
+  const { user, updateBusinessName, isAuthenticated } = useAuth();
   const [activePage, setActivePage] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const [businessName, setBusinessName] = useState('GlowSilk Beauty');
-  const [userEmail, setUserEmail] = useState<string>('sarah@glowsilk.com');
-  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(getAuthToken()));
+  const businessName = user?.businessName || localStorage.getItem('marketpilot_biz') || 'GlowSilk Beauty';
+  const userEmail = user?.email || localStorage.getItem('marketpilot_email') || 'sarah@glowsilk.com';
+  const isLoggedIn = isAuthenticated || Boolean(getAuthToken());
 
   const [products, setProducts] = useState<Product[]>([]);
   const [trends, setTrends] = useState<TrendSignal[]>([]);
@@ -45,10 +47,7 @@ export function App() {
         ]);
 
         if (wsRes.status === 'fulfilled' && wsRes.value?.business_name) {
-          setBusinessName(wsRes.value.business_name);
-        } else {
-          const savedBiz = localStorage.getItem('marketpilot_biz');
-          if (savedBiz) setBusinessName(savedBiz);
+          updateBusinessName(wsRes.value.business_name);
         }
 
         if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
@@ -78,9 +77,9 @@ export function App() {
             brand_voice: ['Authentic', 'Engaging', 'Professional', 'Value-Driven'],
             prohibited_words: ['guaranteed 100%', 'miracle', 'cure-all', 'cheap knockoff'],
             approved_cta_examples: [
-              'Shop Now & Save Today',
-              'Explore the Collection',
-              'Order on WhatsApp'
+              'Explore the collection with 20% off',
+              'Shop the hero drop today',
+              'Claim your exclusive discount',
             ],
             primary_color_hex: '#165823',
             created_at: new Date().toISOString(),
@@ -88,144 +87,16 @@ export function App() {
           });
         }
       } catch (err) {
-        console.error('Initialization error:', err);
+        console.warn('Backend unavailable, using clean dynamic context.');
       }
     };
 
     initData();
   }, []);
 
-  const handleLaunchPlan = async (timeframe: 'weekly' | 'monthly') => {
-    setIsGenerating(true);
-    try {
-      const generated = await api.generateStrategy({
-        timeframe,
-        primary_goal: 'increase_product_awareness',
-        include_trends: true,
-      });
-      setActiveStrategy(generated);
-    } catch (err) {
-      // Create rich instant strategy if unauthenticated or offline
-      const fallbackStrategy: MarketingStrategy = {
-        id: 'strat-' + Date.now(),
-        workspace_id: 'ws1',
-        created_by: 'u1',
-        title: `${timeframe === 'weekly' ? '7-Day Viral Growth Campaign' : '30-Day Omnichannel Scale Strategy'}: 2-in-1 Rechargeable Hair Remover`,
-        timeframe,
-        status: 'approved',
-        executive_summary: 'Targeted direct-to-consumer beauty marketing campaign prioritizing our high-margin hero 2-in-1 Rechargeable Hair Remover (78.7% margin) across viral TikTok before-and-after peach fuzz demos and high-converting Meta acquisition ads.',
-        target_audience_summary: 'Women aged 18–45 seeking painless, fast, irritation-free facial hair and eyebrow precision styling without recurring salon waxing costs.',
-        budget_allocation_summary: {
-          total_budget: 8000,
-          currency: 'USD',
-          organic_percentage: 60,
-          paid_percentage: 40,
-          channel_spend_recommendations: { tiktok: 2000, instagram: 1200 },
-        },
-        product_priorities_summary: {
-          hero_products: [{ name: '2-in-1 Rechargeable Hair Remover', margin_tier: 'high', stock_quantity: 650 }],
-        },
-        strategic_rationale: 'High profit margin ($39.99 vs $8.50 cost = 78.7% margin), strong stock velocity (650 units), and addresses primary pain points of razor burns and waxing costs.',
-        pillars: [
-          {
-            id: 'p-1',
-            strategy_id: 'strat-1',
-            pillar_name: 'Painless 30-Second Peach Fuzz Routine',
-            objective: 'Increase Product Awareness',
-            channel_type: 'organic',
-            platform: 'tiktok',
-            product_name: '2-in-1 Rechargeable Hair Remover',
-            creative_angle: 'Macro close-up: effortless makeup gliding over smooth, fuzz-free skin',
-            hook_ideas: [
-              'Why your foundation looks cakey (and the 30-second fix)',
-              'Stop using disposable razors on your face — do this instead'
-            ],
-            suggested_ctas: ['Get painless smooth skin today'],
-            content_formats: ['short_video_script', 'carousel_slides'],
-            estimated_effort: 'medium',
-            rationale: 'Demonstrates physical transformation and makeup enhancement.',
-            order_index: 1,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: 'p-2',
-            strategy_id: 'strat-1',
-            pillar_name: 'Direct-Response Pain Comparison Ad',
-            objective: 'Drive Sales & Conversions',
-            channel_type: 'paid',
-            platform: 'facebook',
-            product_name: '2-in-1 Rechargeable Hair Remover',
-            creative_angle: 'Cost-of-living comparison: $80 monthly waxing vs $39.99 lifetime device',
-            hook_ideas: [
-              'Tired of redness and razor burns after shaving?',
-              'Save $800 a year on salon waxing with this painless device'
-            ],
-            suggested_ctas: ['Shop the 2-in-1 Precision Remover with 15% off'],
-            content_formats: ['short_video_script', 'post_caption'],
-            estimated_effort: 'low',
-            rationale: 'Direct response pain vs solution framing maximizes paid ROAS on our 78.7% margin.',
-            order_index: 2,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: 'p-3',
-            strategy_id: 'strat-1',
-            pillar_name: 'Micro-Eyebrow Detailing & Shaping Hack',
-            objective: 'Boost Social Engagement',
-            channel_type: 'organic',
-            platform: 'instagram',
-            trend_topic: '“Eyebrow Shaping Hacks for Busy Mornings”',
-            creative_angle: 'Swapping to precision eyebrow head for effortless micro-trimming without tweezers',
-            hook_ideas: [
-              'How I shape my brows in 45 seconds without plucking tears',
-              'The eyebrow attachment you didn’t know you needed'
-            ],
-            suggested_ctas: ['Upgrade your beauty routine'],
-            content_formats: ['carousel_slides', 'post_caption'],
-            estimated_effort: 'medium',
-            rationale: 'Showcases the 2-in-1 dual-head versatility of the device.',
-            order_index: 3,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: 'p-4',
-            strategy_id: 'strat-1',
-            pillar_name: 'VIP Glow Club & Maintenance Tips',
-            objective: 'Customer Retention & LTV',
-            channel_type: 'organic',
-            platform: 'email',
-            product_name: '2-in-1 Rechargeable Hair Remover',
-            creative_angle: 'Skincare prep and cleaning guide to keep blades sharp for 12+ months',
-            hook_ideas: [
-              '3 dermatologist tips to prevent breakouts after facial grooming',
-              'VIP exclusive: Replacement precision head drop'
-            ],
-            suggested_ctas: ['Read the Glow Guide'],
-            content_formats: ['email_newsletter', 'direct_message'],
-            estimated_effort: 'low',
-            rationale: 'Builds brand loyalty and trust among skincare enthusiasts.',
-            order_index: 4,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setActiveStrategy(fallbackStrategy);
-    } finally {
-      setIsGenerating(false);
-      setGenerateModalOpen(false);
-      setActivePage('planner');
-    }
-  };
-
   return (
-    <div className="min-h-screen flex bg-brand-canvas text-brand-ink">
-      {/* Sidebar Navigation */}
+    <div className="min-h-screen bg-brand-canvas flex flex-col md:flex-row text-brand-ink antialiased">
+      {/* Dynamic Workspace-Aware Sidebar */}
       <Sidebar
         activePage={activePage}
         setActivePage={setActivePage}
@@ -234,8 +105,9 @@ export function App() {
         businessName={businessName}
       />
 
-      {/* Main Content Canvas */}
-      <div className="flex-1 flex flex-col md:ml-[255px] min-w-0">
+      {/* Main Content Area */}
+      <div className="flex-1 md:ml-[255px] flex flex-col min-w-0">
+        {/* Dynamic Workspace-Aware Top Header */}
         <Header
           activePage={activePage}
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -245,7 +117,8 @@ export function App() {
           isLoggedIn={isLoggedIn}
         />
 
-        <main className="flex-1 p-5 md:p-10 overflow-y-auto">
+        {/* Dynamic Page Views */}
+        <main className="flex-1 p-5 md:p-10 max-w-[1600px] w-full mx-auto">
           {activePage === 'overview' && (
             <Overview
               onNavigate={setActivePage}
@@ -275,7 +148,7 @@ export function App() {
           )}
 
           {activePage === 'studio' && (
-            <Studio products={products} businessName={businessName} activeStrategy={activeStrategy} />
+            <Studio products={products} businessName={businessName} activeStrategy={activeStrategy} brandKit={brandKit} />
           )}
 
           {activePage === 'products' && (
@@ -327,24 +200,36 @@ export function App() {
         </main>
       </div>
 
-      {/* Modals */}
+      {/* Strategy Generator Modal */}
       <GeneratePlanModal
         isOpen={generateModalOpen}
         onClose={() => setGenerateModalOpen(false)}
-        onGenerate={handleLaunchPlan}
+        onGenerate={async (timeframe) => {
+          setIsGenerating(true);
+          try {
+            const plan = await api.generateStrategy({ timeframe, include_trends: true });
+            setActiveStrategy(plan);
+            setActivePage('planner');
+            setGenerateModalOpen(false);
+          } catch (e) {
+            console.error('Plan generation failed:', e);
+          } finally {
+            setIsGenerating(false);
+          }
+        }}
         isGenerating={isGenerating}
       />
 
+      {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        onSuccess={(email) => {
-          setUserEmail(email);
-          setIsLoggedIn(true);
+        onSuccess={() => {
+          const savedBiz = localStorage.getItem('marketpilot_biz');
+          if (savedBiz) updateBusinessName(savedBiz);
+          setAuthModalOpen(false);
         }}
       />
     </div>
   );
 }
-
-export default App;
