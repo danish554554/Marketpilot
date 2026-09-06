@@ -95,6 +95,16 @@ export const api = {
   deleteProduct: async (id: string) => {
     await apiClient.delete(`/products/${id}`);
   },
+  importProductsCsv: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post('/products/import/csv', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
 
   // Offers
   getOffers: async (): Promise<Offer[]> => {

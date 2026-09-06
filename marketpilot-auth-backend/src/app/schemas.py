@@ -358,6 +358,18 @@ class Product(ProductCreateRequest):
     def compute_profit_margin(cls, data: dict) -> dict:
         """Compute profit margin as ((price - cost_price) / price * 100) when both values are available."""
         if isinstance(data, dict):
+            if not data.get("description"):
+                data["description"] = f"{data.get('name', 'Product')} - Quality store product."
+            if data.get("features") is None:
+                data["features"] = []
+            if data.get("pain_points") is None:
+                data["pain_points"] = []
+            if data.get("images") is None:
+                data["images"] = []
+            if data.get("status") is None:
+                data["status"] = "active"
+            if data.get("priority") is None:
+                data["priority"] = "normal"
             price = data.get("price")
             cost = data.get("cost_price")
             if price is not None and cost is not None:

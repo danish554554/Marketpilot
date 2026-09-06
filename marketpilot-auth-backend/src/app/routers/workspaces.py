@@ -68,6 +68,23 @@ def create_workspace(payload: WorkspaceCreateRequest, current_user: CurrentUser)
 def get_my_workspace(current_user: CurrentUser) -> Workspace:
     workspace = _find_for_owner(str(current_user.id))
     if not workspace:
+        # Auto-provision workspace for user
+        try:
+            biz_name = getattr(current_user, "full_name", None) or "My Store"
+            country = getattr(current_user, "target_country", None) or "Pakistan"
+            service_client = get_service_client()
+            ins = service_client.table("business_workspaces").insert({
+                "owner_id": str(current_user.id),
+                "business_name": biz_name,
+                "industry": "e-commerce",
+                "country": "PK",
+                "currency": "PKR",
+                "target_market": country,
+            }).execute()
+            if ins.data and len(ins.data) > 0:
+                return _serialize_workspace(ins.data[0])
+        except Exception:
+            pass
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No business workspace exists for this account.")
     return _serialize_workspace(workspace)
 

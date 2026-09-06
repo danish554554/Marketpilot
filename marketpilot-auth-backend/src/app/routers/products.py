@@ -32,18 +32,44 @@ HEADER_ALIASES = {
 
 
 def _require_manager(current_user: CurrentUser) -> None:
-    if current_user.role not in {Role.BUSINESS_OWNER, Role.ADMINISTRATOR}:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only a business owner can manage products.")
+    if current_user.role not in {Role.BUSINESS_OWNER, Role.ADMINISTRATOR, Role.TEAM_MEMBER}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only authorized store members can manage products.")
 
 
 def _current_workspace_id(current_user: CurrentUser) -> str:
+    service_client = get_service_client()
     try:
-        result = get_service_client().table("business_workspaces").select("id").eq("owner_id", str(current_user.id)).maybe_single().execute()
+        result = service_client.table("business_workspaces").select("id").eq("owner_id", str(current_user.id)).maybe_single().execute()
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Business workspace storage is temporarily unavailable.") from exc
-    if result is None or not result.data:
-        raise HTTPException(status_code=404, detail="Create your business workspace before adding products.")
-    return result.data["id"]
+    if result and result.data:
+        return result.data["id"]
+
+    # Auto-provision a default business workspace for this user if one does not exist
+    try:
+        biz_name = getattr(current_user, "full_name", None) or "My Store"
+        country = getattr(current_user, "target_country", None) or "Pakistan"
+        ins = service_client.table("business_workspaces").insert({
+            "owner_id": str(current_user.id),
+            "business_name": biz_name,
+            "industry": "e-commerce",
+            "country": "PK",
+            "currency": "PKR",
+            "target_market": country,
+        }).execute()
+        if ins.data and len(ins.data) > 0:
+            return ins.data[0]["id"]
+    except Exception:
+        pass
+
+    try:
+        retry = service_client.table("business_workspaces").select("id").eq("owner_id", str(current_user.id)).maybe_single().execute()
+        if retry and retry.data:
+            return retry.data["id"]
+    except Exception:
+        pass
+
+    raise HTTPException(status_code=404, detail="Create your business workspace before adding products.")
 
 
 def _product_or_404(product_id: UUID, workspace_id: str) -> Product:
@@ -191,12 +217,29 @@ def create_product(payload: ProductCreateRequest, current_user: CurrentUser) -> 
     workspace_id = _current_workspace_id(current_user)
     values = payload.model_dump(mode="json")
     values["workspace_id"] = workspace_id
+    if not values.get("description") or not values["description"].strip():
+        values["description"] = f"{values.get('name', 'Product')} - High quality store product."
+    if values.get("features") is None:
+        values["features"] = []
+    if values.get("pain_points") is None:
+        values["pain_points"] = []
+    if values.get("images") is None:
+        values["images"] = []
     try:
         result = get_service_client().table("products").insert(values).execute()
         return Product.model_validate(result.data[0])
     except Exception as exc:
         if "products_workspace_id_sku_key" in str(exc):
             raise HTTPException(status_code=409, detail="A product with this SKU already exists in this workspace.") from exc
+        # Fallback if 004b optional columns (features/pain_points/cost_price) are not present in table
+        err_str = str(exc).lower()
+        if any(col in err_str for col in ["features", "pain_points", "cost_price"]):
+            try:
+                fallback_values = {k: v for k, v in values.items() if k not in {"features", "pain_points", "cost_price"}}
+                result = get_service_client().table("products").insert(fallback_values).execute()
+                return Product.model_validate(result.data[0])
+            except Exception:
+                pass
         raise HTTPException(status_code=503, detail="Product storage is temporarily unavailable. Run the Module 4 migration first.") from exc
 
 
@@ -218,7 +261,7 @@ def list_products(
         if category is not None:
             query = query.eq("category", category.strip())
         result = query.order("created_at", desc=True).execute()
-        return [Product.model_validate(row) for row in result.data]
+        return [Product.model_validate(row) for row in (result.data or [])]
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Product storage is temporarily unavailable. Run the Module 4 migration first.") from exc
 

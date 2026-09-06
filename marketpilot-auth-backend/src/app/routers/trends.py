@@ -68,9 +68,8 @@ def list_trends(
         result = query.order("collection_date", desc=True).order("confidence_score", desc=True).execute()
         signals = [TrendSignal.model_validate(row) for row in (result.data or [])]
 
-        # If Local scope requested (e.g. Pakistan)
-        user_country = (country or "Pakistan").lower()
-        if scope == "local" or "pakistan" in user_country:
+        # If Local scope requested (e.g. Pakistan or target market)
+        if scope == "local" or (country and "pakistan" in country.lower()):
             local_keywords = ["pakistan", "pk", "lahore", "karachi", "islamabad", "daraz", "cod", "lawn", "desi", "desi aesthetics", "cash on delivery"]
             local_matches = [
                 s for s in signals 

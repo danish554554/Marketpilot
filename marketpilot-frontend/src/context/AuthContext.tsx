@@ -48,11 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('marketpilot_token');
     const savedEmail = localStorage.getItem('marketpilot_email');
+    const savedId = localStorage.getItem('marketpilot_user_id');
     const savedBiz = localStorage.getItem('marketpilot_biz');
     const savedName = localStorage.getItem('marketpilot_full_name');
     const savedCountry = localStorage.getItem('marketpilot_target_country') || 'Pakistan';
     if (token && savedEmail) {
       setUser({
+        id: savedId || undefined,
         email: savedEmail,
         fullName: savedName || '',
         businessName: savedBiz || 'GlowSilk Beauty',
@@ -105,15 +107,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const fullName = data.user?.full_name || '';
+    const userId = data.user?.id || '';
     const finalBiz = savedBiz || (fullName && !fullName.toLowerCase().includes('admin') ? fullName : 'GlowSilk Beauty');
     const country = data.user?.target_country || localStorage.getItem('marketpilot_target_country') || 'Pakistan';
 
     localStorage.setItem('marketpilot_email', email);
+    if (userId) localStorage.setItem('marketpilot_user_id', userId);
     localStorage.setItem('marketpilot_biz', finalBiz);
     localStorage.setItem('marketpilot_target_country', country);
     if (fullName) localStorage.setItem('marketpilot_full_name', fullName);
 
-    setUser({ email, fullName, businessName: finalBiz, targetCountry: country });
+    setUser({ id: userId || undefined, email, fullName, businessName: finalBiz, targetCountry: country });
     setIsAuthenticated(true);
   }, []);
 
@@ -153,7 +157,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = data.session?.access_token || data.access_token;
     const savedName = data.user?.full_name || nameToSend;
     const savedCountry = data.user?.target_country || countryToSend;
+    const userId = data.user?.id || '';
     localStorage.setItem('marketpilot_email', email);
+    if (userId) localStorage.setItem('marketpilot_user_id', userId);
     localStorage.setItem('marketpilot_biz', cleanBiz);
     localStorage.setItem('marketpilot_full_name', savedName);
     localStorage.setItem('marketpilot_target_country', savedCountry);
@@ -167,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('marketpilot_refresh_token', data.session.refresh_token);
       }
       setUser({
+        id: userId || undefined,
         email,
         fullName: savedName,
         businessName: cleanBiz,
@@ -219,6 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('marketpilot_token');
     localStorage.removeItem('marketpilot_refresh_token');
     localStorage.removeItem('marketpilot_email');
+    localStorage.removeItem('marketpilot_user_id');
     localStorage.removeItem('marketpilot_full_name');
     setUser(null);
     setIsAuthenticated(false);

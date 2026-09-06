@@ -29,13 +29,34 @@ export function App() {
   const userEmail = user?.email || localStorage.getItem('marketpilot_email') || 'sarah@glowsilk.com';
   const isLoggedIn = isAuthenticated || Boolean(getAuthToken());
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const email = user?.email || localStorage.getItem('marketpilot_email') || 'sarah@glowsilk.com';
+      const cached = localStorage.getItem(`marketpilot_prods_${email}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
   const [trends, setTrends] = useState<TrendSignal[]>([]);
   const [activeStrategy, setActiveStrategy] = useState<MarketingStrategy | null>(null);
   const [brandKit, setBrandKit] = useState<BrandKitType | null>(null);
 
-  // Initial Data Fetching from FastAPI backend
+  // Initial Data Fetching from FastAPI backend & Synchronization with Local Cache
   useEffect(() => {
+    // Immediately attempt to hydrate products from local storage for this active user
+    try {
+      const cached = localStorage.getItem(`marketpilot_prods_${userEmail}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProducts(parsed);
+        }
+      }
+    } catch {}
+
     const initData = async () => {
       try {
         const [wsRes, prodRes, trendRes, stratRes, bkRes] = await Promise.allSettled([
@@ -52,8 +73,20 @@ export function App() {
 
         if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
           setProducts(prodRes.value);
+          try {
+            localStorage.setItem(`marketpilot_prods_${userEmail}`, JSON.stringify(prodRes.value));
+          } catch {}
         } else {
-          setProducts([]);
+          // If backend fetch didn't return products (e.g. initial token refresh or guest), keep cached
+          try {
+            const cached = localStorage.getItem(`marketpilot_prods_${userEmail}`);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setProducts(parsed);
+              }
+            }
+          } catch {}
         }
 
         if (trendRes.status === 'fulfilled' && Array.isArray(trendRes.value)) {
@@ -92,7 +125,7 @@ export function App() {
     };
 
     initData();
-  }, []);
+  }, [isAuthenticated, userEmail, user?.id]);
 
   return (
     <div className="min-h-screen bg-brand-canvas flex flex-col md:flex-row text-brand-ink antialiased">
