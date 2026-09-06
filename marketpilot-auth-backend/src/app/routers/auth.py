@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.dependencies import CurrentUser
 from app.schemas import (
     AuthResponse, AuthSession, LoginRequest, LogoutRequest, MessageResponse,
-    PasswordResetEmailRequest, PasswordUpdateRequest, RegisterRequest, UserProfile,
+    PasswordResetEmailRequest, PasswordUpdateRequest, RegisterRequest, ResendOtpRequest, UserProfile,
     VerifyOtpRequest,
 )
 from app.supabase_client import get_anon_client, get_service_client
@@ -31,16 +31,27 @@ def _auth_error(exc: Exception, fallback: str) -> HTTPException:
 def register(payload: RegisterRequest) -> AuthResponse:
     try:
         biz_name = payload.business_name.strip() if payload.business_name and payload.business_name.strip() else payload.full_name
+        target_country = payload.target_country.strip() if payload.target_country else "Pakistan"
+        
+        # Determine initial country code and currency defaults
+        country_code = "PK" if "pakistan" in target_country.lower() else "US"
+        currency = "PKR" if "pakistan" in target_country.lower() else "USD"
+
         response = get_anon_client().auth.sign_up({
             "email": str(payload.email), "password": payload.password,
-            "options": {"data": {"full_name": payload.full_name, "business_name": biz_name}},
+            "options": {"data": {
+                "full_name": payload.full_name,
+                "business_name": biz_name,
+                "target_country": target_country,
+            }},
         })
         if response.user is None:
             raise HTTPException(status_code=400, detail="Account could not be created.")
 
         profile = _profile_for(response.user.id)
+        profile.target_country = target_country
 
-        # Provision full business workspace in database
+        # Provision full business workspace in database with target country
         try:
             service_client = get_service_client()
             ws_check = service_client.table("business_workspaces").select("id").eq("owner_id", response.user.id).maybe_single().execute()
@@ -49,7 +60,9 @@ def register(payload: RegisterRequest) -> AuthResponse:
                     "owner_id": response.user.id,
                     "business_name": biz_name,
                     "industry": "e-commerce",
-                    "currency": "USD",
+                    "country": country_code,
+                    "currency": currency,
+                    "target_market": target_country,
                 }).execute()
                 if ws_res.data and len(ws_res.data) > 0:
                     ws_id = ws_res.data[0]["id"]
@@ -71,8 +84,34 @@ def register(payload: RegisterRequest) -> AuthResponse:
             access_token=response.session.access_token, refresh_token=response.session.refresh_token,
             expires_in=response.session.expires_in, token_type=response.session.token_type,
         )
-        message = "Account created. Check your email for your confirmation code." if session is None else "Account created successfully."
-        return AuthResponse(user=profile, session=session, message=message)
+        requires_verification = (session is None)
+        message = "Account created. Check your email for your confirmation code." if requires_verification else "Account created successfully."
+        return AuthResponse(user=profile, session=session, message=message, requires_verification=requires_verification)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _auth_error(exc, "Unable to create account.") from exc
+
+
+@router.post("/resend-otp", response_model=MessageResponse)
+def resend_otp(payload: ResendOtpRequest) -> MessageResponse:
+    try:
+        get_anon_client().auth.resend({
+            "type": "signup",
+            "email": str(payload.email),
+        })
+        return MessageResponse(message=f"Verification code resent to {payload.email}. Please check your inbox and spam folder.")
+    except Exception as exc:
+        err_msg = str(exc).lower()
+        if "rate limit" in err_msg or "too many" in err_msg:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many verification requests. Please wait a minute before requesting another code.",
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to resend verification code. Please verify the email address is correct.",
+        ) from exc
     except HTTPException:
         raise
     except Exception as exc:

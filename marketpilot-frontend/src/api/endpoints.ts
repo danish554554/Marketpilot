@@ -19,12 +19,13 @@ export const api = {
     const res = await apiClient.post('/auth/login', { email, password });
     return res.data;
   },
-  register: async (email: string, password: string, businessName: string, fullName?: string) => {
+  register: async (email: string, password: string, businessName: string, fullName?: string, targetCountry: string = 'Pakistan') => {
     const res = await apiClient.post('/auth/register', {
       email,
       password,
       full_name: fullName || businessName,
       business_name: businessName,
+      target_country: targetCountry,
     });
     return res.data;
   },
@@ -37,6 +38,10 @@ export const api = {
   },
   verifyOtp: async (email: string, token: string) => {
     const res = await apiClient.post('/auth/verify-otp', { email, token });
+    return res.data;
+  },
+  resendOtp: async (email: string) => {
+    const res = await apiClient.post('/auth/resend-otp', { email });
     return res.data;
   },
   requestPasswordReset: async (email: string) => {
@@ -117,8 +122,13 @@ export const api = {
   },
 
   // Trends
-  getTrends: async (): Promise<TrendSignal[]> => {
-    const res = await apiClient.get('/trends');
+  getTrends: async (params?: { scope?: string; country?: string; platform?: string }): Promise<TrendSignal[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.scope) searchParams.append('scope', params.scope);
+    if (params?.country) searchParams.append('country', params.country);
+    if (params?.platform && params.platform !== 'all') searchParams.append('platform', params.platform);
+    const qs = searchParams.toString();
+    const res = await apiClient.get(`/trends${qs ? '?' + qs : ''}`);
     return res.data;
   },
   getMatchedTrends: async (): Promise<TrendSignal[]> => {
@@ -180,6 +190,10 @@ export const api = {
     const res = await apiClient.patch(`/planner/items/${itemId}`, data);
     return res.data;
   },
+  updateCalendarItemStatus: async (itemId: string, status: string): Promise<PlannerContentItem> => {
+    const res = await apiClient.patch(`/planner/items/${itemId}/status?status=${status}`);
+    return res.data;
+  },
   generateStudioCopy: async (params: {
     product_name: string;
     product_description?: string;
@@ -192,6 +206,24 @@ export const api = {
     custom_instructions?: string;
   }): Promise<{ hook: string; caption: string; call_to_action: string; hashtags: string; ai_model_used: string }> => {
     const res = await apiClient.post('/planner/generate-copy', params);
+    return res.data;
+  },
+  generateVoiceover: async (params: {
+    script: string;
+    target_country?: string;
+    target_language?: string;
+    speaker_style?: string;
+  }): Promise<{
+    target_country: string;
+    target_language: string;
+    localized_voiceover_script: string;
+    phonetic_or_roman_script?: string;
+    cultural_notes?: string;
+    suggested_audio_pacing: string;
+    word_count: number;
+    estimated_duration_seconds: number;
+  }> => {
+    const res = await apiClient.post('/planner/generate-voiceover', params);
     return res.data;
   },
   validateGuardrails: async (params: {

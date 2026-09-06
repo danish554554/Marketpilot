@@ -6,13 +6,16 @@ interface User {
   email: string;
   fullName?: string;
   businessName: string;
+  targetCountry: string;
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
+  targetCountry: string;
+  setTargetCountry: (country: string) => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, businessName: string, fullName?: string) => Promise<void>;
+  register: (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string) => Promise<{ requires_verification: boolean }>;
   updateBusinessName: (newBusinessName: string) => void;
   enterDemoMode: () => void;
   logout: () => void;
@@ -28,7 +31,18 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [targetCountry, setTargetCountryState] = useState<string>(
+    () => localStorage.getItem('marketpilot_target_country') || 'Pakistan'
+  );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const setTargetCountry = useCallback((country: string) => {
+    if (!country || !country.trim()) return;
+    const clean = country.trim();
+    localStorage.setItem('marketpilot_target_country', clean);
+    setTargetCountryState(clean);
+    setUser((prev) => (prev ? { ...prev, targetCountry: clean } : null));
+  }, []);
 
   // Check persisted token on mount
   useEffect(() => {
@@ -36,11 +50,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const savedEmail = localStorage.getItem('marketpilot_email');
     const savedBiz = localStorage.getItem('marketpilot_biz');
     const savedName = localStorage.getItem('marketpilot_full_name');
+    const savedCountry = localStorage.getItem('marketpilot_target_country') || 'Pakistan';
     if (token && savedEmail) {
       setUser({
         email: savedEmail,
         fullName: savedName || '',
         businessName: savedBiz || 'GlowSilk Beauty',
+        targetCountry: savedCountry,
       });
       setIsAuthenticated(true);
     }
@@ -90,18 +106,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const fullName = data.user?.full_name || '';
     const finalBiz = savedBiz || (fullName && !fullName.toLowerCase().includes('admin') ? fullName : 'GlowSilk Beauty');
+    const country = data.user?.target_country || localStorage.getItem('marketpilot_target_country') || 'Pakistan';
 
     localStorage.setItem('marketpilot_email', email);
     localStorage.setItem('marketpilot_biz', finalBiz);
+    localStorage.setItem('marketpilot_target_country', country);
     if (fullName) localStorage.setItem('marketpilot_full_name', fullName);
 
-    setUser({ email, fullName, businessName: finalBiz });
+    setUser({ email, fullName, businessName: finalBiz, targetCountry: country });
     setIsAuthenticated(true);
   }, []);
 
-  const register = useCallback(async (email: string, password: string, businessName: string, fullName?: string) => {
+  const register = useCallback(async (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string) => {
     const cleanBiz = businessName.trim() || 'GlowSilk Beauty';
     const nameToSend = fullName?.trim() || cleanBiz;
+    const countryToSend = targetCountry?.trim() || 'Pakistan';
 
     let res: Response;
     try {
@@ -113,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password,
           full_name: nameToSend,
           business_name: cleanBiz,
+          target_country: countryToSend,
         }),
       });
     } catch (err) {
@@ -132,9 +152,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     const token = data.session?.access_token || data.access_token;
     const savedName = data.user?.full_name || nameToSend;
+    const savedCountry = data.user?.target_country || countryToSend;
     localStorage.setItem('marketpilot_email', email);
     localStorage.setItem('marketpilot_biz', cleanBiz);
     localStorage.setItem('marketpilot_full_name', savedName);
+    localStorage.setItem('marketpilot_target_country', savedCountry);
+
+    const requiresVerification = data.requires_verification ?? (data.session === null);
 
     // If session is returned (e.g. email confirmations disabled on Supabase), save token
     if (token) {
@@ -142,7 +166,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.session?.refresh_token) {
         localStorage.setItem('marketpilot_refresh_token', data.session.refresh_token);
       }
+      setUser({
+        email,
+        fullName: savedName,
+        businessName: cleanBiz,
+        targetCountry: savedCountry,
+      });
+      setIsAuthenticated(true);
     }
+
+    return { requires_verification: requiresVerification };
   }, []);
 
   // Explicit demo mode (only when user deliberately requests it)
@@ -151,7 +184,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('marketpilot_token', demoToken);
     localStorage.setItem('marketpilot_email', 'demo@marketpilot.ai');
     localStorage.setItem('marketpilot_biz', 'GlowSilk Beauty (Demo)');
-    setUser({ email: 'demo@marketpilot.ai', fullName: 'Demo User', businessName: 'GlowSilk Beauty (Demo)' });
+    localStorage.setItem('marketpilot_target_country', 'Pakistan');
+    setUser({
+      email: 'demo@marketpilot.ai',
+      fullName: 'Demo User',
+      businessName: 'GlowSilk Beauty (Demo)',
+      targetCountry: 'Pakistan',
+    });
     setIsAuthenticated(true);
   }, []);
 
@@ -186,7 +225,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, register, updateBusinessName, enterDemoMode, logout }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        user,
+        targetCountry,
+        setTargetCountry,
+        login,
+        register,
+        updateBusinessName,
+        enterDemoMode,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

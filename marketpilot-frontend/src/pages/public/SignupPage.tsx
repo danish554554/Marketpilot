@@ -11,11 +11,13 @@ export function SignupPage() {
   // Step 1 State
   const [step, setStep] = useState<'signup' | 'verify' | 'verified'>('signup');
   const [businessName, setBusinessName] = useState('');
+  const [targetCountry, setTargetCountry] = useState('Pakistan');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resendSuccess, setResendSuccess] = useState('');
 
   // Step 2 Verification State
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
@@ -49,10 +51,18 @@ export function SignupPage() {
 
     setLoading(true);
     try {
-      await register(email, password, businessName);
-      // Advance to verification code step
-      setStep('verify');
-      setResendCountdown(45);
+      const res = await register(email, password, businessName, undefined, targetCountry);
+      if (res && res.requires_verification === false) {
+        // Direct session returned or auto-confirmed in Supabase
+        setStep('verified');
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1200);
+      } else {
+        // Advance to verification code step
+        setStep('verify');
+        setResendCountdown(45);
+      }
     } catch (err: any) {
       setError(err.message || "We couldn't connect to MarketPilot. Please try again.");
     } finally {
@@ -122,12 +132,14 @@ export function SignupPage() {
     if (resendCountdown > 0 || resending) return;
     setResending(true);
     setError('');
+    setResendSuccess('');
 
     try {
-      await register(email, password, businessName);
-      setResendCountdown(45);
+      await api.resendOtp(email);
+      setResendCountdown(60);
+      setResendSuccess(`A fresh verification code was sent to ${email}. Please check your inbox and spam folder.`);
     } catch (err: any) {
-      setError('Could not resend code. Please check backend connection.');
+      setError(err.response?.data?.detail || 'Could not resend code. Please wait a minute or check your email.');
     } finally {
       setResending(false);
     }
@@ -201,6 +213,27 @@ export function SignupPage() {
               />
             </div>
             <div>
+              <label className="block text-xs font-bold text-brand-ink mb-1 flex items-center justify-between">
+                <span>Target Market Country *</span>
+                <span className="text-[10px] text-brand-muted font-normal">Sets trends & voice-over language</span>
+              </label>
+              <select
+                value={targetCountry}
+                onChange={(e) => setTargetCountry(e.target.value)}
+                className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink font-semibold"
+              >
+                <option value="Pakistan">🇵🇰 Pakistan (Urdu Voice-Over & Local Trends)</option>
+                <option value="United States">🇺🇸 United States (Global Trends)</option>
+                <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                <option value="United Arab Emirates">🇦🇪 United Arab Emirates (Arabic Voice-Over)</option>
+                <option value="Saudi Arabia">🇸🇦 Saudi Arabia (Arabic Voice-Over)</option>
+                <option value="Canada">🇨🇦 Canada</option>
+                <option value="Germany">🇩🇪 Germany (German Voice-Over)</option>
+                <option value="India">🇮🇳 India (Hindi Voice-Over)</option>
+                <option value="Australia">🇦🇺 Australia</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-xs font-bold text-brand-ink mb-1">Work Email *</label>
               <input
                 type="email"
@@ -263,6 +296,13 @@ export function SignupPage() {
         {/* Step 2: 6-Digit Email Verification Form */}
         {step === 'verify' && (
           <form onSubmit={handleVerifySubmit} className="space-y-6">
+            {resendSuccess && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-start gap-2">
+                <CheckCircle2 size={16} className="text-brand-green shrink-0 mt-0.5" />
+                <span>{resendSuccess}</span>
+              </div>
+            )}
+
             <div className="flex justify-center gap-2 sm:gap-2.5 my-4">
               {otpDigits.map((digit, idx) => (
                 <input
@@ -315,6 +355,12 @@ export function SignupPage() {
               >
                 {resendCountdown > 0 ? `Resend code in ${resendCountdown}s` : 'Resend Code'}
               </button>
+            </div>
+
+            <div className="text-center pt-2">
+              <Link to="/login" className="text-xs text-brand-muted hover:text-brand-green">
+                Confirmed via email link? <span className="font-bold underline text-brand-green">Log in directly ➔</span>
+              </Link>
             </div>
           </form>
         )}

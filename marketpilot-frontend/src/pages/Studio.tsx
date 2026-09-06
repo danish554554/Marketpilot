@@ -19,11 +19,16 @@ import {
   ArrowRight,
   Info,
   HelpCircle,
-  Edit3
+  Edit3,
+  Volume2,
+  VolumeX,
+  Mic,
+  Globe
 } from 'lucide-react';
 import { BrandKit, MarketingStrategy, Product, TrendSignal } from '../types';
 import { api } from '../api/endpoints';
 import { useCurrency } from '../context/CurrencyContext';
+import { useAuth } from '../context/AuthContext';
 
 interface StudioProps {
   products: Product[];
@@ -33,6 +38,18 @@ interface StudioProps {
   trends?: TrendSignal[];
 }
 
+const COUNTRY_DEFAULT_LANG: Record<string, string> = {
+  Pakistan: 'Urdu',
+  'United Arab Emirates': 'Arabic',
+  'Saudi Arabia': 'Arabic',
+  Germany: 'German',
+  Canada: 'English',
+  'United States': 'English',
+  'United Kingdom': 'English',
+  India: 'Hindi',
+  Australia: 'English',
+};
+
 export const Studio: React.FC<StudioProps> = ({
   products,
   businessName,
@@ -41,6 +58,7 @@ export const Studio: React.FC<StudioProps> = ({
   trends = [],
 }) => {
   const { formatAmount } = useCurrency();
+  const { targetCountry } = useAuth();
   const [activeTab, setActiveTab] = useState<'script' | 'organic' | 'paid' | 'email' | 'whatsapp'>('script');
   const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id || '');
   const [selectedTrendTopic, setSelectedTrendTopic] = useState<string>(
@@ -50,6 +68,25 @@ export const Studio: React.FC<StudioProps> = ({
   const [selectedPillarIndex, setSelectedPillarIndex] = useState<number>(0);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Localized Voice-Over State
+  const initialLang = COUNTRY_DEFAULT_LANG[targetCountry] || (targetCountry?.toLowerCase() === 'pakistan' ? 'Urdu' : 'English');
+  const [voiceLanguage, setVoiceLanguage] = useState<string>(initialLang);
+  const [voiceoverData, setVoiceoverData] = useState<{
+    language: string;
+    roman_script?: string;
+    native_script: string;
+    estimated_duration_seconds: number;
+  } | null>(null);
+  const [isGeneratingVoiceover, setIsGeneratingVoiceover] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [copiedVoiceover, setCopiedVoiceover] = useState(false);
+
+  useEffect(() => {
+    const mapped = COUNTRY_DEFAULT_LANG[targetCountry] || 'English';
+    setVoiceLanguage(mapped);
+    setVoiceoverData(null);
+  }, [targetCountry]);
 
   const [activeBrandKit, setActiveBrandKit] = useState<BrandKit | null>(brandKit || null);
   const [guardrailResult, setGuardrailResult] = useState<{
@@ -249,6 +286,72 @@ export const Studio: React.FC<StudioProps> = ({
     navigator.clipboard.writeText(fullText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleGenerateVoiceover = async () => {
+    setIsGeneratingVoiceover(true);
+    try {
+      const fullScript = `${hook}\n\n${caption}`;
+      const res = await api.generateVoiceover({
+        script: fullScript,
+        target_country: targetCountry,
+        target_language: voiceLanguage,
+      });
+      setVoiceoverData({
+        language: res.target_language,
+        roman_script: res.phonetic_or_roman_script,
+        native_script: res.localized_voiceover_script,
+        estimated_duration_seconds: res.estimated_duration_seconds,
+      });
+    } catch (err) {
+      console.error('Voiceover generation error:', err);
+    } finally {
+      setIsGeneratingVoiceover(false);
+    }
+  };
+
+  const handlePlayVoiceover = () => {
+    if (!voiceoverData) return;
+    if (isPlayingAudio) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      alert('Speech synthesis audio preview is not supported by this browser.');
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const textToSpeak = voiceoverData.roman_script || voiceoverData.native_script;
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+
+    const voices = window.speechSynthesis.getVoices();
+    const langKey = voiceLanguage.toLowerCase().startsWith('urdu')
+      ? 'ur'
+      : voiceLanguage.toLowerCase().slice(0, 2);
+    const matchingVoice = voices.find((v) => v.lang.toLowerCase().includes(langKey));
+    if (matchingVoice) utterance.voice = matchingVoice;
+
+    utterance.rate = 0.95;
+    utterance.onend = () => setIsPlayingAudio(false);
+    utterance.onerror = () => setIsPlayingAudio(false);
+
+    setIsPlayingAudio(true);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleCopyVoiceover = () => {
+    if (!voiceoverData) return;
+    const copyText = voiceoverData.roman_script
+      ? `[Roman ${voiceoverData.language} Voice-Over]\n${voiceoverData.roman_script}\n\n[Native ${voiceoverData.language} Script]\n${voiceoverData.native_script}`
+      : voiceoverData.native_script;
+    navigator.clipboard.writeText(copyText);
+    setCopiedVoiceover(true);
+    setTimeout(() => setCopiedVoiceover(false), 2000);
   };
 
   // Missing data checks
@@ -614,6 +717,121 @@ export const Studio: React.FC<StudioProps> = ({
                   className="w-full text-xs text-slate-600 p-2.5 rounded-xl border border-brand-line bg-slate-50/50 focus:bg-white focus:outline-none focus:border-brand-green disabled:opacity-50"
                 />
               </div>
+            </div>
+
+            {/* Localized Spoken Voice-Over Studio */}
+            <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-emerald-50/60 to-slate-50 border border-emerald-200/80 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-100 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-brand-green text-white grid place-items-center">
+                    <Mic size={14} />
+                  </div>
+                  <div>
+                    <b className="text-xs font-bold text-brand-ink flex items-center gap-1.5">
+                      Target Market Voice-Over (Colloquial {targetCountry})
+                    </b>
+                    <p className="text-[10px] text-slate-500 m-0">
+                      Written copy remains high-converting English. Voice-over speaks natural local phrasing.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={voiceLanguage}
+                    onChange={(e) => setVoiceLanguage(e.target.value)}
+                    className="text-[11px] font-bold bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-green/20"
+                  >
+                    <option value="Urdu">Urdu (اردو / Roman)</option>
+                    <option value="Arabic">Arabic (العربية)</option>
+                    <option value="Hindi">Hindi (हिन्दी / Hinglish)</option>
+                    <option value="Spanish">Spanish (Español)</option>
+                    <option value="German">German (Deutsch)</option>
+                    <option value="French">French (Français)</option>
+                    <option value="English">English (Conversational)</option>
+                  </select>
+
+                  <button
+                    onClick={handleGenerateVoiceover}
+                    disabled={isGeneratingVoiceover || !caption}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-brand-green hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-[0.98]"
+                  >
+                    {isGeneratingVoiceover ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                    <span>{isGeneratingVoiceover ? 'Synthesizing...' : 'Generate Voice-Over'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Voice-Over Results Display */}
+              {voiceoverData ? (
+                <div className="space-y-3 pt-1 animate-fadeIn">
+                  <div className="flex items-center justify-between text-[10px] text-slate-500">
+                    <span className="font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      ✓ Ready for Creator Audio Recording ({voiceoverData.language})
+                    </span>
+                    <span className="font-medium text-slate-500">
+                      ⏱ Est. Duration: ~{voiceoverData.estimated_duration_seconds} seconds
+                    </span>
+                  </div>
+
+                  {/* Roman Script Box */}
+                  {voiceoverData.roman_script && (
+                    <div>
+                      <small className="block text-[9px] font-extrabold text-slate-600 uppercase mb-1">
+                        🗣️ Spoken Roman {voiceoverData.language} (Easy to read aloud on camera)
+                      </small>
+                      <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-mono leading-relaxed select-all">
+                        {voiceoverData.roman_script}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Native Script Box */}
+                  <div>
+                    <small className="block text-[9px] font-extrabold text-slate-600 uppercase mb-1">
+                      ✍️ Native Script ({voiceoverData.language})
+                    </small>
+                    <div
+                      className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 leading-relaxed select-all"
+                      dir={
+                        voiceLanguage.toLowerCase().includes('urdu') ||
+                        voiceLanguage.toLowerCase().includes('arabic')
+                          ? 'rtl'
+                          : 'ltr'
+                      }
+                    >
+                      {voiceoverData.native_script}
+                    </div>
+                  </div>
+
+                  {/* Playback & Copy Controls */}
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      onClick={handlePlayVoiceover}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        isPlayingAudio
+                          ? 'bg-amber-600 text-white hover:bg-amber-700'
+                          : 'bg-slate-800 text-white hover:bg-slate-900'
+                      }`}
+                    >
+                      {isPlayingAudio ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                      <span>{isPlayingAudio ? '⏹ Stop Audio' : '🔊 Listen to Voice-Over (TTS)'}</span>
+                    </button>
+
+                    <button
+                      onClick={handleCopyVoiceover}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-all"
+                    >
+                      {copiedVoiceover ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                      <span>{copiedVoiceover ? 'Copied Voice-Over!' : 'Copy Spoken Voice-Over'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-2 text-center text-[11px] text-slate-400 italic">
+                  Click "Generate Voice-Over" to adapt this English script into a natural, spoken {voiceLanguage} voice-over for {targetCountry}.
+                </div>
+              )}
             </div>
           </div>
 

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { TrendingUp, Sparkles, ExternalLink, Filter, RefreshCw, CheckCircle2, Zap, Target, Hash, Lightbulb } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, Sparkles, ExternalLink, Filter, RefreshCw, CheckCircle2, Zap, Target, Hash, Lightbulb, MapPin, Globe } from 'lucide-react';
 import { TrendSignal } from '../types';
 import { api } from '../api/endpoints';
+import { useAuth } from '../context/AuthContext';
 
 interface TrendsProps {
   trends: TrendSignal[];
@@ -9,55 +10,59 @@ interface TrendsProps {
   onNavigate: (page: string) => void;
 }
 
+const COUNTRIES = [
+  { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
+  { code: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
+  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦' },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+  { code: 'IN', name: 'India', flag: '🇮🇳' },
+  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+];
+
 export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate }) => {
+  const { targetCountry, setTargetCountry } = useAuth();
   const [platformFilter, setPlatformFilter] = useState<string>('all');
+  const [trendScope, setTrendScope] = useState<'local' | 'global'>('local');
   const [isIngesting, setIsIngesting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [selectedTrendIndex, setSelectedTrendIndex] = useState<number>(0);
 
-  React.useEffect(() => {
-    if (trends.length === 0) {
-      api.getTrends().then((loaded) => {
-        if (loaded && loaded.length > 0 && setTrends) {
-          setTrends(loaded);
-        }
-      }).catch(() => {});
+  const fetchScopedTrends = async () => {
+    try {
+      const loaded = await api.getTrends({
+        scope: trendScope,
+        country: targetCountry,
+        platform: platformFilter !== 'all' ? platformFilter : undefined,
+      });
+      if (loaded && loaded.length > 0 && setTrends) {
+        setTrends(loaded);
+        setSelectedTrendIndex(0);
+      }
+    } catch (err) {
+      console.error('Error fetching scoped trends:', err);
     }
-  }, []);
+  };
+
+  useEffect(() => {
+    fetchScopedTrends();
+  }, [trendScope, targetCountry, platformFilter]);
 
   const handleIngestLiveTrends = async () => {
     setIsIngesting(true);
     setStatusMessage(null);
 
+    const geoCode = targetCountry.toLowerCase() === 'pakistan' ? 'PK' : 'US';
     try {
-      const res = await api.ingestLiveTrends({ geo: 'US', limit_per_source: 6 });
-      let updated: TrendSignal[] = [];
-      try {
-        updated = await api.getTrends();
-      } catch {}
-
-      if (setTrends) {
-        if (updated && updated.length > 0) {
-          setTrends(updated);
-        } else if (res.signals && res.signals.length > 0) {
-          setTrends(res.signals);
-        }
-      }
-      setSelectedTrendIndex(0);
-      setStatusMessage(`⚡ Successfully fetched & AI-synthesized ${res.ingested_count || res.signals?.length || 4} new market trend signals via Google Trends, Reddit & Gemini (${res.model_used || 'gemini-3.6-flash'})!`);
+      const res = await api.ingestLiveTrends({ geo: geoCode, limit_per_source: 6 });
+      await fetchScopedTrends();
+      setStatusMessage(`⚡ Successfully fetched & AI-synthesized fresh ${trendScope === 'local' ? targetCountry : 'Global'} trend signals via Google Trends, Reddit & Gemini (${res.model_used || 'gemini-3.6-flash'})!`);
     } catch (err: any) {
       console.error('Ingestion error:', err);
-      try {
-        const updated = await api.getTrends();
-        if (setTrends && updated.length > 0) {
-          setTrends(updated);
-          setStatusMessage('Loaded verified trend signals from database.');
-        } else {
-          setStatusMessage('Unable to connect to live trends pipeline. Please ensure the backend is running.');
-        }
-      } catch {
-        setStatusMessage('Unable to connect to live trends pipeline. Please ensure the backend is running.');
-      }
+      await fetchScopedTrends();
+      setStatusMessage('Loaded verified trend signals from database.');
     } finally {
       setIsIngesting(false);
     }
@@ -129,6 +134,51 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Scope Segmented Switcher & Target Country Selector */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-brand-line p-3 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+          <button
+            onClick={() => setTrendScope('local')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              trendScope === 'local'
+                ? 'bg-brand-green text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <MapPin size={13} />
+            <span>Local Trends ({targetCountry})</span>
+          </button>
+          <button
+            onClick={() => setTrendScope('global')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              trendScope === 'global'
+                ? 'bg-brand-green text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Globe size={13} />
+            <span>Global Trends (Worldwide)</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+            <Target size={13} className="text-brand-green" /> Target Market:
+          </span>
+          <select
+            value={targetCountry}
+            onChange={(e) => setTargetCountry(e.target.value)}
+            className="text-xs font-bold bg-slate-50 border border-brand-line rounded-xl px-3 py-1.5 text-brand-ink focus:outline-none focus:ring-2 focus:ring-brand-green/20 cursor-pointer"
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.name} value={c.name}>
+                {c.flag} {c.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

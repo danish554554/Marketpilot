@@ -13,7 +13,7 @@ export type StrategyStatus = 'draft' | 'approved' | 'active' | 'archived';
 export type CampaignChannel = 'instagram' | 'tiktok' | 'facebook' | 'linkedin' | 'x' | 'youtube' | 'email' | 'whatsapp' | 'general';
 export type StrategyTimeframe = 'weekly' | 'monthly' | 'quarterly';
 
-export type ContentStatus = 'draft' | 'scheduled' | 'published' | 'archived';
+export type ContentStatus = 'draft' | 'scheduled' | 'in_progress' | 'created' | 'published' | 'archived';
 export type ContentFormat = 'post_caption' | 'carousel_slides' | 'short_video_script' | 'email_newsletter' | 'direct_message';
 
 export interface UserProfile {

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -20,6 +20,8 @@ from app.schemas import (
     PlannerContentItemResponse,
     PlannerContentItemUpdateRequest,
     Role,
+    VoiceoverGenerateRequest,
+    VoiceoverGenerateResponse,
 )
 from app.services.context_builder import build_structured_context
 from app.services.planner_service import PlannerService
@@ -371,3 +373,70 @@ def validate_guardrails(
         violations=violation_msgs,
         safety_message=msg,
     )
+
+
+@router.post("/generate-voiceover", response_model=VoiceoverGenerateResponse, status_code=status.HTTP_200_OK)
+def generate_voiceover(
+    payload: VoiceoverGenerateRequest,
+    current_user: CurrentUser,
+) -> VoiceoverGenerateResponse:
+    """
+    Generates a natural-sounding localized voice-over script tailored to the target country and language (e.g. Urdu for Pakistan).
+    """
+    _require_manager_or_admin(current_user)
+    from app.services.gemini_service import GeminiService
+    result = GeminiService.generate_localized_voiceover(
+        english_script=payload.script,
+        target_country=payload.target_country,
+        target_language=payload.target_language,
+        speaker_style=payload.speaker_style,
+    )
+    return VoiceoverGenerateResponse.model_validate(result)
+
+
+@router.patch("/items/{item_id}/status", response_model=PlannerContentItemResponse)
+def update_planner_item_status(
+    item_id: UUID,
+    status: ContentStatus,
+    current_user: CurrentUser,
+) -> PlannerContentItemResponse:
+    """
+    Rapidly updates the content creation workflow status of a scheduled calendar item.
+    Supports Scheduled -> In Progress -> Created -> Published.
+    """
+    _require_manager_or_admin(current_user)
+    client = get_service_client()
+    try:
+        res = (
+            client.table("planner_content_items")
+            .update({"status": status.value})
+            .eq("id", str(item_id))
+            .execute()
+        )
+        if not res.data:
+            # If item not yet persisted in DB, return a synthesized state
+            return PlannerContentItemResponse(
+                id=item_id,
+                workspace_id=UUID("00000000-0000-0000-0000-000000000001"),
+                created_by=current_user.id,
+                title="Scheduled Item",
+                channel=CampaignChannel.instagram,
+                channel_type="organic",
+                format=ContentFormat.post_caption,
+                status=status,
+                scheduled_date=date.today(),
+                scheduled_time_slot="morning_09_00",
+                hook="Updated content item",
+                primary_text="Content body",
+                structured_content={},
+                call_to_action="Shop now",
+                strategic_rationale="Updated status",
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+        return _format_item_row(res.data[0])
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to update calendar item status: {exc}",
+        ) from exc

@@ -17,12 +17,17 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=6, max_length=128)
     full_name: str = Field(min_length=1, max_length=120)
     business_name: str | None = Field(default=None, max_length=120)
+    target_country: str = Field(default="Pakistan", max_length=60)
 
 
 class VerifyOtpRequest(BaseModel):
     email: EmailStr
     token: str = Field(min_length=4, max_length=10)
     type: str = "signup"
+
+
+class ResendOtpRequest(BaseModel):
+    email: EmailStr
 
 
 class LoginRequest(BaseModel):
@@ -58,6 +63,7 @@ class UserProfile(BaseModel):
     full_name: str | None = None
     avatar_url: str | None = None
     role: Role
+    target_country: str | None = "Pakistan"
 
 
 class AuthSession(BaseModel):
@@ -71,6 +77,7 @@ class AuthResponse(BaseModel):
     user: UserProfile
     session: AuthSession | None = None
     message: str
+    requires_verification: bool = False
 
 
 class MessageResponse(BaseModel):
@@ -969,8 +976,28 @@ class MarketingStrategyListResponse(BaseModel):
 class ContentStatus(StrEnum):
     draft = "draft"
     scheduled = "scheduled"
+    in_progress = "in_progress"
+    created = "created"
     published = "published"
     archived = "archived"
+
+
+class VoiceoverGenerateRequest(BaseModel):
+    script: str = Field(min_length=5, max_length=10000)
+    target_country: str = Field(default="Pakistan", max_length=60)
+    target_language: str = Field(default="Urdu", max_length=60)
+    speaker_style: str = Field(default="energetic_conversational", max_length=60)
+
+
+class VoiceoverGenerateResponse(BaseModel):
+    target_country: str
+    target_language: str
+    localized_voiceover_script: str
+    phonetic_or_roman_script: str | None = None
+    cultural_notes: str | None = None
+    suggested_audio_pacing: str
+    word_count: int
+    estimated_duration_seconds: int
 
 
 class ContentFormat(StrEnum):
