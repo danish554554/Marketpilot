@@ -361,19 +361,27 @@ class GeminiService:
         trend_topic: str | None = None,
         hook_idea: str | None = None,
         custom_instructions: str | None = None,
+        target_country: str | None = "Pakistan",
+        target_language: str | None = "Urdu",
     ) -> dict[str, str]:
         """
         Uses Google Gemini to generate highly persuasive, channel-tailored marketing copy
         accurately referencing the specific product, its real features, and target pain points.
+        For video scripts, voiceover lines are natively localized into the target market's language.
         """
         client = cls.get_client()
         model_name = cls.get_model_name()
+
+        country = target_country or "Pakistan"
+        lang = target_language or ("Urdu" if "pakistan" in country.lower() else "English")
 
         system_instruction = (
             "You are an elite direct-response e-commerce copywriter and viral video scriptwriter. "
             "Write production-ready, highly engaging, conversion-optimized marketing copy. "
             "IMPORTANT: Strictly speak about the specific product given in the prompt, its real features, and the problems it solves. "
             "Do NOT confuse it with unrelated products. "
+            f"TARGET MARKET & LANGUAGE CONTEXT: Target Country is {country}, Spoken Language is {lang}. "
+            "FOR VIDEO SCRIPTS (TikTok / Reels / Shorts): All spoken Voiceover lines and the opening Hook MUST be written in the target country's natural colloquial language (e.g. for Pakistan, write conversational Spoken Roman Urdu so creators can read it fluently on camera, along with native Urdu script). Visual directions, scene timings, and camera cues remain in English. "
             "Output pure JSON with exactly 4 keys: 'hook', 'caption', 'call_to_action', 'hashtags'."
         )
 
@@ -384,13 +392,15 @@ class GeminiService:
             f"- Key Features: {', '.join(product_features) if product_features else 'Premium quality & durable design'}\n"
             f"- Pain Points It Solves: {', '.join(product_pain_points) if product_pain_points else 'Daily consumer friction'}\n\n"
             f"CAMPAIGN GOAL & FORMAT:\n"
+            f"- Target Market Country: {country}\n"
+            f"- Spoken Local Language: {lang}\n"
             f"- Channel: {channel} (e.g. tiktok, instagram, paid ad, email, whatsapp)\n"
             f"- Format: {format_type}\n"
             f"- Live Trend / Angle: {trend_topic or 'Problem-Solution demonstration'}\n"
             f"- Optional Hook Seed: {hook_idea or 'None'}\n"
             f"- Custom Notes: {custom_instructions or 'Focus on fast benefits and high clarity'}\n\n"
             "INSTRUCTIONS FOR FORMAT:\n"
-            "- If format is 'script' or 'tiktok': Write a complete timestamped short-form video script with [HOOK - 0:00 to 0:03], [DEMO & BENEFIT - 0:03 to 0:10], and [CALL TO ACTION - 0:10 to 0:15] with visual & voiceover cues.\n"
+            f"- If format is 'script' or 'tiktok': Write a complete timestamped short-form video script with [HOOK - 0:00 to 0:03], [DEMO & BENEFIT - 0:03 to 0:10], and [CALL TO ACTION - 0:10 to 0:15]. All Voiceover lines MUST be in {lang} (for Pakistan, write Roman Urdu and Urdu script so the creator speaks natural Urdu on camera). Visual & camera cues remain in English.\n"
             "- If format is 'organic' or 'instagram': Write an educational carousel/reel caption highlighting why traditional alternatives fail and how this product solves it, with clean bullet points and engagement question.\n"
             "- If format is 'paid': Write a high-urgency direct-response ad copy with strong hook, comparison against costly alternatives, risk-reversal guarantee, and compelling discount CTA.\n"
             "- If format is 'email': Write a complete newsletter with Subject Line, story-driven intro, product benefits, and clear CTA button text.\n"
@@ -432,21 +442,40 @@ class GeminiService:
         first_feat = product_features[0] if product_features else "innovative design"
         first_pain = product_pain_points[0] if product_pain_points else "daily frustration"
 
-        if format_type == "script" or channel == "tiktok":
-            h = hook_idea or f"Still struggling with {first_pain}? Stop and watch this."
-            c = (
-                f"[HOOK - 0:00 to 0:03]\n"
-                f"Visual: Close-up demonstrating the daily problem with {first_pain}.\n"
-                f"Voiceover: \"{h}\"\n\n"
-                f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
-                f"Visual: Presenter using {product_name} showcasing {first_feat}.\n"
-                f"Voiceover: \"The {product_name} fixes this in seconds. Built with {first_feat} so you get effortless results every time.\"\n\n"
-                f"[CALL TO ACTION - 0:10 to 0:15]\n"
-                f"Visual: Finished result with product box in hand.\n"
-                f"Voiceover: \"Tap the link below to get yours with special launch pricing before stock runs out!\""
-            )
-            cta = "Tap link in bio to get 20% off"
-            tags = f"#{product_name.replace(' ', '')} #ViralFinds #ProblemSolved #LifeHacks"
+        if format_type in ("script", "short_video_script") or channel == "tiktok":
+            if "pakistan" in country.lower() or "urdu" in lang.lower():
+                h = hook_idea or "Peach fuzz ke upar foundation lagana band karein — pehle yeh 30-sec trick dekhein!"
+                c = (
+                    f"[HOOK - 0:00 to 0:03]\n"
+                    f"Visual: Split-screen close-up showing cakey foundation over peach fuzz vs. smooth skin glide.\n"
+                    f"Voiceover (Roman Urdu): \"Peach fuzz ke upar foundation lagana band karein! Pehle yeh 30-second ki trick dekhein.\"\n"
+                    f"Voiceover (اردو): \"پیچ فز کے اوپر فاؤنڈیشن لگانا بند کریں! پہلے یہ ۳۰ سیکنڈ کی ٹرک دیکھیں۔\"\n\n"
+                    f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
+                    f"Visual: Presenter effortlessly gliding {product_name} across cheek, highlighting {first_feat}.\n"
+                    f"Voiceover (Roman Urdu): \"Purane aur naakara tareeqon pe waqt zaya karna chhod dein. Yeh {product_name} sirf chand seconds mein bina dard ke makhan jaisi smooth skin deta hai.\"\n"
+                    f"Voiceover (اردو): \"پرانے اور ناکارہ طریقوں پر وقت ضائع کرنا چھوڑ دیں۔ یہ {product_name} صرف چند سیکنڈز میں بنا درد کے مکھن جیسی ہموار جلد دیتا ہے۔\"\n\n"
+                    f"[CALL TO ACTION - 0:10 to 0:15]\n"
+                    f"Visual: Clean, glowing finished look with {product_name} in hand.\n"
+                    f"Voiceover (Roman Urdu): \"Toh bas abhi ready ho jayein! Neeche diye gaye link par click karein aur launch sale mein poora 20% OFF hasil karein!\"\n"
+                    f"Voiceover (اردو): \"تو بس ابھی ریڈی ہو جائیں! نیچے دیے گئے لنک پر کلک کریں اور لانچ سیل میں پورا ۲۰٪ رعایت حاصل کریں!\""
+                )
+                cta = "Neeche link par click karein aur 20% discount hasil karein"
+                tags = f"#{product_name.replace(' ', '')} #BeautyHacksPK #SkincareUrdu #ViralFindsPK"
+            else:
+                h = hook_idea or f"Still struggling with {first_pain}? Stop and watch this."
+                c = (
+                    f"[HOOK - 0:00 to 0:03]\n"
+                    f"Visual: Close-up demonstrating the daily problem with {first_pain}.\n"
+                    f"Voiceover: \"{h}\"\n\n"
+                    f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
+                    f"Visual: Presenter using {product_name} showcasing {first_feat}.\n"
+                    f"Voiceover: \"The {product_name} fixes this in seconds. Built with {first_feat} so you get effortless results every time.\"\n\n"
+                    f"[CALL TO ACTION - 0:10 to 0:15]\n"
+                    f"Visual: Finished result with product box in hand.\n"
+                    f"Voiceover: \"Tap the link below to get yours with special launch pricing before stock runs out!\""
+                )
+                cta = "Tap link in bio to get 20% off"
+                tags = f"#{product_name.replace(' ', '')} #ViralFinds #ProblemSolved #LifeHacks"
         elif format_type == "paid":
             h = f"Why struggle with {first_pain} when you can have this?"
             c = (

@@ -1195,6 +1195,8 @@ class CopyGenerationRequest(BaseModel):
     trend_topic: str | None = None
     hook_idea: str | None = None
     custom_instructions: str | None = None
+    target_country: str | None = "Pakistan"
+    target_language: str | None = "Urdu"
 
 
 class CopyGenerationResponse(BaseModel):

@@ -68,25 +68,7 @@ export const Studio: React.FC<StudioProps> = ({
   const [selectedPillarIndex, setSelectedPillarIndex] = useState<number>(0);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  // Localized Voice-Over State
-  const initialLang = COUNTRY_DEFAULT_LANG[targetCountry] || (targetCountry?.toLowerCase() === 'pakistan' ? 'Urdu' : 'English');
-  const [voiceLanguage, setVoiceLanguage] = useState<string>(initialLang);
-  const [voiceoverData, setVoiceoverData] = useState<{
-    language: string;
-    roman_script?: string;
-    native_script: string;
-    estimated_duration_seconds: number;
-  } | null>(null);
-  const [isGeneratingVoiceover, setIsGeneratingVoiceover] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [copiedVoiceover, setCopiedVoiceover] = useState(false);
-
-  useEffect(() => {
-    const mapped = COUNTRY_DEFAULT_LANG[targetCountry] || 'English';
-    setVoiceLanguage(mapped);
-    setVoiceoverData(null);
-  }, [targetCountry]);
 
   const [activeBrandKit, setActiveBrandKit] = useState<BrandKit | null>(brandKit || null);
   const [guardrailResult, setGuardrailResult] = useState<{
@@ -192,7 +174,9 @@ export const Studio: React.FC<StudioProps> = ({
         format: tab,
         trend_topic: trend || activePillar?.trend_topic || undefined,
         hook_idea: activePillar?.hook_ideas?.[0] || undefined,
-        custom_instructions: `Offer/Promotion: ${offer || 'Standard Pricing'}. Ground strictly in product features: ${prod.features?.join(', ')}.`,
+        custom_instructions: `Offer/Promotion: ${offer || 'Standard Pricing'}. Ground strictly in product features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}.`,
+        target_country: targetCountry,
+        target_language: COUNTRY_DEFAULT_LANG[targetCountry] || (targetCountry?.toLowerCase() === 'pakistan' ? 'Urdu' : 'English'),
       });
 
       setHook(res.hook);
@@ -220,6 +204,7 @@ export const Studio: React.FC<StudioProps> = ({
     const feat = prod.features?.[0] || 'innovative high-performance design';
     const pain = prod.pain_points?.[0] || 'wasting time on poor alternatives';
     const hookIdea = activePillar?.hook_ideas?.[0] || `Still struggling with ${pain}? Watch this.`;
+    const isUrduMarket = targetCountry?.toLowerCase() === 'pakistan';
 
     let generatedHook = '';
     let generatedCaption = '';
@@ -227,12 +212,21 @@ export const Studio: React.FC<StudioProps> = ({
     let generatedTags = '';
 
     if (tab === 'script') {
-      generatedHook = hookIdea;
-      generatedCaption = (
-        `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing the daily problem with ${pain}.\nVoiceover: "${hookIdea}"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter using ${prodName} highlighting ${feat}.\nVoiceover: "The ${prodName} fixes this in seconds. Designed with ${feat} for smooth, effortless results."\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Showing clean finished look with product in hand.\nVoiceover: "Tap the link below to get yours with ${offer || 'free express shipping'} before stock runs out!"`
-      );
-      generatedCta = `Tap link in bio to claim ${offer || '20% off'}`;
-      generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralFinds #ProblemSolved #LifeHacks`;
+      if (isUrduMarket) {
+        generatedHook = `Peach fuzz ke upar foundation lagana band karein — pehle yeh 30-sec trick dekhein!`;
+        generatedCaption = (
+          `[HOOK - 0:00 to 0:03]\nVisual: Split-screen close-up showing cakey makeup over peach fuzz vs. smooth skin glide.\nVoiceover (Roman Urdu): "Peach fuzz ke upar foundation lagana band karein! Pehle yeh 30-second ki trick dekhein."\nVoiceover (اردو): "پیچ فز کے اوپر فاؤنڈیشن لگانا بند کریں! پہلے یہ ۳۰ سیکنڈ کی ٹرک دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter effortlessly gliding ${prodName} across cheek, highlighting ${feat}.\nVoiceover (Roman Urdu): "Purane aur naakara tareeqon pe waqt zaya karna chhod dein. Yeh ${prodName} sirf chand seconds mein bina dard ke makhan jaisi smooth skin deta hai."\nVoiceover (اردو): "پرانے اور ناکارہ طریقوں پر وقت ضائع کرنا چھوڑ دیں۔ یہ ${prodName} صرف چند سیکنڈز میں بنا درد کے مکھن جیسی ہموار جلد دیتا ہے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Clean, glowing finished look with ${prodName} in hand.\nVoiceover (Roman Urdu): "Toh bas abhi ready ho jayein! Neeche diye gaye link par click karein aur launch sale mein poora ${offer || '20% OFF'} hasil karein!"\nVoiceover (اردو): "تو بس ابھی ریڈی ہو جائیں! نیچے دیے گئے لنک پر کلک کریں اور لانچ سیل میں پورا ۲۰٪ رعایت حاصل کریں!"`
+        );
+        generatedCta = `Neeche diye gaye link par click karein aur ${offer || '20% off'} hasil karein`;
+        generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #BeautyHacksPK #SkincareUrdu #ViralFindsPK`;
+      } else {
+        generatedHook = hookIdea;
+        generatedCaption = (
+          `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing the daily problem with ${pain}.\nVoiceover: "${hookIdea}"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter using ${prodName} highlighting ${feat}.\nVoiceover: "The ${prodName} fixes this in seconds. Designed with ${feat} for smooth, effortless results."\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Showing clean finished look with product in hand.\nVoiceover: "Tap the link below to get yours with ${offer || 'free express shipping'} before stock runs out!"`
+        );
+        generatedCta = `Tap link in bio to claim ${offer || '20% off'}`;
+        generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralFinds #ProblemSolved #LifeHacks`;
+      }
     } else if (tab === 'organic') {
       generatedHook = `Why most people struggle with ${pain} (and the 30-second fix).`;
       generatedCaption = (
@@ -288,30 +282,7 @@ export const Studio: React.FC<StudioProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleGenerateVoiceover = async () => {
-    setIsGeneratingVoiceover(true);
-    try {
-      const fullScript = `${hook}\n\n${caption}`;
-      const res = await api.generateVoiceover({
-        script: fullScript,
-        target_country: targetCountry,
-        target_language: voiceLanguage,
-      });
-      setVoiceoverData({
-        language: res.target_language,
-        roman_script: res.phonetic_or_roman_script,
-        native_script: res.localized_voiceover_script,
-        estimated_duration_seconds: res.estimated_duration_seconds,
-      });
-    } catch (err) {
-      console.error('Voiceover generation error:', err);
-    } finally {
-      setIsGeneratingVoiceover(false);
-    }
-  };
-
-  const handlePlayVoiceover = () => {
-    if (!voiceoverData) return;
+  const handlePlayScriptAudio = () => {
     if (isPlayingAudio) {
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -325,14 +296,23 @@ export const Studio: React.FC<StudioProps> = ({
       return;
     }
 
+    // Extract voiceover lines from script
+    const voiceoverMatches = caption.match(/Voiceover(?:\s*\([^)]+\))?:\s*"([^"]+)"/gi);
+    let textToSpeak = '';
+    if (voiceoverMatches && voiceoverMatches.length > 0) {
+      textToSpeak = voiceoverMatches
+        .map((m) => m.replace(/Voiceover(?:\s*\([^)]+\))?:\s*"?/i, '').replace(/"?$/, ''))
+        .join(' ');
+    } else {
+      textToSpeak = `${hook}. ${caption}`;
+    }
+
     window.speechSynthesis.cancel();
-    const textToSpeak = voiceoverData.roman_script || voiceoverData.native_script;
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
 
     const voices = window.speechSynthesis.getVoices();
-    const langKey = voiceLanguage.toLowerCase().startsWith('urdu')
-      ? 'ur'
-      : voiceLanguage.toLowerCase().slice(0, 2);
+    const isUrdu = targetCountry?.toLowerCase() === 'pakistan';
+    const langKey = isUrdu ? 'ur' : 'en';
     const matchingVoice = voices.find((v) => v.lang.toLowerCase().includes(langKey));
     if (matchingVoice) utterance.voice = matchingVoice;
 
@@ -342,16 +322,6 @@ export const Studio: React.FC<StudioProps> = ({
 
     setIsPlayingAudio(true);
     window.speechSynthesis.speak(utterance);
-  };
-
-  const handleCopyVoiceover = () => {
-    if (!voiceoverData) return;
-    const copyText = voiceoverData.roman_script
-      ? `[Roman ${voiceoverData.language} Voice-Over]\n${voiceoverData.roman_script}\n\n[Native ${voiceoverData.language} Script]\n${voiceoverData.native_script}`
-      : voiceoverData.native_script;
-    navigator.clipboard.writeText(copyText);
-    setCopiedVoiceover(true);
-    setTimeout(() => setCopiedVoiceover(false), 2000);
   };
 
   // Missing data checks
@@ -662,20 +632,45 @@ export const Studio: React.FC<StudioProps> = ({
 
             {/* Body Content / Script */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-extrabold text-slate-600 uppercase">
-                  Generated Script / Body Content
-                </label>
-                {isGenerating ? (
-                  <span className="text-[9px] text-emerald-700 font-bold flex items-center gap-1">
-                    <Loader2 size={10} className="animate-spin" /> Gemini Writing...
-                  </span>
-                ) : (
-                  <span className="text-[9px] text-slate-400 font-bold">{caption.length} characters</span>
-                )}
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-extrabold text-slate-600 uppercase">
+                    {activeTab === 'script' ? 'Video Script with Localized Voiceover' : 'Generated Copy / Body Content'}
+                  </label>
+                  {activeTab === 'script' && (
+                    <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      🗣️ Voiceover: {targetCountry === 'Pakistan' ? 'Urdu (Roman & Native Script)' : targetCountry}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {activeTab === 'script' && (
+                    <button
+                      type="button"
+                      onClick={handlePlayScriptAudio}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all ${
+                        isPlayingAudio
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                      title="Listen to synthesized spoken audio"
+                    >
+                      {isPlayingAudio ? <VolumeX size={11} /> : <Volume2 size={11} />}
+                      <span>{isPlayingAudio ? 'Stop Audio' : '🔊 Listen Voiceover (TTS)'}</span>
+                    </button>
+                  )}
+                  {isGenerating ? (
+                    <span className="text-[9px] text-emerald-700 font-bold flex items-center gap-1">
+                      <Loader2 size={10} className="animate-spin" /> Gemini Writing...
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-slate-400 font-bold">{caption.length} characters</span>
+                  )}
+                </div>
               </div>
               <textarea
-                rows={8}
+                rows={activeTab === 'script' ? 12 : 8}
                 value={caption}
                 onChange={(e) => {
                   setCaption(e.target.value);
@@ -717,121 +712,6 @@ export const Studio: React.FC<StudioProps> = ({
                   className="w-full text-xs text-slate-600 p-2.5 rounded-xl border border-brand-line bg-slate-50/50 focus:bg-white focus:outline-none focus:border-brand-green disabled:opacity-50"
                 />
               </div>
-            </div>
-
-            {/* Localized Spoken Voice-Over Studio */}
-            <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-emerald-50/60 to-slate-50 border border-emerald-200/80 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-100 pb-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-brand-green text-white grid place-items-center">
-                    <Mic size={14} />
-                  </div>
-                  <div>
-                    <b className="text-xs font-bold text-brand-ink flex items-center gap-1.5">
-                      Target Market Voice-Over (Colloquial {targetCountry})
-                    </b>
-                    <p className="text-[10px] text-slate-500 m-0">
-                      Written copy remains high-converting English. Voice-over speaks natural local phrasing.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <select
-                    value={voiceLanguage}
-                    onChange={(e) => setVoiceLanguage(e.target.value)}
-                    className="text-[11px] font-bold bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-green/20"
-                  >
-                    <option value="Urdu">Urdu (اردو / Roman)</option>
-                    <option value="Arabic">Arabic (العربية)</option>
-                    <option value="Hindi">Hindi (हिन्दी / Hinglish)</option>
-                    <option value="Spanish">Spanish (Español)</option>
-                    <option value="German">German (Deutsch)</option>
-                    <option value="French">French (Français)</option>
-                    <option value="English">English (Conversational)</option>
-                  </select>
-
-                  <button
-                    onClick={handleGenerateVoiceover}
-                    disabled={isGeneratingVoiceover || !caption}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-brand-green hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-[0.98]"
-                  >
-                    {isGeneratingVoiceover ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                    <span>{isGeneratingVoiceover ? 'Synthesizing...' : 'Generate Voice-Over'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Voice-Over Results Display */}
-              {voiceoverData ? (
-                <div className="space-y-3 pt-1 animate-fadeIn">
-                  <div className="flex items-center justify-between text-[10px] text-slate-500">
-                    <span className="font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                      ✓ Ready for Creator Audio Recording ({voiceoverData.language})
-                    </span>
-                    <span className="font-medium text-slate-500">
-                      ⏱ Est. Duration: ~{voiceoverData.estimated_duration_seconds} seconds
-                    </span>
-                  </div>
-
-                  {/* Roman Script Box */}
-                  {voiceoverData.roman_script && (
-                    <div>
-                      <small className="block text-[9px] font-extrabold text-slate-600 uppercase mb-1">
-                        🗣️ Spoken Roman {voiceoverData.language} (Easy to read aloud on camera)
-                      </small>
-                      <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-mono leading-relaxed select-all">
-                        {voiceoverData.roman_script}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Native Script Box */}
-                  <div>
-                    <small className="block text-[9px] font-extrabold text-slate-600 uppercase mb-1">
-                      ✍️ Native Script ({voiceoverData.language})
-                    </small>
-                    <div
-                      className="p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 leading-relaxed select-all"
-                      dir={
-                        voiceLanguage.toLowerCase().includes('urdu') ||
-                        voiceLanguage.toLowerCase().includes('arabic')
-                          ? 'rtl'
-                          : 'ltr'
-                      }
-                    >
-                      {voiceoverData.native_script}
-                    </div>
-                  </div>
-
-                  {/* Playback & Copy Controls */}
-                  <div className="flex items-center justify-between pt-1">
-                    <button
-                      onClick={handlePlayVoiceover}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                        isPlayingAudio
-                          ? 'bg-amber-600 text-white hover:bg-amber-700'
-                          : 'bg-slate-800 text-white hover:bg-slate-900'
-                      }`}
-                    >
-                      {isPlayingAudio ? <VolumeX size={13} /> : <Volume2 size={13} />}
-                      <span>{isPlayingAudio ? '⏹ Stop Audio' : '🔊 Listen to Voice-Over (TTS)'}</span>
-                    </button>
-
-                    <button
-                      onClick={handleCopyVoiceover}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-all"
-                    >
-                      {copiedVoiceover ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                      <span>{copiedVoiceover ? 'Copied Voice-Over!' : 'Copy Spoken Voice-Over'}</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-2 text-center text-[11px] text-slate-400 italic">
-                  Click "Generate Voice-Over" to adapt this English script into a natural, spoken {voiceLanguage} voice-over for {targetCountry}.
-                </div>
-              )}
             </div>
           </div>
 

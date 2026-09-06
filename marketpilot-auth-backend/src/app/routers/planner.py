@@ -329,6 +329,8 @@ def generate_copy(
         trend_topic=payload.trend_topic,
         hook_idea=payload.hook_idea,
         custom_instructions=payload.custom_instructions,
+        target_country=payload.target_country,
+        target_language=payload.target_language,
     )
 
     return CopyGenerationResponse(
