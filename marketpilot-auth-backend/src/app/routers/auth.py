@@ -108,7 +108,23 @@ def register(payload: RegisterRequest) -> AuthResponse:
         except Exception as ws_err:
             print(f"Notice: Workspace auto-provisioning handled: {ws_err}")
 
-        # Generate 6-digit authentication code
+        # If Supabase already authorized the session (email confirmation disabled or auto-confirmed)
+        if response.session is not None:
+            session = AuthSession(
+                access_token=response.session.access_token,
+                refresh_token=response.session.refresh_token,
+                expires_in=response.session.expires_in,
+                token_type=response.session.token_type,
+            )
+            return AuthResponse(
+                user=profile,
+                session=session,
+                requires_verification=False,
+                verification_code=None,
+                message="Account created successfully! Welcome to MarketPilot.",
+            )
+
+        # Otherwise, email confirmation is required by Supabase
         otp_code = _generate_otp(str(payload.email), str(response.user.id))
 
         # Send direct verification email if SMTP is configured
@@ -127,8 +143,6 @@ def register(payload: RegisterRequest) -> AuthResponse:
             except Exception:
                 pass
 
-        # Strictly require verification: session is NOT returned until code is verified
-        # Never expose plain verification_code to browser UI or HTTP response
         return AuthResponse(
             user=profile,
             session=None,

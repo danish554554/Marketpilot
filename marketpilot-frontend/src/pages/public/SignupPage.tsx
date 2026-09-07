@@ -77,7 +77,11 @@ export function SignupPage() {
 
     setLoading(true);
     try {
-      await register(email, password, businessName, undefined, targetCountry);
+      const res = await register(email, password, businessName, undefined, targetCountry);
+      if (res && res.requires_verification === false) {
+        navigate('/dashboard');
+        return;
+      }
       // Advance to the 6-digit verification code step
       setStep('verify');
       setResendCountdown(45);
