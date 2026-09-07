@@ -139,7 +139,7 @@ export function App() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 md:ml-[255px] flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
+      <div className="flex-1 md:ml-[255px] flex flex-col min-w-0 w-full max-w-full">
         {/* Dynamic Workspace-Aware Top Header */}
         <Header
           activePage={activePage}
@@ -151,7 +151,7 @@ export function App() {
         />
 
         {/* Dynamic Page Views */}
-        <main className="flex-1 p-3.5 sm:p-5 md:p-10 max-w-[1600px] w-full mx-auto min-w-0">
+        <main className="flex-1 p-3.5 sm:p-5 md:p-10 max-w-[1600px] w-full mx-auto min-w-0 overflow-x-hidden">
           {activePage === 'overview' && (
             <Overview
               onNavigate={setActivePage}
