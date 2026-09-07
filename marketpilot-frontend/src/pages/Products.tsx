@@ -38,6 +38,26 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
     }
   };
 
+  // Proactively fetch latest cloud products from database on component mount
+  React.useEffect(() => {
+    let isMounted = true;
+    const syncCatalogue = async () => {
+      try {
+        const cloudProducts = await api.getProducts();
+        if (isMounted && Array.isArray(cloudProducts)) {
+          setProducts(cloudProducts);
+          updateCachedProducts(cloudProducts);
+        }
+      } catch (err) {
+        console.warn('Background products sync note:', err);
+      }
+    };
+    syncCatalogue();
+    return () => {
+      isMounted = false;
+    };
+  }, [userEmail]);
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -72,23 +92,6 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
         return updated;
       });
       setStatusMessage({ type: 'success', text: `"${saved.name}" successfully saved to your store catalogue.` });
-    } catch (err: any) {
-      console.warn('Backend addProduct warning, preserving with local workspace fallback:', err);
-      const fallbackProd: Product = {
-        ...(newProd as Product),
-        id: 'prod-' + Date.now(),
-        workspace_id: user?.id || 'ws-default',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setProducts((prev) => {
-        const updated = [fallbackProd, ...prev];
-        updateCachedProducts(updated);
-        return updated;
-      });
-      setStatusMessage({ type: 'success', text: `"${fallbackProd.name}" saved to your catalogue.` });
-    } finally {
-      setLoading(false);
       setShowAddModal(false);
       setName('');
       setDescription('');
@@ -96,6 +99,39 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
       setCostPrice('');
       setPainPoints('');
       setFeatures('');
+    } catch (err: any) {
+      console.error('Backend addProduct error:', err);
+      const isDemo = !localStorage.getItem('marketpilot_token') || user?.id === 'demo-user-123';
+      if (isDemo) {
+        const fallbackProd: Product = {
+          ...(newProd as Product),
+          id: 'prod-' + Date.now(),
+          workspace_id: user?.id || 'ws-default',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        setProducts((prev) => {
+          const updated = [fallbackProd, ...prev];
+          updateCachedProducts(updated);
+          return updated;
+        });
+        setStatusMessage({ type: 'success', text: `[Demo Mode] "${fallbackProd.name}" saved to your local browser.` });
+        setShowAddModal(false);
+        setName('');
+        setDescription('');
+        setPrice('');
+        setCostPrice('');
+        setPainPoints('');
+        setFeatures('');
+      } else {
+        const errDetail = err.response?.data?.detail || err.message || 'Unable to save product to database.';
+        setStatusMessage({
+          type: 'error',
+          text: `Failed to save product to cloud: ${typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail)}.`,
+        });
+      }
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -52,10 +52,12 @@ def _current_workspace_id(current_user: CurrentUser) -> str:
         ins = service_client.table("business_workspaces").insert({
             "owner_id": str(current_user.id),
             "business_name": biz_name,
+            "business_description": f"{biz_name} e-commerce store catalogue and marketing workspace.",
             "industry": "e-commerce",
             "country": "PK",
             "currency": "PKR",
             "target_market": country,
+            "marketing_objectives": ["increase_sales", "increase_engagement"],
         }).execute()
         if ins.data and len(ins.data) > 0:
             return ins.data[0]["id"]
@@ -227,8 +229,21 @@ def create_product(payload: ProductCreateRequest, current_user: CurrentUser) -> 
         values["images"] = []
     try:
         result = get_service_client().table("products").insert(values).execute()
-        return Product.model_validate(result.data[0])
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to insert product record.")
+        row = result.data[0]
+        if row.get("profit_margin") is None and row.get("price") and row.get("cost_price"):
+            try:
+                p = float(row["price"])
+                c = float(row["cost_price"])
+                if p > 0:
+                    row["profit_margin"] = round(((p - c) / p) * 100, 2)
+            except Exception:
+                pass
+        return Product.model_validate(row)
     except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
         if "products_workspace_id_sku_key" in str(exc):
             raise HTTPException(status_code=409, detail="A product with this SKU already exists in this workspace.") from exc
         # Fallback if 004b optional columns (features/pain_points/cost_price) are not present in table
@@ -237,7 +252,8 @@ def create_product(payload: ProductCreateRequest, current_user: CurrentUser) -> 
             try:
                 fallback_values = {k: v for k, v in values.items() if k not in {"features", "pain_points", "cost_price"}}
                 result = get_service_client().table("products").insert(fallback_values).execute()
-                return Product.model_validate(result.data[0])
+                if result.data:
+                    return Product.model_validate(result.data[0])
             except Exception:
                 pass
         raise HTTPException(status_code=503, detail="Product storage is temporarily unavailable. Run the Module 4 migration first.") from exc
@@ -261,7 +277,18 @@ def list_products(
         if category is not None:
             query = query.eq("category", category.strip())
         result = query.order("created_at", desc=True).execute()
-        return [Product.model_validate(row) for row in (result.data or [])]
+        products: list[Product] = []
+        for row in (result.data or []):
+            if row.get("profit_margin") is None and row.get("price") and row.get("cost_price"):
+                try:
+                    p = float(row["price"])
+                    c = float(row["cost_price"])
+                    if p > 0:
+                        row["profit_margin"] = round(((p - c) / p) * 100, 2)
+                except Exception:
+                    pass
+            products.append(Product.model_validate(row))
+        return products
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Product storage is temporarily unavailable. Run the Module 4 migration first.") from exc
 

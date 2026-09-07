@@ -76,10 +76,12 @@ def get_my_workspace(current_user: CurrentUser) -> Workspace:
             ins = service_client.table("business_workspaces").insert({
                 "owner_id": str(current_user.id),
                 "business_name": biz_name,
+                "business_description": f"{biz_name} e-commerce store catalogue and marketing workspace.",
                 "industry": "e-commerce",
                 "country": "PK",
                 "currency": "PKR",
                 "target_market": country,
+                "marketing_objectives": ["increase_sales", "increase_engagement"],
             }).execute()
             if ins.data and len(ins.data) > 0:
                 return _serialize_workspace(ins.data[0])

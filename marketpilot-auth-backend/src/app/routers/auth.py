@@ -86,10 +86,12 @@ def register(payload: RegisterRequest) -> AuthResponse:
                 ws_res = service_client.table("business_workspaces").insert({
                     "owner_id": response.user.id,
                     "business_name": biz_name,
+                    "business_description": f"{biz_name} e-commerce store catalogue and marketing workspace.",
                     "industry": "e-commerce",
                     "country": country_code,
                     "currency": currency,
                     "target_market": target_country,
+                    "marketing_objectives": ["increase_sales", "increase_engagement"],
                 }).execute()
                 if ws_res.data and len(ws_res.data) > 0:
                     ws_id = ws_res.data[0]["id"]
