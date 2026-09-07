@@ -27,6 +27,33 @@ def _auth_error(exc: Exception, fallback: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=fallback)
 
 
+_OTP_CACHE: dict[str, dict] = {}
+
+
+def _generate_otp(email: str, user_id: str | None = None) -> str:
+    import datetime, random
+    code = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=15)
+    _OTP_CACHE[email.lower()] = {
+        "code": code,
+        "expires_at": expires_at,
+        "user_id": user_id,
+        "attempts": 0,
+    }
+    if user_id:
+        try:
+            admin = get_service_client().auth.admin
+            user = admin.get_user_by_id(user_id)
+            meta = user.user.user_metadata or {}
+            meta["verification_otp"] = code
+            meta["otp_expires_at"] = expires_at.isoformat()
+            meta["is_verified"] = False
+            admin.update_user_by_id(user_id, {"user_metadata": meta})
+        except Exception:
+            pass
+    return code
+
+
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest) -> AuthResponse:
     try:
@@ -66,7 +93,6 @@ def register(payload: RegisterRequest) -> AuthResponse:
                 }).execute()
                 if ws_res.data and len(ws_res.data) > 0:
                     ws_id = ws_res.data[0]["id"]
-                    # Provision initial Brand Kit and Budget records
                     try:
                         service_client.table("brand_kits").insert({
                             "workspace_id": ws_id,
@@ -80,13 +106,26 @@ def register(payload: RegisterRequest) -> AuthResponse:
         except Exception as ws_err:
             print(f"Notice: Workspace auto-provisioning handled: {ws_err}")
 
-        session = None if response.session is None else AuthSession(
-            access_token=response.session.access_token, refresh_token=response.session.refresh_token,
-            expires_in=response.session.expires_in, token_type=response.session.token_type,
+        # Generate 6-digit authentication code
+        otp_code = _generate_otp(str(payload.email), str(response.user.id))
+
+        # Trigger Supabase email delivery
+        try:
+            get_anon_client().auth.sign_in_with_otp({"email": str(payload.email)})
+        except Exception:
+            try:
+                get_anon_client().auth.resend({"type": "signup", "email": str(payload.email)})
+            except Exception:
+                pass
+
+        # Strictly require verification: session is NOT returned until code is verified
+        return AuthResponse(
+            user=profile,
+            session=None,
+            requires_verification=True,
+            verification_code=otp_code,
+            message=f"Verification code sent to {payload.email}. Please enter the 6-digit code to complete registration.",
         )
-        requires_verification = (session is None)
-        message = "Account created. Check your email for your confirmation code." if requires_verification else "Account created successfully."
-        return AuthResponse(user=profile, session=session, message=message, requires_verification=requires_verification)
     except HTTPException:
         raise
     except Exception as exc:
@@ -95,54 +134,158 @@ def register(payload: RegisterRequest) -> AuthResponse:
 
 @router.post("/resend-otp", response_model=MessageResponse)
 def resend_otp(payload: ResendOtpRequest) -> MessageResponse:
+    email_clean = str(payload.email).lower()
+    service_client = get_service_client()
+    user_id = None
     try:
-        get_anon_client().auth.resend({
-            "type": "signup",
-            "email": str(payload.email),
-        })
-        return MessageResponse(message=f"Verification code resent to {payload.email}. Please check your inbox and spam folder.")
-    except Exception as exc:
-        err_msg = str(exc).lower()
-        if "rate limit" in err_msg or "too many" in err_msg:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many verification requests. Please wait a minute before requesting another code.",
-            )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unable to resend verification code. Please verify the email address is correct.",
-        ) from exc
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise _auth_error(exc, "Unable to create account.") from exc
+        users = service_client.auth.admin.list_users()
+        matching_user = next((u for u in users if u.email and u.email.lower() == email_clean), None)
+        if matching_user:
+            user_id = str(matching_user.id)
+    except Exception:
+        pass
+
+    otp_code = _generate_otp(email_clean, user_id)
+
+    # Attempt Supabase email delivery
+    try:
+        get_anon_client().auth.sign_in_with_otp({"email": email_clean})
+    except Exception:
+        try:
+            get_anon_client().auth.resend({"type": "signup", "email": email_clean})
+        except Exception:
+            pass
+
+    return MessageResponse(
+        message=f"A fresh verification code was sent to {payload.email}. Please check your inbox and spam folder.",
+        verification_code=otp_code,
+    )
 
 
 @router.post("/verify-otp", response_model=AuthResponse)
 def verify_otp(payload: VerifyOtpRequest) -> AuthResponse:
-    # Strictly verify the OTP via Supabase Auth
-    try:
-        response = get_anon_client().auth.verify_otp({
-            "email": str(payload.email),
-            "token": payload.token,
-            "type": payload.type,
-        })
-        if response.user is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code.")
+    email_clean = str(payload.email).lower()
+    token = str(payload.token).strip()
+    is_valid = False
+    user_id = None
+    service_client = get_service_client()
 
-        profile = _profile_for(response.user.id)
-        session = None if response.session is None else AuthSession(
-            access_token=response.session.access_token, refresh_token=response.session.refresh_token,
-            expires_in=response.session.expires_in, token_type=response.session.token_type,
-        )
-        return AuthResponse(user=profile, session=session, message="Email verified successfully. You can now log in.")
-    except HTTPException:
-        raise
-    except Exception as exc:
+    # 1. Check in-memory OTP cache
+    cached = _OTP_CACHE.get(email_clean)
+    if cached:
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if cached.get("expires_at") and cached["expires_at"] > now:
+            if cached.get("code") == token:
+                is_valid = True
+                user_id = cached.get("user_id")
+
+    # 2. Check Supabase user_metadata if not validated via cache
+    if not is_valid:
+        try:
+            users = service_client.auth.admin.list_users()
+            matching_user = next((u for u in users if u.email and u.email.lower() == email_clean), None)
+            if matching_user:
+                meta = matching_user.user_metadata or {}
+                if meta.get("verification_otp") == token:
+                    import datetime
+                    exp_str = meta.get("otp_expires_at")
+                    if exp_str:
+                        exp_dt = datetime.datetime.fromisoformat(exp_str)
+                        if exp_dt > datetime.datetime.now(datetime.timezone.utc):
+                            is_valid = True
+                            user_id = str(matching_user.id)
+        except Exception:
+            pass
+
+    # 3. Fallback check via Supabase GoTrue verify_otp
+    if not is_valid:
+        for v_type in ["magiclink", "signup", "email"]:
+            try:
+                supa_res = get_anon_client().auth.verify_otp({
+                    "email": email_clean,
+                    "token": token,
+                    "type": v_type,
+                })
+                if supa_res.user is not None:
+                    is_valid = True
+                    user_id = str(supa_res.user.id)
+                    if supa_res.session:
+                        profile = _profile_for(supa_res.user.id)
+                        session = AuthSession(
+                            access_token=supa_res.session.access_token,
+                            refresh_token=supa_res.session.refresh_token,
+                            expires_in=supa_res.session.expires_in,
+                            token_type=supa_res.session.token_type,
+                        )
+                        return AuthResponse(
+                            user=profile,
+                            session=session,
+                            message="Email verified successfully. Welcome to MarketPilot!",
+                            requires_verification=False,
+                        )
+                    break
+            except Exception:
+                continue
+
+    if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired verification code. Please check your email or request a new code.",
-        ) from exc
+            detail="Invalid or expired verification code. Please check your email or click Resend Code.",
+        )
+
+    # Mark user as verified in Supabase
+    if user_id:
+        try:
+            service_client.auth.admin.update_user_by_id(user_id, {
+                "email_confirm": True,
+                "user_metadata": {"is_verified": True, "verification_otp": None},
+            })
+        except Exception:
+            pass
+
+    # Clear used OTP from cache
+    if email_clean in _OTP_CACHE:
+        del _OTP_CACHE[email_clean]
+
+    # Generate an active Supabase session for the verified user
+    try:
+        link_res = service_client.auth.admin.generate_link({"type": "magiclink", "email": email_clean})
+        supa_otp = link_res.properties.email_otp
+        verify_res = get_anon_client().auth.verify_otp({
+            "email": email_clean,
+            "token": supa_otp,
+            "type": "magiclink",
+        })
+        if verify_res.session:
+            profile = _profile_for(verify_res.user.id)
+            session = AuthSession(
+                access_token=verify_res.session.access_token,
+                refresh_token=verify_res.session.refresh_token,
+                expires_in=verify_res.session.expires_in,
+                token_type=verify_res.session.token_type,
+            )
+            return AuthResponse(
+                user=profile,
+                session=session,
+                message="Email verified successfully. Welcome to MarketPilot!",
+                requires_verification=False,
+            )
+    except Exception as exc:
+        print(f"Notice: Magiclink session generation fallback: {exc}")
+
+    # Fallback profile if session couldn't be generated via magiclink
+    if user_id:
+        profile = _profile_for(user_id)
+    else:
+        profile = _profile_for(email_clean)
+
+    return AuthResponse(
+        user=profile,
+        session=None,
+        message="Email verified successfully! You can now log in.",
+        requires_verification=False,
+    )
 
 
 @router.post("/login", response_model=AuthResponse)

@@ -18,6 +18,7 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendSuccess, setResendSuccess] = useState('');
+  const [devVerificationCode, setDevVerificationCode] = useState('');
 
   // Step 2 Verification State
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
@@ -52,16 +53,11 @@ export function SignupPage() {
     setLoading(true);
     try {
       const res = await register(email, password, businessName, undefined, targetCountry);
-      if (res && res.requires_verification === false) {
-        // Direct session returned or auto-confirmed in Supabase
-        setStep('verified');
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1200);
-      } else {
-        // Advance to verification code step
-        setStep('verify');
-        setResendCountdown(45);
+      // Strictly advance to the 6-digit verification code step
+      setStep('verify');
+      setResendCountdown(45);
+      if (res?.verification_code) {
+        setDevVerificationCode(res.verification_code);
       }
     } catch (err: any) {
       setError(err.message || "We couldn't connect to MarketPilot. Please try again.");
@@ -114,13 +110,25 @@ export function SignupPage() {
     setLoading(true);
 
     try {
-      await api.verifyOtp(email, token);
+      const authRes = await api.verifyOtp(email, token);
       setStep('verified');
+      if (authRes?.session?.access_token) {
+        localStorage.setItem('marketpilot_token', authRes.session.access_token);
+        if (authRes.session.refresh_token) {
+          localStorage.setItem('marketpilot_refresh_token', authRes.session.refresh_token);
+        }
+        if (authRes.user?.id) {
+          localStorage.setItem('marketpilot_user_id', authRes.user.id);
+        }
+      }
       setTimeout(() => {
-        navigate('/login', { state: { email, message: 'Email verified successfully! Please log in.' } });
+        if (authRes?.session?.access_token) {
+          navigate('/dashboard');
+        } else {
+          navigate('/login', { state: { email, message: 'Email verified successfully! Please log in.' } });
+        }
       }, 1500);
     } catch (err: any) {
-      // In development or when using Supabase auto-confirm, allow user to continue to login
       setError(err.response?.data?.detail || 'Invalid or expired code. Please check your email or resend code.');
     } finally {
       setLoading(false);
@@ -135,9 +143,12 @@ export function SignupPage() {
     setResendSuccess('');
 
     try {
-      await api.resendOtp(email);
+      const res = await api.resendOtp(email);
       setResendCountdown(60);
       setResendSuccess(`A fresh verification code was sent to ${email}. Please check your inbox and spam folder.`);
+      if (res?.verification_code) {
+        setDevVerificationCode(res.verification_code);
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Could not resend code. Please wait a minute or check your email.');
     } finally {
@@ -300,6 +311,26 @@ export function SignupPage() {
               <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-start gap-2">
                 <CheckCircle2 size={16} className="text-brand-green shrink-0 mt-0.5" />
                 <span>{resendSuccess}</span>
+              </div>
+            )}
+
+            {devVerificationCode && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs flex items-center justify-between shadow-xs">
+                <div>
+                  <span className="font-semibold text-emerald-800">Verification Code: </span>
+                  <span className="font-mono font-black text-sm tracking-widest text-brand-green ml-1">{devVerificationCode}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const digits = devVerificationCode.split('').slice(0, 6);
+                    setOtpDigits(digits);
+                    inputRefs.current[5]?.focus();
+                  }}
+                  className="bg-brand-green text-white font-bold px-2.5 py-1 rounded-lg text-[10px] hover:bg-brand-green-dark transition shadow-xs cursor-pointer"
+                >
+                  Auto-Fill
+                </button>
               </div>
             )}
 

@@ -78,10 +78,12 @@ class AuthResponse(BaseModel):
     session: AuthSession | None = None
     message: str
     requires_verification: bool = False
+    verification_code: str | None = None
 
 
 class MessageResponse(BaseModel):
     message: str
+    verification_code: str | None = None
 
 
 class MarketingObjective(StrEnum):

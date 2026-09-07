@@ -15,7 +15,7 @@ interface AuthContextType {
   targetCountry: string;
   setTargetCountry: (country: string) => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string) => Promise<{ requires_verification: boolean }>;
+  register: (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string) => Promise<{ requires_verification: boolean; verification_code?: string; message?: string }>;
   updateBusinessName: (newBusinessName: string) => void;
   enterDemoMode: () => void;
   logout: () => void;
@@ -164,10 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('marketpilot_full_name', savedName);
     localStorage.setItem('marketpilot_target_country', savedCountry);
 
-    const requiresVerification = data.requires_verification ?? (data.session === null);
+    const requiresVerification = data.requires_verification !== false;
 
-    // If session is returned (e.g. email confirmations disabled on Supabase), save token
-    if (token) {
+    // Only set authenticated session if verification is explicitly not required
+    if (token && !requiresVerification) {
       localStorage.setItem('marketpilot_token', token);
       if (data.session?.refresh_token) {
         localStorage.setItem('marketpilot_refresh_token', data.session.refresh_token);
@@ -182,7 +182,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAuthenticated(true);
     }
 
-    return { requires_verification: requiresVerification };
+    return {
+      requires_verification: requiresVerification,
+      verification_code: data.verification_code,
+      message: data.message,
+    };
   }, []);
 
   // Explicit demo mode (only when user deliberately requests it)
