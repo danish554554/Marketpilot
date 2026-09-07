@@ -34,6 +34,32 @@ export function SignupPage() {
     return () => clearTimeout(timer);
   }, [step, resendCountdown]);
 
+  // Auto-detect authentication if user clicked the "Sign in" link in Gmail
+  useEffect(() => {
+    if (step !== 'verify') return;
+
+    const checkAuthenticated = () => {
+      const token = localStorage.getItem('marketpilot_token');
+      if (token) {
+        setStep('verified');
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1000);
+      }
+    };
+
+    checkAuthenticated();
+    window.addEventListener('storage', checkAuthenticated);
+    window.addEventListener('focus', checkAuthenticated);
+    const interval = setInterval(checkAuthenticated, 1500);
+
+    return () => {
+      window.removeEventListener('storage', checkAuthenticated);
+      window.removeEventListener('focus', checkAuthenticated);
+      clearInterval(interval);
+    };
+  }, [step, navigate]);
+
   // Handle Step 1: Sign up
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -307,30 +333,49 @@ export function SignupPage() {
               </div>
             )}
 
-            {/* Real Email Delivery Instructions */}
-            <div className="p-4 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl text-xs space-y-2.5 shadow-xs">
+            {/* Email Verification Guidance */}
+            <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl text-xs space-y-3 shadow-xs">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center shrink-0 mt-0.5">
-                  <Mail size={16} />
+                <div className="w-9 h-9 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center shrink-0 mt-0.5">
+                  <Mail size={18} />
                 </div>
-                <div className="space-y-1">
-                  <p className="font-bold text-emerald-950 text-xs">Verification Code Sent to Gmail</p>
+                <div className="space-y-1.5 flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-emerald-950 text-xs">Email Sent to Gmail</p>
+                    <span className="text-[10px] font-bold text-brand-green bg-emerald-100 px-2 py-0.5 rounded-full">Active</span>
+                  </div>
                   <p className="text-emerald-800 text-[11px] leading-relaxed">
-                    We've sent a 6-digit verification code to <strong className="text-emerald-950 font-semibold">{email}</strong>. Please check your Gmail inbox (or Spam folder) and type the code below.
+                    We sent an authentication email to <strong className="text-emerald-950 font-bold">{email}</strong>.
                   </p>
-                  <div className="pt-1.5 flex items-center gap-3">
-                    <a
-                      href="https://mail.google.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-brand-green hover:text-brand-green-dark hover:underline"
-                    >
-                      <span>Open Gmail Inbox</span>
-                      <span className="text-[10px]">↗</span>
-                    </a>
+                  <div className="bg-white/90 rounded-xl p-3 border border-emerald-100/80 space-y-2 mt-1 shadow-2xs">
+                    <p className="text-[11px] font-semibold text-slate-800 flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-brand-green" />
+                      <span>Easiest: Click "Sign in" in your email</span>
+                    </p>
+                    <p className="text-[11px] text-slate-600 leading-normal">
+                      Open the email from <strong>Supabase Auth</strong> in your Gmail and click the <strong>"Sign in"</strong> button. This window will automatically detect it and open your dashboard!
+                    </p>
+                    <div className="pt-1">
+                      <a
+                        href="https://mail.google.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-green text-white font-bold rounded-lg text-xs hover:bg-brand-green-dark transition shadow-xs cursor-pointer"
+                      >
+                        <Mail size={12} />
+                        <span>Open Gmail Inbox</span>
+                        <span className="text-[10px]">↗</span>
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-slate-200"></div>
+              <span className="flex-shrink mx-3 text-[11px] text-slate-400 font-medium">or enter 6-digit code</span>
+              <div className="flex-grow border-t border-slate-200"></div>
             </div>
 
             <div className="flex justify-center gap-2 sm:gap-2.5 my-4">
@@ -387,10 +432,24 @@ export function SignupPage() {
               </button>
             </div>
 
-            <div className="text-center pt-2">
-              <Link to="/login" className="text-xs text-brand-muted hover:text-brand-green">
-                Confirmed via email link? <span className="font-bold underline text-brand-green">Log in directly ➔</span>
-              </Link>
+            <div className="pt-2 text-center space-y-1">
+              <p className="text-[11px] text-brand-muted">
+                Clicked the link in Gmail?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const token = localStorage.getItem('marketpilot_token');
+                    if (token) {
+                      navigate('/dashboard');
+                    } else {
+                      navigate('/login', { state: { email, message: 'Email verified! Please log in.' } });
+                    }
+                  }}
+                  className="text-brand-green font-bold hover:underline cursor-pointer"
+                >
+                  Proceed to Dashboard ➔
+                </button>
+              </p>
             </div>
           </form>
         )}
