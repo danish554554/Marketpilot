@@ -45,27 +45,28 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="h-[74px] sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-brand-line px-5 md:px-10 flex items-center justify-between">
+    <header className="h-[64px] sm:h-[74px] sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-brand-line px-3.5 sm:px-5 md:px-10 flex items-center justify-between w-full max-w-full overflow-x-hidden">
       {/* Left: Mobile Menu & Page Title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
         <button
           onClick={onMenuToggle}
-          className="md:hidden text-slate-500 hover:text-slate-800 p-1"
+          className="md:hidden text-slate-500 hover:text-slate-800 p-1.5 -ml-1 shrink-0 rounded-lg hover:bg-slate-100 transition-colors"
+          aria-label="Toggle navigation menu"
         >
           <Menu size={20} />
         </button>
-        <div>
-          <small className="block text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
+        <div className="min-w-0">
+          <small className="block text-[8px] sm:text-[9px] font-extrabold tracking-wider text-slate-400 uppercase truncate">
             {current.kicker}
           </small>
-          <h3 className="text-[15px] font-display font-bold text-brand-ink m-0">
+          <h3 className="text-sm sm:text-[15px] font-display font-bold text-brand-ink m-0 truncate">
             {current.title}
           </h3>
         </div>
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {/* Currency Switcher */}
         <CurrencySelector />
 
@@ -77,16 +78,16 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-2 p-0.5 sm:p-1 rounded-full hover:bg-slate-50 transition-colors"
             title={isLoggedIn && userEmail ? `Logged in as ${userEmail}` : 'Account'}
           >
-            <span className="w-8 h-8 rounded-full bg-[#e9e1d7] text-[#7c5637] text-xs font-extrabold grid place-items-center">
-              {isLoggedIn && userEmail ? userEmail[0].toUpperCase() : <User size={14} />}
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#e9e1d7] text-[#7c5637] text-xs font-extrabold grid place-items-center">
+              {isLoggedIn && userEmail ? userEmail[0].toUpperCase() : <User size={13} />}
             </span>
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 top-12 bg-white border border-brand-line rounded-xl shadow-soft py-2 w-52 z-50">
+            <div className="absolute right-0 top-11 sm:top-12 bg-white border border-brand-line rounded-xl shadow-soft py-2 w-52 z-50">
               {isLoggedIn && userEmail && (
                 <div className="px-4 py-2 border-b border-brand-line">
                   <p className="text-xs font-bold text-brand-ink truncate">{userEmail}</p>
@@ -107,10 +108,11 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Primary Generate CTA */}
         <button
           onClick={onOpenGenerateModal}
-          className="bg-brand-green hover:bg-brand-green-dark text-white font-extrabold text-[11px] px-3.5 py-2.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
+          className="bg-brand-green hover:bg-brand-green-dark text-white font-extrabold text-[10px] sm:text-[11px] px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 rounded-lg shadow-sm flex items-center gap-1 sm:gap-1.5 transition-all"
         >
-          <Sparkles size={13} />
-          <span>✦ Generate plan</span>
+          <Sparkles size={12} className="shrink-0" />
+          <span className="hidden xs:inline sm:inline">✦ Generate</span>
+          <span className="inline xs:hidden sm:hidden">Plan</span>
         </button>
       </div>
     </header>

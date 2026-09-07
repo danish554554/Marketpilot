@@ -386,10 +386,10 @@ export const Studio: React.FC<StudioProps> = ({
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
       {/* 1. Transparent Grounding & Attribution Header Bar */}
-      <div className="bg-white border border-brand-line rounded-2xl p-5 shadow-card space-y-3">
+      <div className="bg-white border border-brand-line rounded-2xl p-4 sm:p-5 shadow-card space-y-3 overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2 py-0.5 rounded-md flex items-center gap-1">
                 <Sparkles size={11} className="text-emerald-700" />
                 TRANSPARENT AI GROUNDING ENGINE
@@ -422,11 +422,11 @@ export const Studio: React.FC<StudioProps> = ({
           <span className="text-[10px] font-extrabold text-slate-400 uppercase mr-1">BASED ON:</span>
 
           {/* Product Badge */}
-          <div className="bg-slate-50 border border-slate-200 text-brand-ink text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold">
-            <Package size={13} className="text-brand-green" />
-            <span>Product: <strong className="text-brand-green">{selectedProduct.name}</strong></span>
+          <div className="bg-slate-50 border border-slate-200 text-brand-ink text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold max-w-full truncate">
+            <Package size={13} className="text-brand-green shrink-0" />
+            <span className="truncate">Product: <strong className="text-brand-green truncate max-w-[140px] sm:max-w-none inline-block align-bottom">{selectedProduct.name}</strong></span>
             {selectedProduct.profit_margin && (
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold">
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold shrink-0">
                 {selectedProduct.profit_margin}% Margin
               </span>
             )}
@@ -605,9 +605,9 @@ export const Studio: React.FC<StudioProps> = ({
         </aside>
 
         {/* Right Multi-Channel Editor (8 cols) */}
-        <main className="lg:col-span-8 bg-white border border-brand-line rounded-2xl p-6 shadow-card space-y-5">
+        <main className="lg:col-span-8 bg-white border border-brand-line rounded-2xl p-4 sm:p-6 shadow-card space-y-5 overflow-hidden">
           {/* Format / Channel Tabs */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-brand-line pb-3">
+          <div className="flex overflow-x-auto pb-2 sm:pb-3 sm:flex-wrap items-center gap-1.5 sm:gap-2 border-b border-brand-line">
             <button
               onClick={() => setActiveTab('script')}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -780,20 +780,24 @@ export const Studio: React.FC<StudioProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-brand-line">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:items-center sm:justify-between pt-3 border-t border-brand-line">
             <button
-              onClick={() => generateAIPost(activeTab, selectedProduct, selectedTrendTopic, customOffer)}
+              onClick={() => {
+                const nextCount = regenerationCount + 1;
+                setRegenerationCount(nextCount);
+                generateAIPost(activeTab, selectedProduct, selectedTrendTopic, customOffer, nextCount);
+              }}
               disabled={isGenerating}
-              className="text-xs text-slate-600 hover:text-slate-900 font-bold flex items-center gap-1.5 disabled:opacity-50"
+              className="text-xs text-slate-600 hover:text-slate-900 font-bold flex items-center gap-1.5 disabled:opacity-50 self-start"
             >
               <RefreshCw size={12} className={isGenerating ? 'animate-spin text-brand-green' : ''} />
-              <span>{isGenerating ? 'Gemini 3.6 Flash Writing...' : 'Regenerate with Gemini AI'}</span>
+              <span>{isGenerating ? 'Gemini 3.6 Flash Writing...' : `Regenerate with Gemini AI${regenerationCount > 0 ? ` (Angle #${(regenerationCount % 4) + 1})` : ''}`}</span>
             </button>
 
             <button
               onClick={handleCopy}
               disabled={isGenerating}
-              className="flex items-center gap-2 px-5 py-2.5 bg-brand-green hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-green hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 w-full sm:w-auto"
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
               <span>{copied ? 'Copied to Clipboard!' : 'Copy Ready-to-Publish Copy'}</span>

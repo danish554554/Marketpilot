@@ -128,7 +128,7 @@ export function App() {
   }, [isAuthenticated, userEmail, user?.id]);
 
   return (
-    <div className="min-h-screen bg-brand-canvas flex flex-col md:flex-row text-brand-ink antialiased">
+    <div className="min-h-screen bg-brand-canvas flex flex-col md:flex-row text-brand-ink antialiased w-full max-w-full overflow-x-hidden">
       {/* Dynamic Workspace-Aware Sidebar */}
       <Sidebar
         activePage={activePage}
@@ -139,7 +139,7 @@ export function App() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 md:ml-[255px] flex flex-col min-w-0">
+      <div className="flex-1 md:ml-[255px] flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
         {/* Dynamic Workspace-Aware Top Header */}
         <Header
           activePage={activePage}
@@ -151,7 +151,7 @@ export function App() {
         />
 
         {/* Dynamic Page Views */}
-        <main className="flex-1 p-5 md:p-10 max-w-[1600px] w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-5 md:p-10 max-w-[1600px] w-full mx-auto min-w-0">
           {activePage === 'overview' && (
             <Overview
               onNavigate={setActivePage}

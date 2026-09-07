@@ -252,17 +252,17 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
       )}
 
       {/* Main Schedule Canvas */}
-      <article className="bg-white border border-brand-line rounded-2xl p-6 shadow-card space-y-4">
+      <article className="bg-white border border-brand-line rounded-2xl p-4 sm:p-6 shadow-card space-y-4 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-line pb-4">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <b className="text-sm font-display font-bold text-brand-ink">Upcoming Publishing Queue</b>
             <span className="text-xs text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded-full">
-              {filteredItems.length} Scheduled Content Drops
+              {filteredItems.length} Scheduled Drops
             </span>
           </div>
 
           {/* Filter Channel */}
-          <div className="flex items-center gap-1.5 text-xs font-bold bg-slate-50 p-1 rounded-xl border border-slate-100">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-xs font-bold bg-slate-50 p-1 rounded-xl border border-slate-100 max-w-full">
             <span className="text-slate-400 text-[10px] uppercase font-extrabold ml-1 mr-1">Filter:</span>
             {['all', 'tiktok', 'instagram', 'email', 'whatsapp'].map((c) => (
               <button

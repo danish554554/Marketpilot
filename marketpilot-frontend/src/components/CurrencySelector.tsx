@@ -23,15 +23,15 @@ export const CurrencySelector: React.FC<{ compact?: boolean }> = ({ compact = fa
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 rounded-xl border border-brand-line bg-white hover:bg-slate-50 transition-all font-bold text-xs text-brand-ink shadow-sm ${
-          compact ? 'px-2.5 py-1.5' : 'px-3 py-2'
+        className={`flex items-center gap-1 sm:gap-1.5 rounded-xl border border-brand-line bg-white hover:bg-slate-50 transition-all font-bold text-xs text-brand-ink shadow-sm ${
+          compact ? 'px-2 py-1 sm:px-2.5 sm:py-1.5' : 'px-2 py-1.5 sm:px-3 sm:py-2'
         }`}
         title={`Current currency: ${currencyConfig.name}`}
       >
-        <span className="text-sm">{currencyConfig.flag}</span>
-        <span className="font-extrabold">{currencyConfig.code}</span>
-        <span className="text-slate-400 text-[10px]">({currencyConfig.symbol})</span>
-        <ChevronDown size={13} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="text-xs sm:text-sm">{currencyConfig.flag}</span>
+        <span className="font-extrabold text-[11px] sm:text-xs">{currencyConfig.code}</span>
+        <span className="text-slate-400 text-[10px] hidden sm:inline">({currencyConfig.symbol})</span>
+        <ChevronDown size={12} className={`text-slate-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
