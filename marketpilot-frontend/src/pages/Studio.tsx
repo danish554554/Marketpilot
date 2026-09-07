@@ -149,11 +149,14 @@ export const Studio: React.FC<StudioProps> = ({
     }
   };
 
+  const [regenerationCount, setRegenerationCount] = useState(0);
+
   const generateAIPost = async (
     tab = activeTab,
     prod = selectedProduct,
     trend = selectedTrendTopic,
-    offer = customOffer
+    offer = customOffer,
+    variationSeed = regenerationCount
   ) => {
     setIsGenerating(true);
     const channelMap: Record<string, string> = {
@@ -173,10 +176,11 @@ export const Studio: React.FC<StudioProps> = ({
         channel: channelMap[tab] || 'tiktok',
         format: tab,
         trend_topic: trend || activePillar?.trend_topic || undefined,
-        hook_idea: activePillar?.hook_ideas?.[0] || undefined,
-        custom_instructions: `Offer/Promotion: ${offer || 'Standard Pricing'}. Ground strictly in product features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}.`,
+        hook_idea: activePillar?.hook_ideas?.[variationSeed % (activePillar?.hook_ideas?.length || 1)] || undefined,
+        custom_instructions: `Offer/Promotion: ${offer || 'Standard Pricing'}. Ground strictly in product features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}. Variation Seed: ${variationSeed}`,
         target_country: targetCountry,
         target_language: COUNTRY_DEFAULT_LANG[targetCountry] || (targetCountry?.toLowerCase() === 'pakistan' ? 'Urdu' : 'English'),
+        variation_seed: variationSeed,
       });
 
       setHook(res.hook);
@@ -188,7 +192,7 @@ export const Studio: React.FC<StudioProps> = ({
       runLiveGuardrailCheck(`${res.hook}\n${res.caption}\n${res.call_to_action}`);
     } catch (err) {
       console.warn('Backend copywriting fallback:', err);
-      fallbackLocalCopy(tab, prod, trend, offer);
+      fallbackLocalCopy(tab, prod, trend, offer, variationSeed);
     } finally {
       setIsGenerating(false);
     }
@@ -198,14 +202,27 @@ export const Studio: React.FC<StudioProps> = ({
     tab: string,
     prod = selectedProduct,
     trend = selectedTrendTopic,
-    offer = customOffer
+    offer = customOffer,
+    variationSeed = 0
   ) => {
     const prodName = prod.name;
-    const feat = prod.features?.[0] || 'innovative high-performance design';
-    const pain = prod.pain_points?.[0] || 'wasting time on poor alternatives';
-    const hookIdea = activePillar?.hook_ideas?.[0] || `Still struggling with ${pain}? Watch this.`;
+    const feat1 = prod.features?.[0] || 'innovative high-performance design';
+    const feat2 = prod.features?.[1] || 'effortless salon-quality finish';
+    const pain1 = prod.pain_points?.[0] || 'wasting time on poor alternatives';
+    const promo = offer || '20% OFF Launch Discount';
     const isUrduMarket = targetCountry?.toLowerCase() === 'pakistan';
 
+    const nameLower = prodName.toLowerCase();
+    let category = 'general';
+    if (['hair', 'dryer', 'brush', 'curler', 'straightener', 'shampoo', 'blowout'].some(k => nameLower.includes(k))) {
+      category = 'hair';
+    } else if (['skin', 'serum', 'cream', 'face', 'glow', 'acne', 'cleanser', 'lotion', 'fuzz', 'derma'].some(k => nameLower.includes(k))) {
+      category = 'skincare';
+    } else if (['earbud', 'headphone', 'watch', 'charger', 'speaker', 'cable', 'tech', 'smart', 'phone', 'gadget'].some(k => nameLower.includes(k))) {
+      category = 'electronics';
+    }
+
+    const angle = variationSeed % 4;
     let generatedHook = '';
     let generatedCaption = '';
     let generatedCta = '';
@@ -213,51 +230,88 @@ export const Studio: React.FC<StudioProps> = ({
 
     if (tab === 'script') {
       if (isUrduMarket) {
-        generatedHook = `Peach fuzz ke upar foundation lagana band karein — pehle yeh 30-sec trick dekhein!`;
-        generatedCaption = (
-          `[HOOK - 0:00 to 0:03]\nVisual: Split-screen close-up showing cakey makeup over peach fuzz vs. smooth skin glide.\nVoiceover (Roman Urdu): "Peach fuzz ke upar foundation lagana band karein! Pehle yeh 30-second ki trick dekhein."\nVoiceover (اردو): "پیچ فز کے اوپر فاؤنڈیشن لگانا بند کریں! پہلے یہ ۳۰ سیکنڈ کی ٹرک دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter effortlessly gliding ${prodName} across cheek, highlighting ${feat}.\nVoiceover (Roman Urdu): "Purane aur naakara tareeqon pe waqt zaya karna chhod dein. Yeh ${prodName} sirf chand seconds mein bina dard ke makhan jaisi smooth skin deta hai."\nVoiceover (اردو): "پرانے اور ناکارہ طریقوں پر وقت ضائع کرنا چھوڑ دیں۔ یہ ${prodName} صرف چند سیکنڈز میں بنا درد کے مکھن جیسی ہموار جلد دیتا ہے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Clean, glowing finished look with ${prodName} in hand.\nVoiceover (Roman Urdu): "Toh bas abhi ready ho jayein! Neeche diye gaye link par click karein aur launch sale mein poora ${offer || '20% OFF'} hasil karein!"\nVoiceover (اردو): "تو بس ابھی ریڈی ہو جائیں! نیچے دیے گئے لنک پر کلک کریں اور لانچ سیل میں پورا ۲۰٪ رعایت حاصل کریں!"`
-        );
-        generatedCta = `Neeche diye gaye link par click karein aur ${offer || '20% off'} hasil karein`;
-        generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #BeautyHacksPK #SkincareUrdu #ViralFindsPK`;
+        if (category === 'hair') {
+          const hairAngles = [
+            {
+              h: 'Frizzy aur unmanageable baalon se tang aa chuke hain? Pehle yeh 30-second hack dekhein!',
+              c: `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing damp, frizzy tangled hair vs. smooth salon blowout transition.\nVoiceover (Roman Urdu): "Har subah baalon ko dry aur style karne mein ghanton zaya karna chhod dein! Pehle yeh 30-second trick dekhein."\nVoiceover (اردو): "ہر صبح بالوں کو ڈرائی اور اسٹائل کرنے میں گھنٹوں ضائع کرنا چھوڑ دیں! پہلے یہ ۳۰ سیکنڈ ہیک دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter effortlessly gliding ${prodName} through hair, showing instant shine and volume (${feat1}).\nVoiceover (Roman Urdu): "Purane bhari dryers aur multiple brushes ka jhanjhat khatam! Yeh ${prodName} baalon ko sukhata bhi hai aur ${feat1} ke sath salon jaisa volumized blowout deta hai sirf chand minutes mein bina kisi heat damage ke!"\nVoiceover (اردو): "پرانے بھاری ڈرائرز کا جھنجھٹ ختم! یہ ${prodName} بالوں کو سکھاتا بھی ہے اور سیلون جیسا باؤنسی بلو آؤٹ دیتا ہے بغیر کسی نقصان کے!"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Smiling presenter showing silky, styled hair holding ${prodName}.\nVoiceover (Roman Urdu): "Salon ke hazaron rupay bachayein! Neeche diye gaye link par click karein aur launch sale mein poora ${promo} hasil karein!"\nVoiceover (اردو): "سیلون کے ہزاروں روپے بچائیں! نیچے دیے گئے لنک پر کلک کریں اور لانچ سیل میں پورا ${promo} حاصل کریں!"`,
+              cta: `Neeche link par click karein aur ${promo} hasil karein`,
+              tags: `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #HairHacksPK #SalonAtHome #HairStylingUrdu #BeautyPK`
+            },
+            {
+              h: 'Salon ke mehnge blowouts par paise zaya karna band karein!',
+              c: `[HOOK - 0:00 to 0:03]\nVisual: Split-screen comparing expensive salon bill vs. doing it at home with ${prodName}.\nVoiceover (Roman Urdu): "Kiya aap bhi har event ke liye salon ke hazaron rupay kharch karte hain? Yeh video aapke bohot paise bachane wali hai!"\nVoiceover (اردو): "کیا آپ بھی ہر ایونٹ کے لیے سیلون کے ہزاروں روپے خرچ کرتے ہیں؟ یہ ویڈیو آپ کے بہت پیسے بچانے والی ہے!"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Demonstrating ${feat2} on damp hair, instantly creating smooth silky finish.\nVoiceover (Roman Urdu): "Is ${prodName} ka advanced airflow aur ${feat1} frizzy baalon ko instantly tame karta hai aur deta hai super smooth finish bina kisi salon appointment ke."\nVoiceover (اردو): "اس ${prodName} کا جدید ایئر فلو الجھے بالوں کو فوری چمکدار بناتا ہے اور دیتا ہے سیلون جیسی فنشنگ۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Final gorgeous hair flip holding ${prodName} box with Cash on Delivery banner.\nVoiceover (Roman Urdu): "Stock limited hai! Abhi order karein aur Cash on Delivery ke sath ${promo} hasil karein!"\nVoiceover (اردو): "اسٹاک محدود ہے! ابھی آرڈر کریں اور کیش آن ڈلیوری کے ساتھ خصوصی رعایت حاصل کریں!"`,
+              cta: `Order Now with Cash on Delivery & Claim ${promo}`,
+              tags: `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #BlowoutHacks #PakistaniBeauties #TrendingPK #GlowHair`
+            },
+            {
+              h: 'The 1-step styling secret TikTok doesn\'t want you to miss!',
+              c: `[HOOK - 0:00 to 0:03]\nVisual: Fast-paced side-by-side: half head styled in 2 minutes vs messy half.\nVoiceover (Roman Urdu): "Agar aapke paas subah tayyar hone ke liye sirf 5 minute hotay hain, toh yeh device aapki life badal dega!"\nVoiceover (اردو): "اگر آپ کے پاس صبح تیار ہونے کے لیے صرف ۵ منٹ ہوتے ہیں تو یہ ڈیوائس آپ کی زندگی بدل دے گا!"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Rotating close-up of ${prodName} styling damp curls into sleek waves effortlessly.\nVoiceover (Roman Urdu): "Yeh ek hi waqt mein sukhata bhi hai aur professional style bhi karta hai. ${feat1} ke sath baal rehte hain bilkul soft aur shiny."\nVoiceover (اردو): "یہ ایک ہی وقت میں سکھاتا بھی ہے اور پروفیشنل اسٹائل بھی کرتا ہے، بغیر وقت ضائع کیے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Presenter flashing big smile with product in hand.\nVoiceover (Roman Urdu): "Toh der kis baat ki? Bio mein diye gaye link se abhi order karein aur flat ${promo} hasil karein!"\nVoiceover (اردو): "تو دیر کس بات کی؟ بائیو میں دیے گئے لنک سے ابھی آرڈر کریں اور خصوصی ڈسکاؤنٹ پائیں۔"`,
+              cta: `Bio link par click karein aur ${promo} hasil karein`,
+              tags: `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralGadgetsPK #HairCareRoutine #PakistanTrends`
+            },
+            {
+              h: 'Kharab aur damaged baalon ka sabse aasan aur safe solution!',
+              c: `[HOOK - 0:00 to 0:03]\nVisual: Shocked face pointing at burning flat iron vs gentle styling with ${prodName}.\nVoiceover (Roman Urdu): "High heat se baal jalana band karein! Yeh smart device dekhein jo heat damage ke baghair kaam karta hai."\nVoiceover (اردو): "زیادہ گرمی سے بال جلانا بند کریں! یہ اسمارٹ ڈیوائس دیکھیں جو بالوں کو خراب کیے بغیر اسٹائل کرتا ہے۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Smooth brush strokes gliding down showing heat-control technology and ${feat2}.\nVoiceover (Roman Urdu): "Iska intelligent heat distribution system aur ${feat1} aapke baalon ki natural moisture ko lock karta hai."\nVoiceover (اردو): "اس کا جدید سسٹم بالوں کی قدرتی چمک کو برقرار رکھتا ہے اور دیتا ہے شاندار لک۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Gorgeous final look with verified customer review popup.\nVoiceover (Roman Urdu): "Launch sale sirf is hafte ke liye hai! Abhi shop karein aur Cash on Delivery pay karein!"\nVoiceover (اردو): "لانچ سیل صرف اس ہفتے کے لیے ہے! ابھی شاپ کریں اور ڈسکاؤنٹ حاصل کریں۔"`,
+              cta: `Shop Now with COD & Claim ${promo}`,
+              tags: `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #HealthyHairPK #StyleHacks #MustHave`
+            }
+          ];
+          const choice = hairAngles[angle % hairAngles.length];
+          generatedHook = choice.h;
+          generatedCaption = choice.c;
+          generatedCta = choice.cta;
+          generatedTags = choice.tags;
+        } else if (category === 'skincare') {
+          generatedHook = `Dull aur dry skin se pareshan hain? Watch this 10-second glow hack!`;
+          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: Split-screen close-up showing dull skin vs instant luminous glow.\nVoiceover (Roman Urdu): "Mehnge treatments par paise zaya karna band karein! Pehle yeh natural skin glow hack dekhein."\nVoiceover (اردو): "مہنگے ٹریٹمنٹس پر پیسے ضائع کرنا بند کریں! پہلے یہ قدرتی گلو ہیک دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter applying ${prodName} highlighting ${feat1}.\nVoiceover (Roman Urdu): "Yeh ${prodName} ${feat1} ke sath skin ko deeply hydrate aur brighten karta hai bina kisi chipchipahat ke."\nVoiceover (اردو): "یہ ${prodName} جلد کو گہرائی سے ہائیڈریٹ اور چمکدار بناتا ہے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Clean finished look with product in hand.\nVoiceover (Roman Urdu): "Abhi neeche diye gaye link par click karein aur poora ${promo} hasil karein!"\nVoiceover (اردو): "ابھی نیچے دیے گئے لنک سے آرڈر کریں اور رعایت حاصل کریں!"`;
+          generatedCta = `Shop Now & Claim ${promo}`;
+          generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #SkincareUrdu #GlowRoutinePK #BeautyHacks`;
+        } else {
+          generatedHook = `Stop struggling with ${pain1}! Pehle yeh 30-second fix dekhein.`;
+          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: Frustrated reaction to daily problem with ${pain1}.\nVoiceover (Roman Urdu): "Agar aap bhi roz roz ${pain1} se tang hain, toh yeh 30-second video zaroor dekhein!"\nVoiceover (اردو): "اگر آپ بھی روز کے مسائل سے تنگ ہیں تو یہ ویڈیو دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter using ${prodName} highlighting ${feat1}.\nVoiceover (Roman Urdu): "Purane aur nakara tareeqon ko chhod dein. Yeh ${prodName} ${feat1} ke sath aapka time aur paisa dono bachata hai."\nVoiceover (اردو): "یہ ${prodName} آپ کا وقت اور پیسے دونوں بچاتا ہے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Product packaging with Cash on Delivery banner.\nVoiceover (Roman Urdu): "Cash on Delivery available hai! Abhi order karein aur flat ${promo} hasil karein!"\nVoiceover (اردو): "کیش آن ڈلیوری کے ساتھ ابھی آرڈر کریں اور رعایت پائیں!"`;
+          generatedCta = `Order with Cash on Delivery & Claim ${promo}`;
+          generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralFindsPK #ProblemSolved #LifeHacks`;
+        }
       } else {
-        generatedHook = hookIdea;
+        generatedHook = `Still struggling with ${pain1}? Watch this.`;
         generatedCaption = (
-          `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing the daily problem with ${pain}.\nVoiceover: "${hookIdea}"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter using ${prodName} highlighting ${feat}.\nVoiceover: "The ${prodName} fixes this in seconds. Designed with ${feat} for smooth, effortless results."\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Showing clean finished look with product in hand.\nVoiceover: "Tap the link below to get yours with ${offer || 'free express shipping'} before stock runs out!"`
+          `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing the daily problem with ${pain1}.\nVoiceover: "Tired of ${pain1}? Watch this 10-second fix."\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter using ${prodName} highlighting ${feat1}.\nVoiceover: "The ${prodName} fixes this in seconds. Designed with ${feat1} for smooth, effortless results."\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Showing clean finished look with product in hand.\nVoiceover: "Tap the link below to get yours with ${promo} before stock runs out!"`
         );
-        generatedCta = `Tap link in bio to claim ${offer || '20% off'}`;
+        generatedCta = `Tap link in bio to claim ${promo}`;
         generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralFinds #ProblemSolved #LifeHacks`;
       }
     } else if (tab === 'organic') {
-      generatedHook = `Why most people struggle with ${pain} (and the 30-second fix).`;
+      generatedHook = `Why most people struggle with ${pain1} (and the 30-second fix).`;
       generatedCaption = (
-        `If you've been dealing with ${pain}, you're not alone.\n\nMeet the ${prodName}:\n`
+        `If you've been dealing with ${pain1}, you're not alone.\n\nMeet the **${prodName}**:\n`
         + (prod.features || []).map(f => `✨ ${f}`).join('\n')
-        + `\n\n🎁 Special Offer: ${offer || 'Save 20% today'}\n\nDrop a 💬 below or save this post for your next order!`
+        + `\n\n🎁 Special Offer: ${promo}\n\nDrop a 💬 below or save this post for your next order!`
       );
       generatedCta = 'Comment "INFO" for the direct link';
       generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ProductReview #MustHave`;
     } else if (tab === 'paid') {
-      generatedHook = `Stop dealing with ${pain}.`;
+      generatedHook = `Stop dealing with ${pain1}. Upgrade to ${prodName}.`;
       generatedCaption = (
-        `Upgrade your daily routine with the ${prodName}.\n\n`
+        `Upgrade your daily routine with the **${prodName}**.\n\n`
         + (prod.features || []).map(f => `✅ ${f}`).join('\n')
-        + `\n\n🛡️ 30-Day Satisfaction Guarantee\n🚚 Fast Free Tracked Shipping\n🏷️ Offer: ${offer || '20% Launch Discount'}\n\nClick below to claim your discount today!`
+        + `\n\n🛡️ 30-Day Satisfaction Guarantee\n🚚 Fast Tracked Shipping (COD Available)\n🏷️ Offer: ${promo}\n\nClick below to claim your discount today!`
       );
-      generatedCta = `Shop Now & Claim ${offer || 'Discount'}`;
+      generatedCta = `Shop Now & Claim ${promo}`;
       generatedTags = '#LimitedTimeOffer #SpecialDiscount';
     } else if (tab === 'email') {
-      generatedHook = `Subject: The smartest way to tackle ${pain} ✨`;
+      generatedHook = `Subject: The smartest way to tackle ${pain1} ✨`;
       generatedCaption = (
-        `Hi there,\n\nIf ${pain} has been holding you back, we built the **${prodName}** just for you.\n\nKey Highlights:\n`
+        `Hi there,\n\nIf ${pain1} has been holding you back, we built the **${prodName}** just for you.\n\nKey Highlights:\n`
         + (prod.features || []).map(f => `• **${f}**`).join('\n')
-        + `\n\n🎉 Limited Time: ${offer || '20% Off'}\n\nClick below to order yours today:`
+        + `\n\n🎉 Limited Time Offer: ${promo}\n\nClick below to order yours today:`
       );
       generatedCta = `Claim Your ${prodName}`;
       generatedTags = '';
     } else {
       generatedHook = `✨ VIP Restock: ${prodName}`;
       generatedCaption = (
-        `Hi! Quick VIP update on the **${prodName}**.\n\nDue to high demand, we just restocked with **${offer || 'Free Priority Delivery'}**!\n\nReply YES to confirm your order or click below:`
+        `Hi! Quick VIP update on the **${prodName}**.\n\nDue to high demand, our latest restock featuring ${feat1} is going fast!\n\n🎁 Exclusive Offer: **${promo}** + Free Express Delivery.\n\nReply YES to confirm your order or click below:`
       );
       generatedCta = 'Order via WhatsApp with 1 Click';
       generatedTags = '';
@@ -272,7 +326,7 @@ export const Studio: React.FC<StudioProps> = ({
   };
 
   useEffect(() => {
-    generateAIPost(activeTab, selectedProduct, selectedTrendTopic, customOffer);
+    generateAIPost(activeTab, selectedProduct, selectedTrendTopic, customOffer, 0);
   }, [activeTab, selectedProductId, selectedTrendTopic, selectedPillarIndex, activeStrategy]);
 
   const handleCopy = () => {
@@ -350,12 +404,16 @@ export const Studio: React.FC<StudioProps> = ({
           </div>
 
           <button
-            onClick={() => generateAIPost(activeTab, selectedProduct, selectedTrendTopic, customOffer)}
+            onClick={() => {
+              const nextCount = regenerationCount + 1;
+              setRegenerationCount(nextCount);
+              generateAIPost(activeTab, selectedProduct, selectedTrendTopic, customOffer, nextCount);
+            }}
             disabled={isGenerating}
             className="flex items-center gap-2 px-4 py-2 bg-brand-green hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all self-start md:self-auto"
           >
             <RefreshCw size={13} className={isGenerating ? 'animate-spin' : ''} />
-            <span>{isGenerating ? 'Gemini Generating...' : 'Regenerate Copy'}</span>
+            <span>{isGenerating ? 'Gemini Generating...' : `Regenerate with Gemini AI${regenerationCount > 0 ? ` (Angle #${(regenerationCount % 4) + 1})` : ''}`}</span>
           </button>
         </div>
 
@@ -436,7 +494,13 @@ export const Studio: React.FC<StudioProps> = ({
               </label>
               <select
                 value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  setSelectedProductId(newId);
+                  const newProd = products.find((p) => p.id === newId) || selectedProduct;
+                  setRegenerationCount(0);
+                  generateAIPost(activeTab, newProd, selectedTrendTopic, customOffer, 0);
+                }}
                 className="w-full text-xs p-2.5 rounded-xl border border-brand-line bg-white font-medium focus:outline-none focus:border-brand-green"
               >
                 {products.map((p) => (

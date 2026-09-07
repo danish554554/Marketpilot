@@ -1,5 +1,7 @@
 import json
 import logging
+import random
+import re
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -53,7 +55,7 @@ class GeminiService:
     @classmethod
     def get_model_name(cls) -> str:
         settings = get_settings()
-        return settings.gemini_model or "gemini-2.5-flash"
+        return settings.gemini_model or "gemini-3.6-flash"
 
     @classmethod
     def generate_recommendations(
@@ -350,6 +352,236 @@ class GeminiService:
             return None
 
     @classmethod
+    def _synthesize_grounded_copy(
+        cls,
+        product_name: str,
+        product_description: str | None = None,
+        product_features: list[str] | None = None,
+        product_pain_points: list[str] | None = None,
+        channel: str = "tiktok",
+        format_type: str = "script",
+        trend_topic: str | None = None,
+        hook_idea: str | None = None,
+        custom_instructions: str | None = None,
+        target_country: str | None = "Pakistan",
+        target_language: str | None = "Urdu",
+        variation_seed: int = 0,
+    ) -> dict[str, str]:
+        country = target_country or "Pakistan"
+        lang = target_language or ("Urdu" if "pakistan" in country.lower() else "English")
+        is_urdu = "pakistan" in country.lower() or "urdu" in lang.lower()
+
+        features = product_features or []
+        pains = product_pain_points or []
+        feat_1 = features[0] if len(features) > 0 else "high-performance quality"
+        feat_2 = features[1] if len(features) > 1 else "effortless daily results"
+        pain_1 = pains[0] if len(pains) > 0 else "daily hassle"
+        pain_2 = pains[1] if len(pains) > 1 else "wasting time on ineffective alternatives"
+
+        offer = "20% OFF Launch Discount"
+        if custom_instructions:
+            m = re.search(r"Offer/Promotion:\s*([^.]+)", custom_instructions)
+            if m:
+                offer = m.group(1).strip()
+
+        name_lower = product_name.lower()
+        if any(k in name_lower for k in ["hair", "dryer", "brush", "curler", "straightener", "shampoo", "blowout"]):
+            category = "hair"
+        elif any(k in name_lower for k in ["skin", "serum", "cream", "face", "glow", "acne", "cleanser", "lotion", "fuzz", "derma", "moisturizer"]):
+            category = "skincare"
+        elif any(k in name_lower for k in ["earbud", "headphone", "watch", "charger", "speaker", "cable", "tech", "smart", "phone", "gadget", "power"]):
+            category = "electronics"
+        elif any(k in name_lower for k in ["shoe", "sneaker", "heel", "wallet", "bag", "backpack", "jacket", "shirt", "dress", "watch", "leather", "belt"]):
+            category = "fashion"
+        elif any(k in name_lower for k in ["kitchen", "knife", "chopper", "blender", "bottle", "cleaner", "mop", "lamp", "organizer", "cook"]):
+            category = "home"
+        else:
+            category = "general"
+
+        angle = variation_seed % 4
+
+        if format_type in ("script", "short_video_script") or channel == "tiktok":
+            if is_urdu:
+                if category == "hair":
+                    angles = [
+                        (
+                            f"Frizzy aur unmanageable baalon se tang aa chuke hain? Pehle yeh 30-second hack dekhein!",
+                            f"[HOOK - 0:00 to 0:03]\n"
+                            f"Visual: Close-up showing damp, frizzy tangled hair vs. smooth salon blowout transition.\n"
+                            f"Voiceover (Roman Urdu): \"Har subah baalon ko dry aur style karne mein ghanton zaya karna chhod dein! Pehle yeh 30-second trick dekhein.\"\n"
+                            f"Voiceover (اردو): \"ہر صبح بالوں کو ڈرائی اور اسٹائل کرنے میں گھنٹوں ضائع کرنا چھوڑ دیں! پہلے یہ ۳۰ سیکنڈ ہیک دیکھیں۔\"\n\n"
+                            f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
+                            f"Visual: Presenter effortlessly gliding {product_name} through hair, showing instant shine and volume ({feat_1}).\n"
+                            f"Voiceover (Roman Urdu): \"Purane bhari dryers aur multiple brushes ka jhanjhat khatam! Yeh {product_name} baalon ko sukhata bhi hai aur {feat_1} ke sath salon jaisa volumized blowout deta hai sirf chand minutes mein bina kisi heat damage ke!\"\n"
+                            f"Voiceover (اردو): \"پرانے بھاری ڈرائرز کا جھنجھٹ ختم! یہ {product_name} بالوں کو سکھاتا بھی ہے اور سیلون جیسا باؤنسی بلو آؤٹ دیتا ہے بغیر کسی نقصان کے!\"\n\n"
+                            f"[CALL TO ACTION - 0:10 to 0:15]\n"
+                            f"Visual: Smiling presenter showing silky, styled hair holding {product_name}.\n"
+                            f"Voiceover (Roman Urdu): \"Salon ke hazaron rupay bachayein! Neeche diye gaye link par click karein aur launch sale mein poora {offer} hasil karein!\"\n"
+                            f"Voiceover (اردو): \"سیلون کے ہزاروں روپے بچائیں! نیچے دیے گئے لنک پر کلک کریں اور لانچ سیل میں پورا {offer} حاصل کریں!\"",
+                            f"Neeche diye gaye link par click karein aur {offer} hasil karein",
+                            f"#{product_name.replace(' ', '')} #HairHacksPK #SalonAtHome #HairStylingUrdu #BeautyPK"
+                        ),
+                        (
+                            f"Salon ke mehnge blowouts par paise zaya karna band karein!",
+                            f"[HOOK - 0:00 to 0:03]\n"
+                            f"Visual: Split-screen comparing expensive salon receipt vs. doing it at home with {product_name}.\n"
+                            f"Voiceover (Roman Urdu): \"Kiya aap bhi har event ke liye salon ke hazaron rupay kharch karte hain? Yeh video aapke bohot paise bachane wali hai!\"\n"
+                            f"Voiceover (اردو): \"کیا آپ بھی ہر ایونٹ کے لیے سیلون کے ہزاروں روپے خرچ کرتے ہیں؟ یہ ویڈیو آپ کے بہت پیسے بچانے والی ہے!\"\n\n"
+                            f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
+                            f"Visual: Demonstrating {feat_2} on damp hair, instantly creating smooth silky finish.\n"
+                            f"Voiceover (Roman Urdu): \"Is {product_name} ka advanced airflow aur {feat_1} frizzy baalon ko instantly tame karta hai aur deta hai super smooth finish bina kisi salon appointment ke.\"\n"
+                            f"Voiceover (اردو): \"اس {product_name} کا جدید ایئر فلو الجھے بالوں کو فوری چمکدار بناتا ہے اور دیتا ہے سیلون جیسی فنشنگ۔\"\n\n"
+                            f"[CALL TO ACTION - 0:10 to 0:15]\n"
+                            f"Visual: Final gorgeous hair flip holding {product_name} box with Cash on Delivery banner.\n"
+                            f"Voiceover (Roman Urdu): \"Stock limited hai! Abhi order karein aur Cash on Delivery ke sath {offer} hasil karein!\"\n"
+                            f"Voiceover (اردو): \"اسٹاک محدود ہے! ابھی آرڈر کریں اور کیش آن ڈلیوری کے ساتھ خصوصی رعایت حاصل کریں!\"",
+                            f"Order Now with Cash on Delivery & Claim {offer}",
+                            f"#{product_name.replace(' ', '')} #BlowoutHacks #PakistaniBeauties #TrendingPK #GlowHair"
+                        ),
+                        (
+                            f"The 1-step styling secret TikTok doesn't want you to miss!",
+                            f"[HOOK - 0:00 to 0:03]\n"
+                            f"Visual: Fast-paced side-by-side: half head styled in 2 minutes vs messy half.\n"
+                            f"Voiceover (Roman Urdu): \"Agar aapke paas subah tayyar hone ke liye sirf 5 minute hotay hain, toh yeh device aapki life badal dega!\"\n"
+                            f"Voiceover (اردو): \"اگر آپ کے پاس صبح تیار ہونے کے لیے صرف ۵ منٹ ہوتے ہیں تو یہ ڈیوائس آپ کی زندگی بدل دے گا!\"\n\n"
+                            f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
+                            f"Visual: Rotating close-up of {product_name} styling damp curls into sleek waves effortlessly.\n"
+                            f"Voiceover (Roman Urdu): \"Yeh ek hi waqt mein sukhata bhi hai aur professional style bhi karta hai. {feat_1} ke sath baal rehte hain bilkul soft aur shiny.\"\n"
+                            f"Voiceover (اردو): \"یہ ایک ہی وقت میں سکھاتا بھی ہے اور پروفیشنل اسٹائل بھی کرتا ہے، بغیر وقت ضائع کیے۔\"\n\n"
+                            f"[CALL TO ACTION - 0:10 to 0:15]\n"
+                            f"Visual: Presenter flashing big smile with product in hand.\n"
+                            f"Voiceover (Roman Urdu): \"Toh der kis baat ki? Bio mein diye gaye link se abhi order karein aur flat {offer} hasil karein!\"\n"
+                            f"Voiceover (اردو): \"تو دیر کس بات کی؟ بائیو میں دیے گئے لنک سے ابھی آرڈر کریں اور خصوصی ڈسکاؤنٹ پائیں۔\"",
+                            f"Bio link par click karein aur {offer} hasil karein",
+                            f"#{product_name.replace(' ', '')} #ViralGadgetsPK #HairCareRoutine #PakistanTrends"
+                        ),
+                        (
+                            f"Kharab aur damaged baalon ka sabse aasan aur safe solution!",
+                            f"[HOOK - 0:00 to 0:03]\n"
+                            f"Visual: Shocked face pointing at burning flat iron vs. gentle styling with {product_name}.\n"
+                            f"Voiceover (Roman Urdu): \"High heat se baal jalana band karein! Yeh smart device dekhein jo heat damage ke baghair kaam karta hai.\"\n"
+                            f"Voiceover (اردو): \"زیادہ گرمی سے بال جلانا بند کریں! یہ اسمارٹ ڈیوائس دیکھیں جو بالوں کو خراب کیے بغیر اسٹائل کرتا ہے۔\"\n\n"
+                            f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
+                            f"Visual: Smooth brush strokes gliding down showing heat-control technology and {feat_2}.\n"
+                            f"Voiceover (Roman Urdu): \"Iska intelligent heat distribution system aur {feat_1} aapke baalon ki natural moisture ko lock karta hai.\"\n"
+                            f"Voiceover (اردو): \"اس کا جدید سسٹم بالوں کی قدرتی چمک کو برقرار رکھتا ہے اور دیتا ہے شاندار لک۔\"\n\n"
+                            f"[CALL TO ACTION - 0:10 to 0:15]\n"
+                            f"Visual: Gorgeous final look with verified customer review popup.\n"
+                            f"Voiceover (Roman Urdu): \"Launch sale sirf is hafte ke liye hai! Abhi shop karein aur Cash on Delivery pay karein!\"\n"
+                            f"Voiceover (اردو): \"لانچ سیل صرف اس ہفتے کے لیے ہے! ابھی شاپ کریں اور ڈسکاؤنٹ حاصل کریں۔\"",
+                            f"Shop Now with COD & Claim {offer}",
+                            f"#{product_name.replace(' ', '')} #HealthyHairPK #StyleHacks #MustHave"
+                        ),
+                    ]
+                elif category == "skincare":
+                    angles = [
+                        (
+                            f"Dull aur dehydrated skin se pareshan hain? Watch this 10-second glow hack!",
+                            f"[HOOK - 0:00 to 0:03]\nVisual: Split-screen close-up of tired skin vs. glowing dewy skin.\nVoiceover (Roman Urdu): \"Mehnge treatments par paise zaya karna band karein! Pehle yeh natural skin routine dekhein.\"\nVoiceover (اردو): \"مہنگے ٹریٹمنٹس پر پیسے ضائع کرنا بند کریں! پہلے یہ قدرتی اسکن روٹین دیکھیں۔\"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Dropper applying {product_name} onto cheek and gently massaging, absorbing instantly.\nVoiceover (Roman Urdu): \"Yeh {product_name} {feat_1} ke sath skin ko deeply hydrate aur brighten karta hai bina kisi chipchipahat ke.\"\nVoiceover (اردو): \"یہ {product_name} جلد کو گہرائی سے ہائیڈریٹ اور روشن بناتا ہے بغیر کسی چپچپاہٹ کے۔\"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Glowing finished look with product bottle in hand.\nVoiceover (Roman Urdu): \"Apni skin ko de glow! Abhi link par click karein aur launch sale mein poora {offer} hasil karein!\"\nVoiceover (اردو): \"اپنی جلد کو دیں چمک! ابھی لنک پر کلک کریں اور خصوصی رعایت حاصل کریں!\"",
+                            f"Order Now & Claim {offer}",
+                            f"#{product_name.replace(' ', '')} #SkincareUrdu #GlowRoutine #BeautyHacksPK"
+                        ),
+                        (
+                            f"Dark spots aur blemishes ka sabse fast aur effective solution!",
+                            f"[HOOK - 0:00 to 0:03]\nVisual: Mirror reflection showing confidence with clear glowing skin.\nVoiceover (Roman Urdu): \"Agar aapki skin bhi dull lagti hai, toh yeh formula aapke liye game-changer hai!\"\nVoiceover (اردو): \"اگر آپ کی جلد بھی بے رونق لگتی ہے تو یہ فارمولا آپ کے لیے گیم چینجر ہے!\"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Clean application showing {feat_1} and lightweight texture.\nVoiceover (Roman Urdu): \"Sirf chand dino mein visible farq dekhein! Yeh skin barrier ko repair karta hai aur natural radiance wapas lata hai.\"\nVoiceover (اردو): \"صرف چند دنوں میں واضح فرق دیکھیں! یہ جلد کو تروتازہ بناتا ہے۔\"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Bottle display with Cash on Delivery banner.\nVoiceover (Roman Urdu): \"Limited stock! Neeche diye gaye link par click karein aur Cash on Delivery ke sath order karein!\"\nVoiceover (اردو): \"محدود اسٹاک! ابھی نیچے دیے گئے لنک سے آرڈر کریں اور خصوصی ڈسکاؤنٹ پائیں!\"",
+                            f"Shop Now with Cash on Delivery & {offer}",
+                            f"#{product_name.replace(' ', '')} #ClearSkinPK #DailySkincare #TrendingBeauty"
+                        ),
+                    ]
+                elif category == "electronics":
+                    angles = [
+                        (
+                            f"Kharab battery aur tangled wires se tang aa chuke hain? Upgrade now!",
+                            f"[HOOK - 0:00 to 0:03]\nVisual: Frustrated reaction to low battery / tangled cables vs sleek {product_name} unboxing.\nVoiceover (Roman Urdu): \"Sastay aur nakara gadgets par paise zaya karna band karein!\"\nVoiceover (اردو): \"سستے اور ناکارہ گیجٹس پر پیسے ضائع کرنا بند کریں!\"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Close-up macro shot showcasing {feat_1} and premium durable build.\nVoiceover (Roman Urdu): \"Yeh {product_name} deta hai {feat_1} aur {feat_2} ke sath crystal clear performance aur lambi battery life.\"\nVoiceover (اردو): \"یہ {product_name} دیتا ہے شاندار پرفارمنس اور بہترین بیٹری لائف۔\"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Sleek hand carry with warranty card and launch discount badge.\nVoiceover (Roman Urdu): \"Abhi link par click karein aur launch offer mein {offer} hasil karein!\"\nVoiceover (اردو): \"ابھی لنک پر کلک کریں اور لانچ آفر میں خصوصی رعایت حاصل کریں!\"",
+                            f"Order Now & Claim {offer}",
+                            f"#{product_name.replace(' ', '')} #TechGadgetsPK #SmartLife #BestGadgets2026"
+                        ),
+                    ]
+                else:  # general or other categories
+                    angles = [
+                        (
+                            f"Stop struggling with {pain_1}! Watch this 30-second fix.",
+                            f"[HOOK - 0:00 to 0:03]\nVisual: Demonstration of common frustration with {pain_1}.\nVoiceover (Roman Urdu): \"Agar aap bhi roz roz {pain_1} se tang hain, toh yeh 30-second video zaroor dekhein!\"\nVoiceover (اردو): \"اگر آپ بھی روز روز اس مسئلے سے تنگ ہیں تو یہ ویڈیو ضرور دیکھیں!\"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter using {product_name} showcasing {feat_1}.\nVoiceover (Roman Urdu): \"Purane aur thakane wale tareeqon ko chhod dein. Yeh {product_name} {feat_1} ke sath aapka time aur paisa dono bachata hai.\"\nVoiceover (اردو): \"پرانے طریقوں کو چھوڑیں۔ یہ {product_name} آپ کے وقت اور پیسے دونوں کی بچت کرتا ہے۔\"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Clean finished result holding {product_name} with delivery badge.\nVoiceover (Roman Urdu): \"Stock tezi se khatam ho raha hai! Abhi link par click karein aur launch sale mein {offer} hasil karein!\"\nVoiceover (اردو): \"اسٹاک تیزی سے ختم ہو رہا ہے! ابھی نیچے دیے گئے لنک پر کلک کریں اور {offer} حاصل کریں!\"",
+                            f"Click Link to Order with {offer}",
+                            f"#{product_name.replace(' ', '')} #ViralFindsPK #ProblemSolved #TrendingNow"
+                        ),
+                        (
+                            f"Why everyone is upgrading to the {product_name} this month!",
+                            f"[HOOK - 0:00 to 0:03]\nVisual: Quick unboxing reaction with excited expression.\nVoiceover (Roman Urdu): \"Mujhe samajh aa gaya ke har koi is {product_name} ki baat kyun kar raha hai!\"\nVoiceover (اردو): \"مجھے سمجھ آ گیا کہ ہر کوئی اس پروڈکٹ کی اتنی تعریف کیوں کر رہا ہے!\"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Demonstrating {feat_1} and {feat_2} in action.\nVoiceover (Roman Urdu): \"Iska sleek design aur {feat_1} har roz ke kaam ko behad asaan bana deta hai.\"\nVoiceover (اردو): \"اس کا شاندار ڈیزائن روزمرہ کی روٹین کو بہت آسان بنا دیتا ہے۔\"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Presenter giving thumbs up holding product box.\nVoiceover (Roman Urdu): \"Cash on Delivery available hai! Abhi order karein aur flat {offer} hasil karein!\"\nVoiceover (اردو): \"کیش آن ڈلیوری دستیاب ہے! ابھی آرڈر کریں اور رعایت پائیں!\"",
+                            f"Order with Cash on Delivery & {offer}",
+                            f"#{product_name.replace(' ', '')} #MustHavePK #LifeHacks #SpecialOffer"
+                        ),
+                    ]
+
+                sel = angles[angle % len(angles)]
+                return {"hook": sel[0], "caption": sel[1], "call_to_action": sel[2], "hashtags": sel[3]}
+            else:  # International English
+                return {
+                    "hook": f"Still dealing with {pain_1}? Stop and watch this.",
+                    "caption": (
+                        f"[HOOK - 0:00 to 0:03]\n"
+                        f"Visual: Close-up demonstrating the daily problem with {pain_1}.\n"
+                        f"Voiceover: \"Tired of {pain_1}? Here is the 10-second fix.\"\n\n"
+                        f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
+                        f"Visual: Presenter using {product_name} highlighting {feat_1}.\n"
+                        f"Voiceover: \"The {product_name} was engineered to eliminate {pain_1}. With its {feat_1} and {feat_2}, you get effortless professional results every time.\"\n\n"
+                        f"[CALL TO ACTION - 0:10 to 0:15]\n"
+                        f"Visual: Clean finished result holding {product_name}.\n"
+                        f"Voiceover: \"Tap the link below to get yours with {offer} before stock runs out!\""
+                    ),
+                    "call_to_action": f"Tap link to claim {offer}",
+                    "hashtags": f"#{product_name.replace(' ', '')} #ProblemSolved #LifeUpgrade"
+                }
+        elif format_type == "paid":
+            return {
+                "hook": f"Stop struggling with {pain_1}. The {product_name} is here.",
+                "caption": (
+                    f"Tired of dealing with {pain_1}?\n\n"
+                    f"Upgrade your daily routine with the **{product_name}**.\n\n"
+                    f"✅ Built with {feat_1}\n✅ Delivers {feat_2}\n✅ Fast Tracked Shipping (COD Available)\n\n"
+                    f"🏷️ Limited Time Launch Promo: **{offer}**\n\nClick below to claim yours before stock runs out!"
+                ),
+                "call_to_action": f"Shop Now & Claim {offer}",
+                "hashtags": f"#{product_name.replace(' ', '')} #DirectResponse #SpecialOffer"
+            }
+        elif format_type == "email":
+            return {
+                "hook": f"Subject: The smartest way to handle {pain_1} ✨",
+                "caption": (
+                    f"Hi there,\n\n"
+                    f"If {pain_1} has been slowing you down, we have great news.\n\n"
+                    f"We created the **{product_name}** specifically to make your routine effortless.\n\n"
+                    f"Key Highlights:\n• {feat_1}\n• {feat_2}\n\n"
+                    f"Take advantage of our exclusive offer: **{offer}**.\n\nClick below to order yours today:"
+                ),
+                "call_to_action": f"Explore {product_name} & Save",
+                "hashtags": ""
+            }
+        elif format_type == "whatsapp":
+            return {
+                "hook": f"✨ VIP Update: {product_name} is in stock!",
+                "caption": (
+                    f"Hi! Quick VIP update on the **{product_name}**.\n\n"
+                    f"Due to high demand, our latest restock featuring {feat_1} is going fast!\n\n"
+                    f"🎁 VIP Offer: **{offer}** + Free Express Delivery.\n\nReply to this message with **ORDER** to reserve yours now!"
+                ),
+                "call_to_action": "Order via WhatsApp with 1 Click",
+                "hashtags": ""
+            }
+        else:  # organic
+            return {
+                "hook": f"The 3-step routine change for {pain_1}.",
+                "caption": (
+                    f"Most people think dealing with {pain_1} is unavoidable.\n\n"
+                    f"Here is what actually works: Introducing the **{product_name}**.\n\n"
+                    f"✨ {feat_1}\n✨ {feat_2}\n\n"
+                    f"🎁 Special Offer: {offer}\n\nDrop a 💬 below or save this post for later!"
+                ),
+                "call_to_action": "Comment INFO for the direct link",
+                "hashtags": f"#{product_name.replace(' ', '')} #MustHave #ProductReview"
+            }
+
+    @classmethod
     def generate_content_copy(
         cls,
         product_name: str,
@@ -363,11 +595,13 @@ class GeminiService:
         custom_instructions: str | None = None,
         target_country: str | None = "Pakistan",
         target_language: str | None = "Urdu",
+        variation_seed: int = 0,
     ) -> dict[str, str]:
         """
         Uses Google Gemini to generate highly persuasive, channel-tailored marketing copy
         accurately referencing the specific product, its real features, and target pain points.
         For video scripts, voiceover lines are natively localized into the target market's language.
+        Supports variation_seed to generate diverse hooks and angles on regeneration.
         """
         client = cls.get_client()
         model_name = cls.get_model_name()
@@ -397,9 +631,10 @@ class GeminiService:
             f"- Channel: {channel} (e.g. tiktok, instagram, paid ad, email, whatsapp)\n"
             f"- Format: {format_type}\n"
             f"- Live Trend / Angle: {trend_topic or 'Problem-Solution demonstration'}\n"
+            f"- Variation / Angle Index: #{variation_seed} (Generate a distinctly fresh hook and creative angle different from previous variations)\n"
             f"- Optional Hook Seed: {hook_idea or 'None'}\n"
             f"- Custom Notes: {custom_instructions or 'Focus on fast benefits and high clarity'}\n\n"
-            "INSTRUCTIONS FOR FORMAT:\n"
+            f"INSTRUCTIONS FOR FORMAT:\n"
             f"- If format is 'script' or 'tiktok': Write a complete timestamped short-form video script with [HOOK - 0:00 to 0:03], [DEMO & BENEFIT - 0:03 to 0:10], and [CALL TO ACTION - 0:10 to 0:15]. All Voiceover lines MUST be in {lang} (for Pakistan, write Roman Urdu and Urdu script so the creator speaks natural Urdu on camera). Visual & camera cues remain in English.\n"
             "- If format is 'organic' or 'instagram': Write an educational carousel/reel caption highlighting why traditional alternatives fail and how this product solves it, with clean bullet points and engagement question.\n"
             "- If format is 'paid': Write a high-urgency direct-response ad copy with strong hook, comparison against costly alternatives, risk-reversal guarantee, and compelling discount CTA.\n"
@@ -417,13 +652,14 @@ class GeminiService:
         if client:
             try:
                 from google.genai import types
+                dynamic_temp = min(1.0, 0.7 + (variation_seed % 5) * 0.06)
                 response = client.models.generate_content(
                     model=model_name,
                     contents=user_prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=system_instruction,
                         response_mime_type="application/json",
-                        temperature=0.7,
+                        temperature=dynamic_temp,
                     ),
                 )
                 if response and response.text:
@@ -438,92 +674,21 @@ class GeminiService:
             except Exception as exc:
                 logger.warning(f"Gemini copy generation API error: {exc}")
 
-        # Intelligent Product-Aware Fallback
-        first_feat = product_features[0] if product_features else "innovative design"
-        first_pain = product_pain_points[0] if product_pain_points else "daily frustration"
-
-        if format_type in ("script", "short_video_script") or channel == "tiktok":
-            if "pakistan" in country.lower() or "urdu" in lang.lower():
-                h = hook_idea or "Peach fuzz ke upar foundation lagana band karein — pehle yeh 30-sec trick dekhein!"
-                c = (
-                    f"[HOOK - 0:00 to 0:03]\n"
-                    f"Visual: Split-screen close-up showing cakey foundation over peach fuzz vs. smooth skin glide.\n"
-                    f"Voiceover (Roman Urdu): \"Peach fuzz ke upar foundation lagana band karein! Pehle yeh 30-second ki trick dekhein.\"\n"
-                    f"Voiceover (اردو): \"پیچ فز کے اوپر فاؤنڈیشن لگانا بند کریں! پہلے یہ ۳۰ سیکنڈ کی ٹرک دیکھیں۔\"\n\n"
-                    f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
-                    f"Visual: Presenter effortlessly gliding {product_name} across cheek, highlighting {first_feat}.\n"
-                    f"Voiceover (Roman Urdu): \"Purane aur naakara tareeqon pe waqt zaya karna chhod dein. Yeh {product_name} sirf chand seconds mein bina dard ke makhan jaisi smooth skin deta hai.\"\n"
-                    f"Voiceover (اردو): \"پرانے اور ناکارہ طریقوں پر وقت ضائع کرنا چھوڑ دیں۔ یہ {product_name} صرف چند سیکنڈز میں بنا درد کے مکھن جیسی ہموار جلد دیتا ہے۔\"\n\n"
-                    f"[CALL TO ACTION - 0:10 to 0:15]\n"
-                    f"Visual: Clean, glowing finished look with {product_name} in hand.\n"
-                    f"Voiceover (Roman Urdu): \"Toh bas abhi ready ho jayein! Neeche diye gaye link par click karein aur launch sale mein poora 20% OFF hasil karein!\"\n"
-                    f"Voiceover (اردو): \"تو بس ابھی ریڈی ہو جائیں! نیچے دیے گئے لنک پر کلک کریں اور لانچ سیل میں پورا ۲۰٪ رعایت حاصل کریں!\""
-                )
-                cta = "Neeche link par click karein aur 20% discount hasil karein"
-                tags = f"#{product_name.replace(' ', '')} #BeautyHacksPK #SkincareUrdu #ViralFindsPK"
-            else:
-                h = hook_idea or f"Still struggling with {first_pain}? Stop and watch this."
-                c = (
-                    f"[HOOK - 0:00 to 0:03]\n"
-                    f"Visual: Close-up demonstrating the daily problem with {first_pain}.\n"
-                    f"Voiceover: \"{h}\"\n\n"
-                    f"[DEMO & BENEFIT - 0:03 to 0:10]\n"
-                    f"Visual: Presenter using {product_name} showcasing {first_feat}.\n"
-                    f"Voiceover: \"The {product_name} fixes this in seconds. Built with {first_feat} so you get effortless results every time.\"\n\n"
-                    f"[CALL TO ACTION - 0:10 to 0:15]\n"
-                    f"Visual: Finished result with product box in hand.\n"
-                    f"Voiceover: \"Tap the link below to get yours with special launch pricing before stock runs out!\""
-                )
-                cta = "Tap link in bio to get 20% off"
-                tags = f"#{product_name.replace(' ', '')} #ViralFinds #ProblemSolved #LifeHacks"
-        elif format_type == "paid":
-            h = f"Why struggle with {first_pain} when you can have this?"
-            c = (
-                f"If you're tired of dealing with {first_pain}, it's time for an upgrade.\n\n"
-                f"Meet the **{product_name}**:\n"
-                + "\n".join([f"✨ {f}" for f in product_features[:4]])
-                + f"\n\n✅ 30-Day Money Back Guarantee\n✅ Fast Tracked Shipping\n\nClick below to claim your exclusive discount today!"
-            )
-            cta = "Shop Now & Claim Discount"
-            tags = "#SpecialOffer #MustHave #TrendingProduct"
-        elif format_type == "email":
-            h = f"Subject: The smarter way to handle {first_pain} ✨"
-            c = (
-                f"Hi there,\n\n"
-                f"If {first_pain} has been slowing you down, we have great news.\n\n"
-                f"We created the **{product_name}** specifically to make your daily routine effortless.\n\n"
-                f"Key Highlights:\n"
-                + "\n".join([f"• **{f}**" for f in product_features[:3]])
-                + f"\n\nClick below to order yours and take advantage of our limited-time offer:"
-            )
-            cta = "Explore the Collection & Save"
-            tags = ""
-        elif format_type == "whatsapp":
-            h = f"✨ VIP Update: {product_name} is in stock!"
-            c = (
-                f"Hi! Quick update on the **{product_name}**.\n\n"
-                f"Due to high demand, we just restocked our latest batch featuring {first_feat}.\n\n"
-                f"Reply to this message with **ORDER** to reserve yours with free priority shipping!"
-            )
-            cta = "Order via WhatsApp"
-            tags = ""
-        else:  # organic / instagram
-            h = f"The 3-step routine change for {first_pain}."
-            c = (
-                f"Most people think dealing with {first_pain} is just unavoidable.\n\n"
-                f"Here is what actually works: Introducing the {product_name}.\n\n"
-                + "\n".join([f"🔹 {f}" for f in product_features[:4]])
-                + f"\n\nSave this post for later or share with a friend who needs this!"
-            )
-            cta = "Drop a 💬 below for the direct link"
-            tags = f"#{product_name.replace(' ', '')} #RoutineUpgrade #ProductDiscovery"
-
-        return {
-            "hook": h,
-            "caption": c,
-            "call_to_action": cta,
-            "hashtags": tags,
-        }
+        # Intelligent Product-Aware & Multi-Angle Synthesis Fallback
+        return cls._synthesize_grounded_copy(
+            product_name=product_name,
+            product_description=product_description,
+            product_features=product_features,
+            product_pain_points=product_pain_points,
+            channel=channel,
+            format_type=format_type,
+            trend_topic=trend_topic,
+            hook_idea=hook_idea,
+            custom_instructions=custom_instructions,
+            target_country=country,
+            target_language=lang,
+            variation_seed=variation_seed,
+        )
 
     @classmethod
     def generate_localized_voiceover(

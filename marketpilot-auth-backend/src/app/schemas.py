@@ -1211,6 +1211,7 @@ class CopyGenerationRequest(BaseModel):
     custom_instructions: str | None = None
     target_country: str | None = "Pakistan"
     target_language: str | None = "Urdu"
+    variation_seed: int = 0
 
 
 class CopyGenerationResponse(BaseModel):

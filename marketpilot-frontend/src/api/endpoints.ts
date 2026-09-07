@@ -216,6 +216,7 @@ export const api = {
     custom_instructions?: string;
     target_country?: string;
     target_language?: string;
+    variation_seed?: number;
   }): Promise<{ hook: string; caption: string; call_to_action: string; hashtags: string; ai_model_used: string }> => {
     const res = await apiClient.post('/planner/generate-copy', params);
     return res.data;

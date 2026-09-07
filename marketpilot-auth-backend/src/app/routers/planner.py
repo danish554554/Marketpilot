@@ -331,6 +331,7 @@ def generate_copy(
         custom_instructions=payload.custom_instructions,
         target_country=payload.target_country,
         target_language=payload.target_language,
+        variation_seed=payload.variation_seed,
     )
 
     return CopyGenerationResponse(
