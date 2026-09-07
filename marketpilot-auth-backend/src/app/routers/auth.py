@@ -111,7 +111,14 @@ def register(payload: RegisterRequest) -> AuthResponse:
         # Generate 6-digit authentication code
         otp_code = _generate_otp(str(payload.email), str(response.user.id))
 
-        # Trigger Supabase email delivery
+        # Send direct verification email if SMTP is configured
+        try:
+            from app.services.email_service import send_verification_email
+            send_verification_email(str(payload.email), otp_code, biz_name)
+        except Exception as email_err:
+            print(f"Notice: Direct email delivery: {email_err}")
+
+        # Trigger Supabase email delivery (Sends confirmation / magic link to Gmail)
         try:
             get_anon_client().auth.sign_in_with_otp({"email": str(payload.email)})
         except Exception:
@@ -121,12 +128,13 @@ def register(payload: RegisterRequest) -> AuthResponse:
                 pass
 
         # Strictly require verification: session is NOT returned until code is verified
+        # Never expose plain verification_code to browser UI or HTTP response
         return AuthResponse(
             user=profile,
             session=None,
             requires_verification=True,
-            verification_code=otp_code,
-            message=f"Verification code sent to {payload.email}. Please enter the 6-digit code to complete registration.",
+            verification_code=None,
+            message=f"Verification code sent to {payload.email}. Please check your Gmail inbox and enter the 6-digit code to complete registration.",
         )
     except HTTPException:
         raise
@@ -149,6 +157,13 @@ def resend_otp(payload: ResendOtpRequest) -> MessageResponse:
 
     otp_code = _generate_otp(email_clean, user_id)
 
+    # Send direct verification email if SMTP is configured
+    try:
+        from app.services.email_service import send_verification_email
+        send_verification_email(email_clean, otp_code)
+    except Exception as email_err:
+        print(f"Notice: Direct email delivery on resend: {email_err}")
+
     # Attempt Supabase email delivery
     try:
         get_anon_client().auth.sign_in_with_otp({"email": email_clean})
@@ -159,8 +174,8 @@ def resend_otp(payload: ResendOtpRequest) -> MessageResponse:
             pass
 
     return MessageResponse(
-        message=f"A fresh verification code was sent to {payload.email}. Please check your inbox and spam folder.",
-        verification_code=otp_code,
+        message=f"A fresh verification code was sent to {payload.email}. Please check your Gmail inbox and spam folder.",
+        verification_code=None,
     )
 
 

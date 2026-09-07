@@ -18,7 +18,6 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendSuccess, setResendSuccess] = useState('');
-  const [devVerificationCode, setDevVerificationCode] = useState('');
 
   // Step 2 Verification State
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
@@ -52,13 +51,10 @@ export function SignupPage() {
 
     setLoading(true);
     try {
-      const res = await register(email, password, businessName, undefined, targetCountry);
-      // Strictly advance to the 6-digit verification code step
+      await register(email, password, businessName, undefined, targetCountry);
+      // Advance to the 6-digit verification code step
       setStep('verify');
       setResendCountdown(45);
-      if (res?.verification_code) {
-        setDevVerificationCode(res.verification_code);
-      }
     } catch (err: any) {
       setError(err.message || "We couldn't connect to MarketPilot. Please try again.");
     } finally {
@@ -143,12 +139,9 @@ export function SignupPage() {
     setResendSuccess('');
 
     try {
-      const res = await api.resendOtp(email);
+      await api.resendOtp(email);
       setResendCountdown(60);
-      setResendSuccess(`A fresh verification code was sent to ${email}. Please check your inbox and spam folder.`);
-      if (res?.verification_code) {
-        setDevVerificationCode(res.verification_code);
-      }
+      setResendSuccess(`A fresh verification code was sent to ${email}. Please check your Gmail inbox and spam folder.`);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Could not resend code. Please wait a minute or check your email.');
     } finally {
@@ -314,25 +307,31 @@ export function SignupPage() {
               </div>
             )}
 
-            {devVerificationCode && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs flex items-center justify-between shadow-xs">
-                <div>
-                  <span className="font-semibold text-emerald-800">Verification Code: </span>
-                  <span className="font-mono font-black text-sm tracking-widest text-brand-green ml-1">{devVerificationCode}</span>
+            {/* Real Email Delivery Instructions */}
+            <div className="p-4 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl text-xs space-y-2.5 shadow-xs">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center shrink-0 mt-0.5">
+                  <Mail size={16} />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const digits = devVerificationCode.split('').slice(0, 6);
-                    setOtpDigits(digits);
-                    inputRefs.current[5]?.focus();
-                  }}
-                  className="bg-brand-green text-white font-bold px-2.5 py-1 rounded-lg text-[10px] hover:bg-brand-green-dark transition shadow-xs cursor-pointer"
-                >
-                  Auto-Fill
-                </button>
+                <div className="space-y-1">
+                  <p className="font-bold text-emerald-950 text-xs">Verification Code Sent to Gmail</p>
+                  <p className="text-emerald-800 text-[11px] leading-relaxed">
+                    We've sent a 6-digit verification code to <strong className="text-emerald-950 font-semibold">{email}</strong>. Please check your Gmail inbox (or Spam folder) and type the code below.
+                  </p>
+                  <div className="pt-1.5 flex items-center gap-3">
+                    <a
+                      href="https://mail.google.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-brand-green hover:text-brand-green-dark hover:underline"
+                    >
+                      <span>Open Gmail Inbox</span>
+                      <span className="text-[10px]">↗</span>
+                    </a>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
 
             <div className="flex justify-center gap-2 sm:gap-2.5 my-4">
               {otpDigits.map((digit, idx) => (

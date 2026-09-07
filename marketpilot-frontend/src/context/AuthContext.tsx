@@ -44,8 +44,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser((prev) => (prev ? { ...prev, targetCountry: clean } : null));
   }, []);
 
-  // Check persisted token on mount
+  // Check persisted token on mount or handle Supabase email magic-link callback
   useEffect(() => {
+    // 1. Detect and handle Supabase email verification / magic-link redirect in URL hash
+    try {
+      const hash = window.location.hash;
+      if (hash && (hash.includes('access_token=') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
+        const hashClean = hash.startsWith('#') ? hash.substring(1) : hash;
+        const params = new URLSearchParams(hashClean);
+        const hashAccessToken = params.get('access_token');
+        const hashRefreshToken = params.get('refresh_token');
+
+        if (hashAccessToken) {
+          localStorage.setItem('marketpilot_token', hashAccessToken);
+          if (hashRefreshToken) {
+            localStorage.setItem('marketpilot_refresh_token', hashRefreshToken);
+          }
+
+          // Clean up the hash fragment from address bar cleanly
+          window.history.replaceState(null, '', window.location.pathname);
+
+          // Decode JWT payload to retrieve user metadata
+          try {
+            const parts = hashAccessToken.split('.');
+            if (parts.length >= 2) {
+              const payloadJson = JSON.parse(atob(parts[1]));
+              const userEmail = payloadJson.email || '';
+              const userId = payloadJson.sub || '';
+              const meta = payloadJson.user_metadata || {};
+              const biz = meta.business_name || 'GlowSilk Beauty';
+              const fullName = meta.full_name || '';
+              const country = meta.target_country || 'Pakistan';
+
+              if (userEmail) localStorage.setItem('marketpilot_email', userEmail);
+              if (userId) localStorage.setItem('marketpilot_user_id', userId);
+              localStorage.setItem('marketpilot_biz', biz);
+              localStorage.setItem('marketpilot_target_country', country);
+              if (fullName) localStorage.setItem('marketpilot_full_name', fullName);
+
+              setUser({
+                id: userId || undefined,
+                email: userEmail,
+                fullName,
+                businessName: biz,
+                targetCountry: country,
+              });
+              setIsAuthenticated(true);
+              return;
+            }
+          } catch (jwtErr) {
+            console.error('Error decoding Supabase token payload:', jwtErr);
+          }
+        }
+      }
+    } catch (hashErr) {
+      console.error('Error processing Supabase callback hash:', hashErr);
+    }
+
+    // 2. Check standard persisted localStorage session
     const token = localStorage.getItem('marketpilot_token');
     const savedEmail = localStorage.getItem('marketpilot_email');
     const savedId = localStorage.getItem('marketpilot_user_id');
