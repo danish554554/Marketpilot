@@ -12,18 +12,41 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 def _profile_for(user_id: str) -> UserProfile:
-    result = get_service_client().table("profiles").select("id,email,full_name,avatar_url,role").eq("id", user_id).single().execute()
-    if not result.data:
-        raise HTTPException(status_code=500, detail="The user profile was not created. Check the Supabase database trigger.")
-    return UserProfile.model_validate(result.data)
+    import time
+    service_client = get_service_client()
+    for _ in range(3):
+        result = service_client.table("profiles").select("id,email,full_name,avatar_url,role").eq("id", user_id).maybe_single().execute()
+        if result and result.data:
+            return UserProfile.model_validate(result.data)
+        time.sleep(0.25)
+
+    # Fallback: if database trigger didn't insert profile in time, retrieve from admin auth and upsert
+    try:
+        user_res = service_client.auth.admin.get_user_by_id(user_id)
+        if user_res and user_res.user:
+            u = user_res.user
+            meta = u.user_metadata or {}
+            profile_data = {
+                "id": u.id,
+                "email": u.email,
+                "full_name": meta.get("full_name") or (u.email.split("@")[0] if u.email else "User"),
+                "avatar_url": None,
+                "role": "owner",
+            }
+            service_client.table("profiles").upsert(profile_data).execute()
+            return UserProfile.model_validate(profile_data)
+    except Exception:
+        pass
+
+    raise HTTPException(status_code=500, detail="The user profile was not created. Check the Supabase database trigger.")
 
 
 def _auth_error(exc: Exception, fallback: str) -> HTTPException:
     text = str(exc).lower()
     if "invalid login credentials" in text:
         return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password.")
-    if "already registered" in text or "already been registered" in text:
-        return HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists.")
+    if any(k in text for k in ["already registered", "already been registered", "unique constraint", "already exists", "pgrst116", "cannot coerce", "0 rows"]):
+        return HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This email is already registered. Please log in with your password.")
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=fallback)
 
 
@@ -57,6 +80,7 @@ def _generate_otp(email: str, user_id: str | None = None) -> str:
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest) -> AuthResponse:
     try:
+        email_clean = str(payload.email).strip().lower()
         biz_name = payload.business_name.strip() if payload.business_name and payload.business_name.strip() else payload.full_name
         target_country = payload.target_country.strip() if payload.target_country else "Pakistan"
         
@@ -64,26 +88,91 @@ def register(payload: RegisterRequest) -> AuthResponse:
         country_code = "PK" if "pakistan" in target_country.lower() else "US"
         currency = "PKR" if "pakistan" in target_country.lower() else "USD"
 
-        response = get_anon_client().auth.sign_up({
-            "email": str(payload.email), "password": payload.password,
-            "options": {
-                "email_redirect_to": "https://marketpilot-iota.vercel.app",
-                "data": {
-                    "full_name": payload.full_name,
-                    "business_name": biz_name,
-                    "target_country": target_country,
+        service_client = get_service_client()
+
+        # 1. Proactively check if email is already registered in profiles
+        try:
+            existing_prof = service_client.table("profiles").select("id,email").eq("email", email_clean).maybe_single().execute()
+            if existing_prof and existing_prof.data:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="This email is already registered. Please log in with your password.",
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+        response = None
+        used_admin_fallback = False
+
+        try:
+            response = get_anon_client().auth.sign_up({
+                "email": email_clean,
+                "password": payload.password,
+                "options": {
+                    "email_redirect_to": "https://marketpilot-iota.vercel.app",
+                    "data": {
+                        "full_name": payload.full_name,
+                        "business_name": biz_name,
+                        "target_country": target_country,
+                    },
                 },
-            },
-        })
-        if response.user is None:
+            })
+        except Exception as signup_err:
+            signup_err_text = str(signup_err).lower()
+            if any(k in signup_err_text for k in ["already registered", "already been registered", "unique constraint"]):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="This email is already registered. Please log in with your password.",
+                )
+            # Supabase built-in mailer rate-limit or 500 mail server error
+            if "error sending confirmation email" in signup_err_text or "500" in signup_err_text:
+                print(f"Notice: Supabase mailer rate-limited ({signup_err}). Falling back to admin user creation.")
+                try:
+                    admin_res = service_client.auth.admin.create_user({
+                        "email": email_clean,
+                        "password": payload.password,
+                        "email_confirm": True,
+                        "user_metadata": {
+                            "full_name": payload.full_name,
+                            "business_name": biz_name,
+                            "target_country": target_country,
+                            "is_verified": True,
+                        },
+                    })
+                    login_res = get_anon_client().auth.sign_in_with_password({
+                        "email": email_clean,
+                        "password": payload.password,
+                    })
+                    response = login_res
+                    used_admin_fallback = True
+                except Exception as admin_err:
+                    admin_err_text = str(admin_err).lower()
+                    if any(k in admin_err_text for k in ["already registered", "already been registered", "unique constraint"]):
+                        raise HTTPException(
+                            status_code=status.HTTP_409_CONFLICT,
+                            detail="This email is already registered. Please log in with your password.",
+                        )
+                    raise _auth_error(admin_err, "Unable to create account.") from admin_err
+            else:
+                raise _auth_error(signup_err, "Unable to create account.") from signup_err
+
+        if response is None or response.user is None:
             raise HTTPException(status_code=400, detail="Account could not be created.")
+
+        # Supabase returns identities=[] when an email is already registered to avoid leaking user presence
+        if hasattr(response.user, "identities") and response.user.identities is not None and len(response.user.identities) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This email is already registered. Please log in with your password.",
+            )
 
         profile = _profile_for(response.user.id)
         profile.target_country = target_country
 
         # Provision full business workspace in database with target country
         try:
-            service_client = get_service_client()
             ws_check = service_client.table("business_workspaces").select("id").eq("owner_id", response.user.id).maybe_single().execute()
             if not ws_check or not ws_check.data:
                 ws_res = service_client.table("business_workspaces").insert({
@@ -110,6 +199,22 @@ def register(payload: RegisterRequest) -> AuthResponse:
                         pass
         except Exception as ws_err:
             print(f"Notice: Workspace auto-provisioning handled: {ws_err}")
+
+        # If user was created via admin fallback because Supabase mailer was rate-limited:
+        if used_admin_fallback and response.session:
+            session = AuthSession(
+                access_token=response.session.access_token,
+                refresh_token=response.session.refresh_token,
+                expires_in=response.session.expires_in,
+                token_type=response.session.token_type,
+            )
+            return AuthResponse(
+                user=profile,
+                session=session,
+                requires_verification=False,
+                verification_code=None,
+                message="Account created successfully! Welcome to MarketPilot.",
+            )
 
         # Check if email confirmation is required by Supabase
         is_confirmed = getattr(response.user, "email_confirmed_at", None) is not None
