@@ -19,7 +19,7 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: PASSWORD_RESET_REDIRECT_URL
-        value: "http://localhost:3000"
+        value: "https://marketpilot-iota.vercel.app/reset-password"
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL

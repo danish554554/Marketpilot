@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     app_name: str = "MarketPilot AI API"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
-    frontend_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
+    frontend_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://marketpilot-iota.vercel.app"
     supabase_url: AnyHttpUrl
     supabase_anon_key: str = Field(min_length=20)
     supabase_service_role_key: str | None = None
