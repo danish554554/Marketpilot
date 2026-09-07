@@ -1,15 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { api } from '../../api/endpoints';
-import { AlertCircle, CheckCircle2, ArrowLeft, Mail, KeyRound, Sparkles, Send, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Sparkles, ArrowRight, RefreshCw } from 'lucide-react';
 
 export function SignupPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  // Step 1 State
-  const [step, setStep] = useState<'signup' | 'verify' | 'verified'>('signup');
   const [businessName, setBusinessName] = useState('');
   const [targetCountry, setTargetCountry] = useState('Pakistan');
   const [email, setEmail] = useState('');
@@ -17,463 +14,195 @@ export function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [resendSuccess, setResendSuccess] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  // Step 2 Verification State
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
-  const [resendCountdown, setResendCountdown] = useState(45);
-  const [resending, setResending] = useState(false);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  // Countdown timer for resend
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    if (step === 'verify' && resendCountdown > 0) {
-      timer = setTimeout(() => setResendCountdown((prev) => prev - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [step, resendCountdown]);
-
-  // Auto-detect authentication if user clicked the "Sign in" link in Gmail
-  useEffect(() => {
-    if (step !== 'verify') return;
-
-    const checkAuthenticated = () => {
-      const token = localStorage.getItem('marketpilot_token');
-      if (token) {
-        setStep('verified');
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1000);
-      }
-    };
-
-    checkAuthenticated();
-    window.addEventListener('storage', checkAuthenticated);
-    window.addEventListener('focus', checkAuthenticated);
-    const interval = setInterval(checkAuthenticated, 1500);
-
-    return () => {
-      window.removeEventListener('storage', checkAuthenticated);
-      window.removeEventListener('focus', checkAuthenticated);
-      clearInterval(interval);
-    };
-  }, [step, navigate]);
-
-  // Handle Step 1: Sign up
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError('Passwords do not match. Please re-enter.');
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('Password must be at least 6 characters.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await register(email, password, businessName, undefined, targetCountry);
-      if (res && res.requires_verification === false) {
-        navigate('/dashboard');
-        return;
-      }
-      // Advance to the 6-digit verification code step
-      setStep('verify');
-      setResendCountdown(45);
-    } catch (err: any) {
-      setError(err.message || "We couldn't connect to MarketPilot. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle OTP digit changes
-  const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) {
-      // Handle paste
-      const pasted = value.replace(/\D/g, '').slice(0, 6);
-      const newDigits = [...otpDigits];
-      for (let i = 0; i < pasted.length; i++) {
-        newDigits[i] = pasted[i];
-      }
-      setOtpDigits(newDigits);
-      const nextIndex = Math.min(pasted.length, 5);
-      inputRefs.current[nextIndex]?.focus();
-      return;
-    }
-
-    const digit = value.replace(/\D/g, '');
-    const newDigits = [...otpDigits];
-    newDigits[index] = digit;
-    setOtpDigits(newDigits);
-
-    if (digit && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  // Handle Step 2: Verify OTP
-  const handleVerifySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const token = otpDigits.join('').trim();
-    if (token.length < 4) {
-      setError('Please enter the full 6-digit verification code.');
-      return;
-    }
-
-    setError('');
-    setLoading(true);
-
-    try {
-      const authRes = await api.verifyOtp(email, token);
-      setStep('verified');
-      if (authRes?.session?.access_token) {
-        localStorage.setItem('marketpilot_token', authRes.session.access_token);
-        if (authRes.session.refresh_token) {
-          localStorage.setItem('marketpilot_refresh_token', authRes.session.refresh_token);
-        }
-        if (authRes.user?.id) {
-          localStorage.setItem('marketpilot_user_id', authRes.user.id);
-        }
-      }
+      await register(email, password, businessName, undefined, targetCountry);
+      setSuccess(true);
       setTimeout(() => {
-        if (authRes?.session?.access_token) {
-          navigate('/dashboard');
-        } else {
-          navigate('/login', { state: { email, message: 'Email verified successfully! Please log in.' } });
-        }
-      }, 1500);
+        navigate('/dashboard');
+      }, 800);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid or expired code. Please check your email or resend code.');
+      const msg = err.message || "We couldn't connect to MarketPilot. Please try again.";
+      if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already exists')) {
+        setError('This email is already registered. Please log in with your password.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Resend code handler
-  const handleResendCode = async () => {
-    if (resendCountdown > 0 || resending) return;
-    setResending(true);
-    setError('');
-    setResendSuccess('');
-
-    try {
-      await api.resendOtp(email);
-      setResendCountdown(60);
-      setResendSuccess(`A fresh verification code was sent to ${email}. Please check your Gmail inbox and spam folder.`);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Could not resend code. Please wait a minute or check your email.');
-    } finally {
-      setResending(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-brand-canvas py-20 px-4 flex flex-col justify-center">
+    <div className="min-h-screen bg-brand-canvas py-16 px-4 flex flex-col justify-center">
       <div className="max-w-md w-full mx-auto bg-white rounded-2xl shadow-soft border border-brand-line p-8">
-        <div className="flex flex-col items-center mb-8">
-          <Link to="/" className="flex items-center gap-2 mb-6">
+        <div className="flex flex-col items-center mb-6">
+          <Link to="/" className="flex items-center gap-2 mb-4">
             <span className="text-brand-green text-xl font-black">◇</span>
             <span className="font-display font-extrabold text-brand-ink text-xl">
               MarketPilot <span className="text-brand-green">AI</span>
             </span>
           </Link>
-
-          {step === 'signup' && (
-            <>
-              <h1 className="text-2xl font-display font-bold text-brand-ink mb-1">Create your account</h1>
-              <p className="text-xs text-brand-muted">Step 1 of 2: Register your business workspace</p>
-            </>
-          )}
-
-          {step === 'verify' && (
-            <>
-              <div className="w-12 h-12 rounded-full bg-emerald-50 text-brand-green grid place-items-center mb-3">
-                <Mail size={24} />
-              </div>
-              <h1 className="text-2xl font-display font-bold text-brand-ink mb-1">Verify your email</h1>
-              <p className="text-xs text-brand-muted text-center max-w-xs">
-                We've sent a 6-digit confirmation code to <strong className="text-brand-ink">{email}</strong>
-              </p>
-            </>
-          )}
-
-          {step === 'verified' && (
-            <>
-              <div className="w-14 h-14 rounded-full bg-emerald-100 text-brand-green grid place-items-center mb-3">
-                <CheckCircle2 size={32} />
-              </div>
-              <h1 className="text-2xl font-display font-bold text-brand-ink mb-1">Email Verified!</h1>
-              <p className="text-xs text-brand-muted text-center">
-                Redirecting you to the login screen...
-              </p>
-            </>
-          )}
+          <h1 className="text-2xl font-display font-bold text-brand-ink mb-1">Create your workspace</h1>
+          <p className="text-xs text-brand-muted text-center">
+            Set up your AI autonomous marketing agent in 30 seconds
+          </p>
         </div>
+
+        {success && (
+          <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-3 leading-relaxed shadow-xs">
+            <CheckCircle2 size={20} className="text-brand-green shrink-0" />
+            <div>
+              <strong className="font-bold block text-sm text-emerald-950">Workspace Created!</strong>
+              <span>Launching your marketing dashboard now...</span>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-start gap-2.5 leading-relaxed">
             <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-600" />
-            <div>
+            <div className="flex-1">
               <strong className="font-bold block mb-0.5">Notice</strong>
               <span>{error}</span>
+              {error.includes('already registered') && (
+                <div className="mt-2">
+                  <Link
+                    to="/login"
+                    state={{ email }}
+                    className="inline-flex items-center gap-1 font-extrabold text-brand-green hover:underline text-xs"
+                  >
+                    <span>Log in with your password</span>
+                    <ArrowRight size={12} />
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Step 1: Initial Registration Form */}
-        {step === 'signup' && (
-          <form onSubmit={handleSignupSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-brand-ink mb-1">Business / Brand Name *</label>
-              <input
-                type="text"
-                required
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green"
-                placeholder="GlowSilk Beauty"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-brand-ink mb-1 flex items-center justify-between">
-                <span>Target Market Country *</span>
-                <span className="text-[10px] text-brand-muted font-normal">Sets trends & voice-over language</span>
-              </label>
-              <select
-                value={targetCountry}
-                onChange={(e) => setTargetCountry(e.target.value)}
-                className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink font-semibold"
-              >
-                <option value="Pakistan">🇵🇰 Pakistan (Urdu Voice-Over & Local Trends)</option>
-                <option value="United States">🇺🇸 United States (Global Trends)</option>
-                <option value="United Kingdom">🇬🇧 United Kingdom</option>
-                <option value="United Arab Emirates">🇦🇪 United Arab Emirates (Arabic Voice-Over)</option>
-                <option value="Saudi Arabia">🇸🇦 Saudi Arabia (Arabic Voice-Over)</option>
-                <option value="Canada">🇨🇦 Canada</option>
-                <option value="Germany">🇩🇪 Germany (German Voice-Over)</option>
-                <option value="India">🇮🇳 India (Hindi Voice-Over)</option>
-                <option value="Australia">🇦🇺 Australia</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-brand-ink mb-1">Work Email *</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green"
-                placeholder="sarah@glowsilk.com"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-brand-ink mb-1">Password *</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green"
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-brand-ink mb-1">Confirm Password *</label>
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green"
-                placeholder="••••••••"
-              />
-            </div>
+        <form onSubmit={handleSignupSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-brand-ink mb-1">Business / Brand Name *</label>
+            <input
+              type="text"
+              required
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink"
+              placeholder="e.g. GlowSilk Beauty"
+              disabled={loading || success}
+            />
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-brand-green text-white font-extrabold py-3.5 rounded-xl hover:bg-brand-green-dark transition flex justify-center items-center gap-2 mt-6 text-xs shadow-sm"
+          <div>
+            <label className="block text-xs font-bold text-brand-ink mb-1 flex items-center justify-between">
+              <span>Target Market Country *</span>
+              <span className="text-[10px] text-brand-muted font-normal">Sets trends & voice-over</span>
+            </label>
+            <select
+              value={targetCountry}
+              onChange={(e) => setTargetCountry(e.target.value)}
+              className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink font-semibold"
+              disabled={loading || success}
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <RefreshCw size={14} className="animate-spin" /> Sending verification code...
-                </span>
-              ) : (
-                <>
-                  <span>Create Account & Send Code</span>
-                  <Send size={13} />
-                </>
-              )}
-            </button>
+              <option value="Pakistan">🇵🇰 Pakistan (Urdu Voice-Over & Local Trends)</option>
+              <option value="United States">🇺🇸 United States (Global Trends)</option>
+              <option value="United Kingdom">🇬🇧 United Kingdom</option>
+              <option value="United Arab Emirates">🇦🇪 United Arab Emirates (Arabic Voice-Over)</option>
+              <option value="Saudi Arabia">🇸🇦 Saudi Arabia (Arabic Voice-Over)</option>
+              <option value="Canada">🇨🇦 Canada</option>
+              <option value="Germany">🇩🇪 Germany (German Voice-Over)</option>
+              <option value="India">🇮🇳 India (Hindi Voice-Over)</option>
+              <option value="Australia">🇦🇺 Australia</option>
+            </select>
+          </div>
 
-            <div className="mt-6 text-center text-xs text-brand-muted">
-              Already have an account?{' '}
-              <Link to="/login" className="text-brand-green font-bold hover:underline">
-                Log in
-              </Link>
-            </div>
-          </form>
-        )}
+          <div>
+            <label className="block text-xs font-bold text-brand-ink mb-1">Work Email *</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink"
+              placeholder="sarah@glowsilk.com"
+              disabled={loading || success}
+            />
+          </div>
 
-        {/* Step 2: 6-Digit Email Verification Form */}
-        {step === 'verify' && (
-          <form onSubmit={handleVerifySubmit} className="space-y-6">
-            {resendSuccess && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-start gap-2">
-                <CheckCircle2 size={16} className="text-brand-green shrink-0 mt-0.5" />
-                <span>{resendSuccess}</span>
-              </div>
+          <div>
+            <label className="block text-xs font-bold text-brand-ink mb-1">Password *</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink"
+              placeholder="At least 6 characters"
+              disabled={loading || success}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-brand-ink mb-1">Confirm Password *</label>
+            <input
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink"
+              placeholder="Re-enter password"
+              disabled={loading || success}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || success}
+            className="w-full bg-brand-green text-white font-extrabold py-3.5 rounded-xl hover:bg-brand-green-dark transition flex justify-center items-center gap-2 mt-6 text-xs shadow-sm cursor-pointer disabled:opacity-75"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <RefreshCw size={14} className="animate-spin" />
+                Setting up your workspace...
+              </span>
+            ) : success ? (
+              <span className="flex items-center gap-2">
+                <CheckCircle2 size={14} />
+                Launching Dashboard...
+              </span>
+            ) : (
+              <>
+                <span>Create Account & Launch Workspace</span>
+                <Sparkles size={14} />
+              </>
             )}
+          </button>
 
-            {/* Email Verification Guidance */}
-            <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl text-xs space-y-3 shadow-xs">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center shrink-0 mt-0.5">
-                  <Mail size={18} />
-                </div>
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-bold text-emerald-950 text-xs">Email Sent to Gmail</p>
-                    <span className="text-[10px] font-bold text-brand-green bg-emerald-100 px-2 py-0.5 rounded-full">Active</span>
-                  </div>
-                  <p className="text-emerald-800 text-[11px] leading-relaxed">
-                    We sent an authentication email to <strong className="text-emerald-950 font-bold">{email}</strong>.
-                  </p>
-                  <div className="bg-white/90 rounded-xl p-3 border border-emerald-100/80 space-y-2 mt-1 shadow-2xs">
-                    <p className="text-[11px] font-semibold text-slate-800 flex items-center gap-1.5">
-                      <Sparkles size={13} className="text-brand-green" />
-                      <span>Easiest: Click "Sign in" in your email</span>
-                    </p>
-                    <p className="text-[11px] text-slate-600 leading-normal">
-                      Open the email from <strong>Supabase Auth</strong> in your Gmail and click the <strong>"Sign in"</strong> button. This window will automatically detect it and open your dashboard!
-                    </p>
-                    <div className="pt-1">
-                      <a
-                        href="https://mail.google.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-green text-white font-bold rounded-lg text-xs hover:bg-brand-green-dark transition shadow-xs cursor-pointer"
-                      >
-                        <Mail size={12} />
-                        <span>Open Gmail Inbox</span>
-                        <span className="text-[10px]">↗</span>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-slate-200"></div>
-              <span className="flex-shrink mx-3 text-[11px] text-slate-400 font-medium">or enter 6-digit code</span>
-              <div className="flex-grow border-t border-slate-200"></div>
-            </div>
-
-            <div className="flex justify-center gap-2 sm:gap-2.5 my-4">
-              {otpDigits.map((digit, idx) => (
-                <input
-                  key={idx}
-                  ref={(el) => (inputRefs.current[idx] = el)}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(idx, e)}
-                  className="w-11 h-13 sm:w-12 sm:h-14 text-center font-display font-extrabold text-xl border-2 border-brand-line rounded-xl focus:border-brand-green focus:ring-2 focus:ring-brand-green/20 focus:outline-none bg-slate-50 focus:bg-white transition-all text-brand-ink"
-                  autoFocus={idx === 0}
-                />
-              ))}
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-brand-green text-white font-extrabold py-3.5 rounded-xl hover:bg-brand-green-dark transition flex justify-center items-center gap-2 text-xs shadow-sm"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <RefreshCw size={14} className="animate-spin" /> Verifying code...
-                </span>
-              ) : (
-                <>
-                  <span>Verify Email & Log In</span>
-                  <KeyRound size={14} />
-                </>
-              )}
-            </button>
-
-            <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setStep('signup')}
-                className="text-slate-500 hover:text-slate-900 font-bold flex items-center gap-1"
-              >
-                <ArrowLeft size={12} />
-                <span>Change Email</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResendCode}
-                disabled={resendCountdown > 0 || resending}
-                className="text-brand-green font-bold hover:underline disabled:text-slate-400 disabled:no-underline"
-              >
-                {resendCountdown > 0 ? `Resend code in ${resendCountdown}s` : 'Resend Code'}
-              </button>
-            </div>
-
-            <div className="pt-2 text-center space-y-1">
-              <p className="text-[11px] text-brand-muted">
-                Clicked the link in Gmail?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const token = localStorage.getItem('marketpilot_token');
-                    if (token) {
-                      navigate('/dashboard');
-                    } else {
-                      navigate('/login', { state: { email, message: 'Email verified! Please log in.' } });
-                    }
-                  }}
-                  className="text-brand-green font-bold hover:underline cursor-pointer"
-                >
-                  Proceed to Dashboard ➔
-                </button>
-              </p>
-            </div>
-          </form>
-        )}
-
-        {/* Step 3: Verified Success State */}
-        {step === 'verified' && (
-          <div className="py-6 text-center space-y-3">
-            <p className="text-xs text-slate-600">
-              Your email address has been verified. You can now log into your marketing workspace.
-            </p>
-            <div className="pt-2">
-              <Link
-                to="/login"
-                className="inline-flex items-center gap-1.5 px-6 py-2.5 bg-brand-green text-white text-xs font-extrabold rounded-xl shadow-sm hover:bg-emerald-700 transition-all"
-              >
-                <span>Proceed to Login</span>
-              </Link>
-            </div>
+          <div className="mt-6 text-center text-xs text-brand-muted">
+            Already have an account?{' '}
+            <Link to="/login" className="text-brand-green font-bold hover:underline">
+              Log in directly
+            </Link>
           </div>
-        )}
+        </form>
       </div>
     </div>
   );

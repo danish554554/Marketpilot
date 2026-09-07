@@ -108,7 +108,8 @@ def register(payload: RegisterRequest) -> AuthResponse:
         except Exception as ws_err:
             print(f"Notice: Workspace auto-provisioning handled: {ws_err}")
 
-        # If Supabase already authorized the session (email confirmation disabled or auto-confirmed)
+        # Ensure an active session is returned immediately for seamless onboarding
+        session = None
         if response.session is not None:
             session = AuthSession(
                 access_token=response.session.access_token,
@@ -116,39 +117,37 @@ def register(payload: RegisterRequest) -> AuthResponse:
                 expires_in=response.session.expires_in,
                 token_type=response.session.token_type,
             )
-            return AuthResponse(
-                user=profile,
-                session=session,
-                requires_verification=False,
-                verification_code=None,
-                message="Account created successfully! Welcome to MarketPilot.",
-            )
-
-        # Otherwise, email confirmation is required by Supabase
-        otp_code = _generate_otp(str(payload.email), str(response.user.id))
-
-        # Send direct verification email if SMTP is configured
-        try:
-            from app.services.email_service import send_verification_email
-            send_verification_email(str(payload.email), otp_code, biz_name)
-        except Exception as email_err:
-            print(f"Notice: Direct email delivery: {email_err}")
-
-        # Trigger Supabase email delivery (Sends confirmation / magic link to Gmail)
-        try:
-            get_anon_client().auth.sign_in_with_otp({"email": str(payload.email)})
-        except Exception:
+        else:
             try:
-                get_anon_client().auth.resend({"type": "signup", "email": str(payload.email)})
-            except Exception:
-                pass
+                # Auto-confirm user via service admin role and sign in
+                service_client.auth.admin.update_user_by_id(str(response.user.id), {
+                    "email_confirm": True,
+                    "user_metadata": {
+                        "is_verified": True,
+                        "business_name": biz_name,
+                        "target_country": target_country,
+                    },
+                })
+                login_res = get_anon_client().auth.sign_in_with_password({
+                    "email": str(payload.email),
+                    "password": payload.password,
+                })
+                if login_res.session:
+                    session = AuthSession(
+                        access_token=login_res.session.access_token,
+                        refresh_token=login_res.session.refresh_token,
+                        expires_in=login_res.session.expires_in,
+                        token_type=login_res.session.token_type,
+                    )
+            except Exception as sess_err:
+                print(f"Notice: Auto-session generation fallback: {sess_err}")
 
         return AuthResponse(
             user=profile,
-            session=None,
-            requires_verification=True,
+            session=session,
+            requires_verification=False,
             verification_code=None,
-            message=f"Verification code sent to {payload.email}. Please check your Gmail inbox and enter the 6-digit code to complete registration.",
+            message="Account created successfully! Welcome to MarketPilot.",
         )
     except HTTPException:
         raise
