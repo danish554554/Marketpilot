@@ -66,11 +66,14 @@ def register(payload: RegisterRequest) -> AuthResponse:
 
         response = get_anon_client().auth.sign_up({
             "email": str(payload.email), "password": payload.password,
-            "options": {"data": {
-                "full_name": payload.full_name,
-                "business_name": biz_name,
-                "target_country": target_country,
-            }},
+            "options": {
+                "email_redirect_to": "https://marketpilot-iota.vercel.app",
+                "data": {
+                    "full_name": payload.full_name,
+                    "business_name": biz_name,
+                    "target_country": target_country,
+                },
+            },
         })
         if response.user is None:
             raise HTTPException(status_code=400, detail="Account could not be created.")
@@ -108,40 +111,24 @@ def register(payload: RegisterRequest) -> AuthResponse:
         except Exception as ws_err:
             print(f"Notice: Workspace auto-provisioning handled: {ws_err}")
 
-        # Ensure an active session is returned immediately for seamless onboarding
-        session = None
-        if response.session is not None:
-            session = AuthSession(
-                access_token=response.session.access_token,
-                refresh_token=response.session.refresh_token,
-                expires_in=response.session.expires_in,
-                token_type=response.session.token_type,
+        # Check if email confirmation is required by Supabase
+        is_confirmed = getattr(response.user, "email_confirmed_at", None) is not None
+        if not is_confirmed or response.session is None:
+            return AuthResponse(
+                user=profile,
+                session=None,
+                requires_verification=True,
+                verification_code=None,
+                message=f"A verification link has been sent to {payload.email}. Please check your Gmail and click the link to activate your workspace.",
             )
-        else:
-            try:
-                # Auto-confirm user via service admin role and sign in
-                service_client.auth.admin.update_user_by_id(str(response.user.id), {
-                    "email_confirm": True,
-                    "user_metadata": {
-                        "is_verified": True,
-                        "business_name": biz_name,
-                        "target_country": target_country,
-                    },
-                })
-                login_res = get_anon_client().auth.sign_in_with_password({
-                    "email": str(payload.email),
-                    "password": payload.password,
-                })
-                if login_res.session:
-                    session = AuthSession(
-                        access_token=login_res.session.access_token,
-                        refresh_token=login_res.session.refresh_token,
-                        expires_in=login_res.session.expires_in,
-                        token_type=login_res.session.token_type,
-                    )
-            except Exception as sess_err:
-                print(f"Notice: Auto-session generation fallback: {sess_err}")
 
+        # Only if already confirmed
+        session = AuthSession(
+            access_token=response.session.access_token,
+            refresh_token=response.session.refresh_token,
+            expires_in=response.session.expires_in,
+            token_type=response.session.token_type,
+        )
         return AuthResponse(
             user=profile,
             session=session,
