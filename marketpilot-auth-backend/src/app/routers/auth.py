@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
+import httpx
 
 from app.dependencies import CurrentUser
 from app.schemas import (
@@ -126,37 +127,34 @@ def register(payload: RegisterRequest) -> AuthResponse:
                     status_code=status.HTTP_409_CONFLICT,
                     detail="This email is already registered. Please log in with your password.",
                 )
-            # Supabase built-in mailer rate-limit or 500 mail server error
-            if "error sending confirmation email" in signup_err_text or "500" in signup_err_text:
-                print(f"Notice: Supabase mailer rate-limited ({signup_err}). Falling back to admin user creation.")
-                try:
-                    admin_res = service_client.auth.admin.create_user({
-                        "email": email_clean,
-                        "password": payload.password,
-                        "email_confirm": True,
-                        "user_metadata": {
-                            "full_name": payload.full_name,
-                            "business_name": biz_name,
-                            "target_country": target_country,
-                            "is_verified": True,
-                        },
-                    })
-                    login_res = get_anon_client().auth.sign_in_with_password({
-                        "email": email_clean,
-                        "password": payload.password,
-                    })
-                    response = login_res
-                    used_admin_fallback = True
-                except Exception as admin_err:
-                    admin_err_text = str(admin_err).lower()
-                    if any(k in admin_err_text for k in ["already registered", "already been registered", "unique constraint"]):
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail="This email is already registered. Please log in with your password.",
-                        )
-                    raise _auth_error(admin_err, "Unable to create account.") from admin_err
-            else:
-                raise _auth_error(signup_err, "Unable to create account.") from signup_err
+            # Catch mail delivery errors, timeouts (httpx.ReadTimeout), rate limits, or SMTP crashes:
+            print(f"Notice: Supabase sign_up failed or timed out ({signup_err}). Falling back to admin user creation.")
+            try:
+                admin_res = service_client.auth.admin.create_user({
+                    "email": email_clean,
+                    "password": payload.password,
+                    "email_confirm": True,
+                    "user_metadata": {
+                        "full_name": payload.full_name,
+                        "business_name": biz_name,
+                        "target_country": target_country,
+                        "is_verified": True,
+                    },
+                })
+                login_res = get_anon_client().auth.sign_in_with_password({
+                    "email": email_clean,
+                    "password": payload.password,
+                })
+                response = login_res
+                used_admin_fallback = True
+            except Exception as admin_err:
+                admin_err_text = str(admin_err).lower()
+                if any(k in admin_err_text for k in ["already registered", "already been registered", "unique constraint"]):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="This email is already registered. Please log in with your password.",
+                    )
+                raise _auth_error(admin_err, "Unable to create account.") from admin_err
 
         if response is None or response.user is None:
             raise HTTPException(status_code=400, detail="Account could not be created.")
