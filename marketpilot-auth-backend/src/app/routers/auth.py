@@ -128,24 +128,22 @@ def register(payload: RegisterRequest) -> AuthResponse:
                     detail="This email is already registered. Please log in with your password.",
                 )
             # Catch mail delivery errors, timeouts (httpx.ReadTimeout), rate limits, or SMTP crashes:
-            print(f"Notice: Supabase sign_up failed or timed out ({signup_err}). Falling back to admin user creation.")
+            print(f"Notice: Supabase sign_up failed or timed out ({signup_err}). Creating unconfirmed user via admin.")
             try:
-                admin_res = service_client.auth.admin.create_user({
+                link_res = service_client.auth.admin.generate_link({
+                    "type": "signup",
                     "email": email_clean,
                     "password": payload.password,
-                    "email_confirm": True,
-                    "user_metadata": {
-                        "full_name": payload.full_name,
-                        "business_name": biz_name,
-                        "target_country": target_country,
-                        "is_verified": True,
+                    "options": {
+                        "redirect_to": "https://marketpilot-iota.vercel.app",
+                        "data": {
+                            "full_name": payload.full_name,
+                            "business_name": biz_name,
+                            "target_country": target_country,
+                        },
                     },
                 })
-                login_res = get_anon_client().auth.sign_in_with_password({
-                    "email": email_clean,
-                    "password": payload.password,
-                })
-                response = login_res
+                response = link_res
                 used_admin_fallback = True
             except Exception as admin_err:
                 admin_err_text = str(admin_err).lower()
@@ -197,22 +195,6 @@ def register(payload: RegisterRequest) -> AuthResponse:
                         pass
         except Exception as ws_err:
             print(f"Notice: Workspace auto-provisioning handled: {ws_err}")
-
-        # If user was created via admin fallback because Supabase mailer was rate-limited:
-        if used_admin_fallback and response.session:
-            session = AuthSession(
-                access_token=response.session.access_token,
-                refresh_token=response.session.refresh_token,
-                expires_in=response.session.expires_in,
-                token_type=response.session.token_type,
-            )
-            return AuthResponse(
-                user=profile,
-                session=session,
-                requires_verification=False,
-                verification_code=None,
-                message="Account created successfully! Welcome to MarketPilot.",
-            )
 
         # Check if email confirmation is required by Supabase
         is_confirmed = getattr(response.user, "email_confirmed_at", None) is not None
