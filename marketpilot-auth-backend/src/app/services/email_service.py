@@ -109,3 +109,105 @@ def send_verification_email(to_email: str, otp_code: str, business_name: str | N
     except Exception as exc:
         logger.error("Failed to send verification email via SMTP: %s", exc)
         return False
+
+
+def send_verification_link_email(to_email: str, action_link: str, business_name: str | None = None) -> bool:
+    """
+    Sends an email containing the Supabase verification link to activate the user's workspace.
+    Delivers directly via Gmail SMTP / configured SMTP server.
+    """
+    settings = get_settings()
+
+    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
+        logger.info(
+            "SMTP credentials not configured; verification link email skipped. "
+            "Link generated for email: %s",
+            to_email,
+        )
+        return False
+
+    brand = business_name or "MarketPilot AI"
+    from_addr = settings.smtp_from or settings.smtp_user
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Verify your email to activate MarketPilot AI"
+    msg["From"] = f"MarketPilot AI <{from_addr}>"
+    msg["To"] = to_email
+
+    plain_text = (
+        f"Welcome to MarketPilot AI!\n\n"
+        f"Please verify your email address to activate your workspace for {brand}:\n\n"
+        f"{action_link}\n\n"
+        f"This link will expire in 24 hours.\n\n"
+        f"- The MarketPilot AI Team"
+    )
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Verify your email</title>
+      <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; color: #1e293b; }}
+        .wrapper {{ width: 100%; max-width: 540px; margin: 30px auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }}
+        .header {{ background-color: #165823; padding: 28px 24px; text-align: center; }}
+        .header h1 {{ color: #ffffff; font-size: 22px; margin: 0; font-weight: 800; letter-spacing: -0.5px; }}
+        .content {{ padding: 32px 28px; }}
+        .greeting {{ font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #0f172a; }}
+        .text {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }}
+        .btn-container {{ text-align: center; margin: 32px 0; }}
+        .btn {{ display: inline-block; background-color: #165823; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 700; box-shadow: 0 2px 4px rgba(22, 88, 35, 0.2); }}
+        .link-alt {{ font-size: 12px; color: #64748b; word-break: break-all; margin-top: 20px; }}
+        .divider {{ border-top: 1px solid #e2e8f0; margin: 28px 0 20px 0; }}
+        .footer {{ font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; }}
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="header">
+          <h1>◇ MarketPilot AI</h1>
+        </div>
+        <div class="content">
+          <div class="greeting">Welcome to MarketPilot AI!</div>
+          <p class="text">
+            You are registering your business workspace for <strong>{brand}</strong>.
+            Please click the button below to verify your email and activate your workspace:
+          </p>
+          <div class="btn-container">
+            <a href="{action_link}" class="btn" target="_blank">Confirm Email &amp; Launch Workspace ➔</a>
+          </div>
+          <p class="link-alt">
+            Or paste this link into your browser:<br>
+            <a href="{action_link}" style="color: #165823;">{action_link}</a>
+          </p>
+          <div class="divider"></div>
+          <div class="footer">
+            &copy; 2026 MarketPilot AI. Autonomous E-commerce Marketing Intelligence.
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+
+    msg.attach(MIMEText(plain_text, "plain"))
+    msg.attach(MIMEText(html_content, "html"))
+
+    try:
+        if settings.smtp_port == 465:
+            server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=10)
+        else:
+            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
+            server.starttls()
+
+        server.login(settings.smtp_user, settings.smtp_password)
+        server.send_message(msg)
+        server.quit()
+        logger.info("Verification link email sent successfully to %s", to_email)
+        return True
+    except Exception as exc:
+        logger.error("Failed to send verification link email via SMTP: %s", exc)
+        return False
+

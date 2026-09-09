@@ -199,6 +199,31 @@ def register(payload: RegisterRequest) -> AuthResponse:
         # Check if email confirmation is required by Supabase
         is_confirmed = getattr(response.user, "email_confirmed_at", None) is not None
         if not is_confirmed or response.session is None:
+            # Deliver official Supabase verification link directly to user's Gmail inbox
+            action_link = getattr(getattr(response, "properties", None), "action_link", None)
+            if not action_link:
+                try:
+                    fresh_link = service_client.auth.admin.generate_link({
+                        "type": "signup",
+                        "email": email_clean,
+                        "password": payload.password,
+                        "options": {"redirect_to": "https://marketpilot-iota.vercel.app"}
+                    })
+                    action_link = fresh_link.properties.action_link
+                except Exception:
+                    pass
+
+            if action_link:
+                try:
+                    from app.services.email_service import send_verification_link_email
+                    send_verification_link_email(
+                        to_email=email_clean,
+                        action_link=action_link,
+                        business_name=biz_name,
+                    )
+                except Exception as email_err:
+                    print(f"Notice: Direct email delivery error: {email_err}")
+
             return AuthResponse(
                 user=profile,
                 session=None,
@@ -242,24 +267,36 @@ def resend_otp(payload: ResendOtpRequest) -> MessageResponse:
 
     otp_code = _generate_otp(email_clean, user_id)
 
-    # Send direct verification email if SMTP is configured
+    # Generate fresh official Supabase verification link
+    action_link = None
+    try:
+        link_res = service_client.auth.admin.generate_link({
+            "type": "magiclink",
+            "email": email_clean,
+            "options": {"redirect_to": "https://marketpilot-iota.vercel.app"}
+        })
+        if link_res and link_res.properties:
+            action_link = link_res.properties.action_link
+    except Exception as e:
+        print(f"Notice: Admin generate_link on resend: {e}")
+
+    # Dispatch email with link directly to Gmail inbox
+    if action_link:
+        try:
+            from app.services.email_service import send_verification_link_email
+            send_verification_link_email(email_clean, action_link)
+        except Exception as email_err:
+            print(f"Notice: Direct email delivery on resend link: {email_err}")
+
+    # Also send 6-digit backup code email
     try:
         from app.services.email_service import send_verification_email
         send_verification_email(email_clean, otp_code)
-    except Exception as email_err:
-        print(f"Notice: Direct email delivery on resend: {email_err}")
-
-    # Attempt Supabase email delivery
-    try:
-        get_anon_client().auth.sign_in_with_otp({"email": email_clean})
     except Exception:
-        try:
-            get_anon_client().auth.resend({"type": "signup", "email": email_clean})
-        except Exception:
-            pass
+        pass
 
     return MessageResponse(
-        message=f"A fresh verification code was sent to {payload.email}. Please check your Gmail inbox and spam folder.",
+        message=f"A fresh verification link was sent to {payload.email}. Please check your Gmail inbox.",
         verification_code=None,
     )
 
