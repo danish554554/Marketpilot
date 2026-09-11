@@ -199,7 +199,18 @@ def register(payload: RegisterRequest) -> AuthResponse:
         # Check if email confirmation is required by Supabase
         is_confirmed = getattr(response.user, "email_confirmed_at", None) is not None
         if not is_confirmed or response.session is None:
-            # Deliver official Supabase verification link directly to user's Gmail inbox
+            # Generate 6-digit verification code
+            otp_code = _generate_otp(email_clean, response.user.id if response and response.user else None)
+
+            # Also cache Supabase GoTrue email_otp if present
+            supa_otp = getattr(getattr(response, "properties", None), "email_otp", None)
+            if supa_otp:
+                supa_str = str(supa_otp).strip()
+                if email_clean in _OTP_CACHE:
+                    _OTP_CACHE[email_clean].setdefault("valid_tokens", []).append(supa_str)
+                _OTP_CACHE[supa_str] = email_clean
+
+            # Capture action link
             action_link = getattr(getattr(response, "properties", None), "action_link", None)
             if not action_link:
                 try:
@@ -210,26 +221,33 @@ def register(payload: RegisterRequest) -> AuthResponse:
                         "options": {"redirect_to": "https://marketpilot-iota.vercel.app"}
                     })
                     action_link = fresh_link.properties.action_link
+                    if fresh_link.properties.email_otp:
+                        f_otp = str(fresh_link.properties.email_otp).strip()
+                        if email_clean in _OTP_CACHE:
+                            _OTP_CACHE[email_clean].setdefault("valid_tokens", []).append(f_otp)
+                        _OTP_CACHE[f_otp] = email_clean
                 except Exception:
                     pass
 
-            if action_link:
-                try:
-                    from app.services.email_service import send_verification_link_email
-                    send_verification_link_email(
-                        to_email=email_clean,
-                        action_link=action_link,
-                        business_name=biz_name,
-                    )
-                except Exception as email_err:
-                    print(f"Notice: Direct email delivery error: {email_err}")
+            # Deliver official verification email with 6-digit code & link directly via Google SMTP
+            try:
+                from app.services.email_service import send_verification_email
+                send_verification_email(
+                    to_email=email_clean,
+                    otp_code=otp_code,
+                    business_name=biz_name,
+                    action_link=action_link,
+                )
+                print(f"Verification code {otp_code} sent to {email_clean} via Google SMTP")
+            except Exception as email_err:
+                print(f"Notice: Direct email delivery error: {email_err}")
 
             return AuthResponse(
                 user=profile,
                 session=None,
                 requires_verification=True,
                 verification_code=None,
-                message=f"A verification link has been sent to {payload.email}. Please check your Gmail and click the link to activate your workspace.",
+                message=f"A verification code has been sent to {payload.email}. Please check your Gmail inbox.",
             )
 
         # Only if already confirmed
@@ -315,9 +333,20 @@ def verify_otp(payload: VerifyOtpRequest) -> AuthResponse:
         import datetime
         now = datetime.datetime.now(datetime.timezone.utc)
         if cached.get("expires_at") and cached["expires_at"] > now:
-            if cached.get("code") == token:
+            valid_codes = [cached.get("code")] + cached.get("valid_tokens", [])
+            if token in [str(c).strip() for c in valid_codes if c]:
                 is_valid = True
                 user_id = cached.get("user_id")
+
+    # 1b. Check direct token key mapping in _OTP_CACHE
+    if not is_valid and token in _OTP_CACHE:
+        val = _OTP_CACHE[token]
+        if isinstance(val, str) and val in _OTP_CACHE:
+            parent = _OTP_CACHE[val]
+            import datetime
+            if parent.get("expires_at") and parent["expires_at"] > datetime.datetime.now(datetime.timezone.utc):
+                is_valid = True
+                user_id = parent.get("user_id")
 
     # 2. Check Supabase user_metadata if not validated via cache
     if not is_valid:

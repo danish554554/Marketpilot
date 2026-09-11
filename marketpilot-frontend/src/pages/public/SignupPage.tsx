@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/endpoints';
-import { AlertCircle, CheckCircle2, ArrowRight, Mail, Sparkles, RefreshCw, Send } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ArrowRight, Mail, Sparkles, RefreshCw, Send, KeyRound } from 'lucide-react';
 
 export function SignupPage() {
-  const { register } = useAuth();
+  const { register, verifyOtp } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<'signup' | 'verify'>('signup');
@@ -14,6 +14,8 @@ export function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resending, setResending] = useState(false);
@@ -87,6 +89,25 @@ export function SignupPage() {
     }
   };
 
+  const handleVerifyOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanCode = otpCode.trim();
+    if (!cleanCode) {
+      setError('Please enter the verification code sent to your Gmail.');
+      return;
+    }
+    setError('');
+    setVerifyingOtp(true);
+    try {
+      await verifyOtp(email, cleanCode);
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Invalid or expired verification code. Please check your Gmail or click Resend.');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const handleResend = async () => {
     if (countdown > 0 || resending) return;
     setResending(true);
@@ -95,9 +116,9 @@ export function SignupPage() {
     try {
       await api.resendOtp(email);
       setCountdown(60);
-      setResendSuccess('A fresh verification link was sent to your Gmail inbox.');
+      setResendSuccess('A fresh verification code was sent to your Gmail inbox.');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Could not resend email. Please try again shortly.');
+      setError(err.response?.data?.detail || 'Could not resend code. Please try again shortly.');
     } finally {
       setResending(false);
     }
@@ -124,11 +145,11 @@ export function SignupPage() {
           ) : (
             <>
               <div className="w-14 h-14 rounded-full bg-emerald-50 text-brand-green grid place-items-center mb-3 ring-8 ring-emerald-50/50">
-                <Mail size={28} className="animate-pulse" />
+                <KeyRound size={28} className="animate-pulse text-brand-green" />
               </div>
-              <h1 className="text-2xl font-display font-bold text-brand-ink mb-1">Check your email</h1>
+              <h1 className="text-2xl font-display font-bold text-brand-ink mb-1">Enter verification code</h1>
               <p className="text-xs text-brand-muted text-center max-w-xs">
-                We've sent a verification link to <strong className="text-brand-ink font-semibold">{email}</strong>
+                We sent a confirmation code to <strong className="text-brand-ink font-semibold">{email}</strong>
               </p>
             </>
           )}
@@ -248,11 +269,11 @@ export function SignupPage() {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <RefreshCw size={14} className="animate-spin" />
-                  Sending verification link...
+                  Sending verification code...
                 </span>
               ) : (
                 <>
-                  <span>Create Account & Send Verification Link</span>
+                  <span>Create Account & Send Verification Code</span>
                   <Send size={13} />
                 </>
               )}
@@ -266,29 +287,71 @@ export function SignupPage() {
             </div>
           </form>
         ) : (
-          <div className="space-y-6">
-            <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl text-xs space-y-2.5 text-center">
+          <form onSubmit={handleVerifyOtp} className="space-y-5">
+            <div className="p-4 bg-emerald-50/90 border border-emerald-200/80 rounded-2xl text-xs space-y-1.5 text-center">
               <p className="text-slate-700 leading-relaxed">
-                Click the confirmation link inside the email sent to <strong className="text-brand-ink">{email}</strong> to activate your workspace.
+                Enter the verification code sent to <strong className="text-brand-ink font-semibold">{email}</strong> to activate your workspace.
               </p>
               <p className="text-[11px] text-slate-500">
-                This page will automatically detect when you click the link and take you to your dashboard.
+                Check your Gmail inbox (or spam folder) for the confirmation code.
               </p>
             </div>
 
-            <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-brand-ink mb-1.5 text-center">
+                Enter Verification Code
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  maxLength={8}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\s+/g, ''))}
+                  className="border-2 border-brand-line focus:border-brand-green rounded-xl px-4 py-3.5 w-full text-center text-xl tracking-[0.35em] font-mono font-bold focus:outline-none focus:ring-4 focus:ring-brand-green/20 bg-slate-50/50 text-brand-ink transition placeholder:text-slate-300 placeholder:tracking-normal"
+                  placeholder="• • • • • •"
+                  disabled={verifyingOtp}
+                />
+              </div>
+              <p className="text-[11px] text-brand-muted text-center mt-1.5">
+                Paste or type the code from your Gmail email
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={verifyingOtp || !otpCode.trim()}
+              className="w-full bg-brand-green text-white font-extrabold py-3.5 rounded-xl hover:bg-brand-green-dark transition flex justify-center items-center gap-2 text-xs shadow-sm cursor-pointer disabled:opacity-60"
+            >
+              {verifyingOtp ? (
+                <span className="flex items-center gap-2">
+                  <RefreshCw size={14} className="animate-spin" />
+                  Verifying code & launching workspace...
+                </span>
+              ) : (
+                <>
+                  <KeyRound size={15} />
+                  <span>Verify Code & Launch Workspace</span>
+                  <ArrowRight size={13} />
+                </>
+              )}
+            </button>
+
+            <div className="pt-2 space-y-3">
               <a
                 href="https://mail.google.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full bg-brand-green text-white font-extrabold py-3.5 rounded-xl hover:bg-brand-green-dark transition flex justify-center items-center gap-2 text-xs shadow-sm cursor-pointer"
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl transition flex justify-center items-center gap-2 text-xs cursor-pointer border border-slate-200"
               >
-                <Mail size={15} />
+                <Mail size={14} />
                 <span>Open Gmail Inbox</span>
-                <ArrowRight size={13} />
               </a>
 
-              <div className="flex items-center justify-between text-xs pt-2">
+              <div className="flex items-center justify-between text-xs pt-1">
                 <button
                   type="button"
                   onClick={() => setStep('signup')}
@@ -303,17 +366,17 @@ export function SignupPage() {
                   disabled={countdown > 0 || resending}
                   className="text-brand-green font-bold hover:underline disabled:text-slate-400 disabled:no-underline"
                 >
-                  {countdown > 0 ? `Resend email in ${countdown}s` : 'Resend Email'}
+                  {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend Code'}
                 </button>
               </div>
             </div>
 
-            <div className="pt-2 text-center border-t border-slate-100">
+            <div className="pt-3 text-center border-t border-slate-100">
               <Link to="/login" className="text-xs text-brand-muted hover:text-brand-green">
                 Already confirmed? <span className="font-bold underline text-brand-green">Log in directly ➔</span>
               </Link>
             </div>
-          </div>
+          </form>
         )}
       </div>
     </div>

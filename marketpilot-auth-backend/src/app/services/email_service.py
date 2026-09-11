@@ -8,12 +8,11 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 
-def send_verification_email(to_email: str, otp_code: str, business_name: str | None = None) -> bool:
+def send_verification_email(to_email: str, otp_code: str, business_name: str | None = None, action_link: str | None = None) -> bool:
     """
-    Sends a 6-digit verification code email to the specified recipient.
-    If custom SMTP settings (SMTP_HOST, SMTP_USER, SMTP_PASSWORD) are configured in .env,
-    delivers directly to the recipient's inbox.
-    Otherwise returns False and allows fallback delivery.
+    Sends a verification code email to the specified recipient.
+    Includes the code for on-screen entry, plus an optional 1-click confirmation link.
+    Delivers directly via Gmail SMTP.
     """
     settings = get_settings()
 
@@ -33,13 +32,22 @@ def send_verification_email(to_email: str, otp_code: str, business_name: str | N
     msg["From"] = f"MarketPilot AI <{from_addr}>"
     msg["To"] = to_email
 
+    link_text = f"\n\nOr click here to confirm automatically:\n{action_link}" if action_link else ""
     plain_text = (
         f"Welcome to MarketPilot AI!\n\n"
-        f"Your 6-digit email verification code is: {otp_code}\n\n"
-        f"This code will expire in 15 minutes.\n"
+        f"Your verification code is: {otp_code}\n\n"
+        f"This code will expire in 15 minutes.{link_text}\n\n"
         f"If you did not request this verification code, please ignore this message.\n\n"
         f"- The MarketPilot AI Team"
     )
+
+    confirm_btn_html = f"""
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="{action_link}" style="display: inline-block; background-color: #165823; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 700;">
+              Confirm Email Automatically ➔
+            </a>
+          </div>
+    """ if action_link else ""
 
     html_content = f"""
     <!DOCTYPE html>
@@ -72,12 +80,13 @@ def send_verification_email(to_email: str, otp_code: str, business_name: str | N
           <div class="greeting">Verify your email address</div>
           <p class="text">
             Welcome to <strong>MarketPilot AI</strong>! You are registering your business workspace for <strong>{brand}</strong>.
-            Please use the 6-digit confirmation code below to verify your email address:
+            Please use the confirmation code below to verify your email address:
           </p>
           <div class="otp-container">
             <div class="otp-box">{otp_code}</div>
-            <div class="expiry">Valid for 15 minutes. Never share this code with anyone.</div>
+            <div class="expiry">Valid for 15 minutes. Enter this code on the verification screen.</div>
           </div>
+          {confirm_btn_html}
           <p class="text" style="font-size: 13px; margin-bottom: 0;">
             If you did not request this verification, you can safely ignore this email.
           </p>

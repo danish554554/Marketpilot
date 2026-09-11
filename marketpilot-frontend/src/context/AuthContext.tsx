@@ -16,6 +16,7 @@ interface AuthContextType {
   setTargetCountry: (country: string) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string) => Promise<{ requires_verification: boolean; verification_code?: string; message?: string }>;
+  verifyOtp: (email: string, token: string) => Promise<void>;
   updateBusinessName: (newBusinessName: string) => void;
   enterDemoMode: () => void;
   logout: () => void;
@@ -245,6 +246,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const verifyOtp = useCallback(async (email: string, token: string) => {
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token }),
+      });
+    } catch (err) {
+      console.error('OTP verification connection error:', err);
+      throw new Error("We couldn't connect to MarketPilot. Please check your connection and try again.");
+    }
+
+    if (!res.ok) {
+      let errMsg = 'Invalid or expired verification code. Please check your email or click Resend.';
+      try {
+        const errJson = await res.json();
+        if (errJson.detail) errMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+      } catch {}
+      throw new Error(errMsg);
+    }
+
+    const data = await res.json();
+    const authToken = data.session?.access_token || data.access_token;
+    if (authToken) {
+      localStorage.setItem('marketpilot_token', authToken);
+      if (data.session?.refresh_token) {
+        localStorage.setItem('marketpilot_refresh_token', data.session.refresh_token);
+      }
+    }
+
+    const savedBiz = localStorage.getItem('marketpilot_biz') || data.user?.business_name || 'GlowSilk Beauty';
+    const fullName = data.user?.full_name || '';
+    const userId = data.user?.id || '';
+    const country = data.user?.target_country || localStorage.getItem('marketpilot_target_country') || 'Pakistan';
+
+    localStorage.setItem('marketpilot_email', email);
+    if (userId) localStorage.setItem('marketpilot_user_id', userId);
+    localStorage.setItem('marketpilot_biz', savedBiz);
+    localStorage.setItem('marketpilot_target_country', country);
+    if (fullName) localStorage.setItem('marketpilot_full_name', fullName);
+
+    setUser({ id: userId || undefined, email, fullName, businessName: savedBiz, targetCountry: country });
+    setIsAuthenticated(true);
+  }, []);
+
   // Explicit demo mode (only when user deliberately requests it)
   const enterDemoMode = useCallback(() => {
     const demoToken = 'demo-preview-' + Date.now();
@@ -301,6 +348,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTargetCountry,
         login,
         register,
+        verifyOtp,
         updateBusinessName,
         enterDemoMode,
         logout,
