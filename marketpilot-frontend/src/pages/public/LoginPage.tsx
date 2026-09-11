@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { AlertCircle, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ArrowRight, Sparkles, Clock } from 'lucide-react';
 
 export function LoginPage() {
   const { login, enterDemoMode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const isSessionExpiredNotice = searchParams.get('reason') === 'expired' || (location.state as any)?.reason === 'expired';
 
   const [email, setEmail] = useState((location.state as any)?.email || '');
   const [password, setPassword] = useState('');
@@ -52,7 +55,17 @@ export function LoginPage() {
           <p className="text-sm text-brand-muted">Log in to your marketing command center</p>
         </div>
 
-        {successMessage && !error && (
+        {isSessionExpiredNotice && !error && (
+          <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs flex items-start gap-2.5 leading-relaxed">
+            <Clock size={16} className="shrink-0 mt-0.5 text-amber-600" />
+            <div>
+              <strong className="font-bold block mb-0.5">Session Expired</strong>
+              <span>Your session expired due to inactivity. Please log in again to access your workspace.</span>
+            </div>
+          </div>
+        )}
+
+        {successMessage && !error && !isSessionExpiredNotice && (
           <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-start gap-2.5 leading-relaxed">
             <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-brand-green" />
             <div>

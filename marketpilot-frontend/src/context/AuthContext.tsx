@@ -1,5 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+﻿import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { API_BASE_URL } from '../api/client';
+import {
+  isSessionExpired,
+  saveAuthSession,
+  clearAuthSession,
+  recordUserActivity,
+  SESSION_KEYS,
+} from '../utils/session';
 
 interface User {
   id?: string;
@@ -33,21 +40,33 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [targetCountry, setTargetCountryState] = useState<string>(
-    () => localStorage.getItem('marketpilot_target_country') || 'Pakistan'
+    () => localStorage.getItem(SESSION_KEYS.TARGET_COUNTRY) || 'Pakistan'
   );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const setTargetCountry = useCallback((country: string) => {
     if (!country || !country.trim()) return;
     const clean = country.trim();
-    localStorage.setItem('marketpilot_target_country', clean);
+    localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, clean);
     setTargetCountryState(clean);
     setUser((prev) => (prev ? { ...prev, targetCountry: clean } : null));
   }, []);
 
-  // Check persisted token on mount or handle Supabase email magic-link callback
+  const handleCleanLogout = useCallback((redirectReason?: string) => {
+    clearAuthSession(true);
+    setUser(null);
+    setIsAuthenticated(false);
+    if (typeof window !== 'undefined' && redirectReason) {
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes('/login') && !currentPath.includes('/signup') && currentPath !== '/') {
+        window.location.href = `/login?reason=${redirectReason}`;
+      }
+    }
+  }, []);
+
+  // 1. Check persisted token on mount or handle Supabase email magic-link callback
   useEffect(() => {
-    // 1. Detect and handle Supabase email verification / magic-link redirect in URL hash
+    // Detect and handle Supabase email verification / magic-link redirect in URL hash
     try {
       const hash = window.location.hash;
       if (hash && (hash.includes('access_token=') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
@@ -57,10 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const hashRefreshToken = params.get('refresh_token');
 
         if (hashAccessToken) {
-          localStorage.setItem('marketpilot_token', hashAccessToken);
-          if (hashRefreshToken) {
-            localStorage.setItem('marketpilot_refresh_token', hashRefreshToken);
-          }
+          saveAuthSession(hashAccessToken, hashRefreshToken || undefined);
 
           // Clean up the hash fragment from address bar cleanly
           window.history.replaceState(null, '', window.location.pathname);
@@ -77,11 +93,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const fullName = meta.full_name || '';
               const country = meta.target_country || 'Pakistan';
 
-              if (userEmail) localStorage.setItem('marketpilot_email', userEmail);
-              if (userId) localStorage.setItem('marketpilot_user_id', userId);
-              localStorage.setItem('marketpilot_biz', biz);
-              localStorage.setItem('marketpilot_target_country', country);
-              if (fullName) localStorage.setItem('marketpilot_full_name', fullName);
+              if (userEmail) localStorage.setItem(SESSION_KEYS.EMAIL, userEmail);
+              if (userId) localStorage.setItem(SESSION_KEYS.USER_ID, userId);
+              localStorage.setItem(SESSION_KEYS.BIZ, biz);
+              localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, country);
+              if (fullName) localStorage.setItem(SESSION_KEYS.FULL_NAME, fullName);
 
               setUser({
                 id: userId || undefined,
@@ -91,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 targetCountry: country,
               });
               setIsAuthenticated(true);
+              recordUserActivity();
               return;
             }
           } catch (jwtErr) {
@@ -102,13 +119,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error processing Supabase callback hash:', hashErr);
     }
 
-    // 2. Check standard persisted localStorage session
-    const token = localStorage.getItem('marketpilot_token');
-    const savedEmail = localStorage.getItem('marketpilot_email');
-    const savedId = localStorage.getItem('marketpilot_user_id');
-    const savedBiz = localStorage.getItem('marketpilot_biz');
-    const savedName = localStorage.getItem('marketpilot_full_name');
-    const savedCountry = localStorage.getItem('marketpilot_target_country') || 'Pakistan';
+    // Check standard persisted localStorage session
+    // FIRST: Check if the session has expired due to time or inactivity
+    if (isSessionExpired()) {
+      clearAuthSession(false);
+      setUser(null);
+      setIsAuthenticated(false);
+      return;
+    }
+
+    const token = localStorage.getItem(SESSION_KEYS.TOKEN);
+    const savedEmail = localStorage.getItem(SESSION_KEYS.EMAIL);
+    const savedId = localStorage.getItem(SESSION_KEYS.USER_ID);
+    const savedBiz = localStorage.getItem(SESSION_KEYS.BIZ);
+    const savedName = localStorage.getItem(SESSION_KEYS.FULL_NAME);
+    const savedCountry = localStorage.getItem(SESSION_KEYS.TARGET_COUNTRY) || 'Pakistan';
+
     if (token && savedEmail) {
       setUser({
         id: savedId || undefined,
@@ -118,18 +144,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         targetCountry: savedCountry,
       });
       setIsAuthenticated(true);
+      recordUserActivity();
     }
   }, []);
+
+  // 2. Active Session Management: Inactivity Detection, Window Focus, Periodic Expiration Check & Cross-Tab Sync
+  useEffect(() => {
+    // Check expiration when user focuses tab or switches back after days
+    const checkExpiration = () => {
+      if (isSessionExpired()) {
+        const token = localStorage.getItem(SESSION_KEYS.TOKEN);
+        if (token) {
+          handleCleanLogout('expired');
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        recordUserActivity();
+      }
+    };
+
+    window.addEventListener('focus', checkExpiration);
+    document.addEventListener('visibilitychange', checkExpiration);
+
+    // Periodic check every 30 seconds
+    const interval = setInterval(checkExpiration, 30000);
+
+    // User activity listeners (throttled in recordUserActivity)
+    const onUserInteraction = () => recordUserActivity();
+    window.addEventListener('mousedown', onUserInteraction, { passive: true });
+    window.addEventListener('keydown', onUserInteraction, { passive: true });
+    window.addEventListener('touchstart', onUserInteraction, { passive: true });
+    window.addEventListener('scroll', onUserInteraction, { passive: true });
+
+    // Multi-tab synchronization via storage event
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === SESSION_KEYS.TOKEN && !e.newValue) {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+      if (e.key === SESSION_KEYS.LOGOUT_BROADCAST) {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    // Custom logout event listener
+    const handleCustomLogout = () => {
+      setUser(null);
+      setIsAuthenticated(false);
+    };
+    window.addEventListener('marketpilot:logout', handleCustomLogout);
+
+    return () => {
+      window.removeEventListener('focus', checkExpiration);
+      document.removeEventListener('visibilitychange', checkExpiration);
+      clearInterval(interval);
+      window.removeEventListener('mousedown', onUserInteraction);
+      window.removeEventListener('keydown', onUserInteraction);
+      window.removeEventListener('touchstart', onUserInteraction);
+      window.removeEventListener('scroll', onUserInteraction);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('marketpilot:logout', handleCustomLogout);
+    };
+  }, [handleCleanLogout]);
 
   const updateBusinessName = useCallback((newBusinessName: string) => {
     if (!newBusinessName || !newBusinessName.trim()) return;
     const cleanName = newBusinessName.trim();
-    localStorage.setItem('marketpilot_biz', cleanName);
+    localStorage.setItem(SESSION_KEYS.BIZ, cleanName);
     setUser((prev) => (prev ? { ...prev, businessName: cleanName } : null));
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const savedBiz = localStorage.getItem('marketpilot_biz');
+    const savedBiz = localStorage.getItem(SESSION_KEYS.BIZ);
 
     let res: Response;
     try {
@@ -158,24 +248,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("We couldn't connect to MarketPilot. Please try again.");
     }
 
-    localStorage.setItem('marketpilot_token', token);
-    if (data.session?.refresh_token) {
-      localStorage.setItem('marketpilot_refresh_token', data.session.refresh_token);
-    }
+    saveAuthSession(token, data.session?.refresh_token);
 
     const fullName = data.user?.full_name || '';
     const userId = data.user?.id || '';
     const finalBiz = savedBiz || (fullName && !fullName.toLowerCase().includes('admin') ? fullName : 'GlowSilk Beauty');
-    const country = data.user?.target_country || localStorage.getItem('marketpilot_target_country') || 'Pakistan';
+    const country = data.user?.target_country || localStorage.getItem(SESSION_KEYS.TARGET_COUNTRY) || 'Pakistan';
 
-    localStorage.setItem('marketpilot_email', email);
-    if (userId) localStorage.setItem('marketpilot_user_id', userId);
-    localStorage.setItem('marketpilot_biz', finalBiz);
-    localStorage.setItem('marketpilot_target_country', country);
-    if (fullName) localStorage.setItem('marketpilot_full_name', fullName);
+    localStorage.setItem(SESSION_KEYS.EMAIL, email);
+    if (userId) localStorage.setItem(SESSION_KEYS.USER_ID, userId);
+    localStorage.setItem(SESSION_KEYS.BIZ, finalBiz);
+    localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, country);
+    if (fullName) localStorage.setItem(SESSION_KEYS.FULL_NAME, fullName);
 
     setUser({ id: userId || undefined, email, fullName, businessName: finalBiz, targetCountry: country });
     setIsAuthenticated(true);
+    recordUserActivity();
   }, []);
 
   const register = useCallback(async (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string) => {
@@ -215,20 +303,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const savedName = data.user?.full_name || nameToSend;
     const savedCountry = data.user?.target_country || countryToSend;
     const userId = data.user?.id || '';
-    localStorage.setItem('marketpilot_email', email);
-    if (userId) localStorage.setItem('marketpilot_user_id', userId);
-    localStorage.setItem('marketpilot_biz', cleanBiz);
-    localStorage.setItem('marketpilot_full_name', savedName);
-    localStorage.setItem('marketpilot_target_country', savedCountry);
+    localStorage.setItem(SESSION_KEYS.EMAIL, email);
+    if (userId) localStorage.setItem(SESSION_KEYS.USER_ID, userId);
+    localStorage.setItem(SESSION_KEYS.BIZ, cleanBiz);
+    localStorage.setItem(SESSION_KEYS.FULL_NAME, savedName);
+    localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, savedCountry);
 
     const requiresVerification = data.requires_verification !== false;
 
     // Only set authenticated session if verification is explicitly not required
     if (token && !requiresVerification) {
-      localStorage.setItem('marketpilot_token', token);
-      if (data.session?.refresh_token) {
-        localStorage.setItem('marketpilot_refresh_token', data.session.refresh_token);
-      }
+      saveAuthSession(token, data.session?.refresh_token);
       setUser({
         id: userId || undefined,
         email,
@@ -237,6 +322,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         targetCountry: savedCountry,
       });
       setIsAuthenticated(true);
+      recordUserActivity();
     }
 
     return {
@@ -271,34 +357,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     const authToken = data.session?.access_token || data.access_token;
     if (authToken) {
-      localStorage.setItem('marketpilot_token', authToken);
-      if (data.session?.refresh_token) {
-        localStorage.setItem('marketpilot_refresh_token', data.session.refresh_token);
-      }
+      saveAuthSession(authToken, data.session?.refresh_token);
     }
 
-    const savedBiz = localStorage.getItem('marketpilot_biz') || data.user?.business_name || 'GlowSilk Beauty';
+    const savedBiz = localStorage.getItem(SESSION_KEYS.BIZ) || data.user?.business_name || 'GlowSilk Beauty';
     const fullName = data.user?.full_name || '';
     const userId = data.user?.id || '';
-    const country = data.user?.target_country || localStorage.getItem('marketpilot_target_country') || 'Pakistan';
+    const country = data.user?.target_country || localStorage.getItem(SESSION_KEYS.TARGET_COUNTRY) || 'Pakistan';
 
-    localStorage.setItem('marketpilot_email', email);
-    if (userId) localStorage.setItem('marketpilot_user_id', userId);
-    localStorage.setItem('marketpilot_biz', savedBiz);
-    localStorage.setItem('marketpilot_target_country', country);
-    if (fullName) localStorage.setItem('marketpilot_full_name', fullName);
+    localStorage.setItem(SESSION_KEYS.EMAIL, email);
+    if (userId) localStorage.setItem(SESSION_KEYS.USER_ID, userId);
+    localStorage.setItem(SESSION_KEYS.BIZ, savedBiz);
+    localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, country);
+    if (fullName) localStorage.setItem(SESSION_KEYS.FULL_NAME, fullName);
 
     setUser({ id: userId || undefined, email, fullName, businessName: savedBiz, targetCountry: country });
     setIsAuthenticated(true);
+    recordUserActivity();
   }, []);
 
   // Explicit demo mode (only when user deliberately requests it)
   const enterDemoMode = useCallback(() => {
     const demoToken = 'demo-preview-' + Date.now();
-    localStorage.setItem('marketpilot_token', demoToken);
-    localStorage.setItem('marketpilot_email', 'demo@marketpilot.ai');
-    localStorage.setItem('marketpilot_biz', 'GlowSilk Beauty (Demo)');
-    localStorage.setItem('marketpilot_target_country', 'Pakistan');
+    saveAuthSession(demoToken);
+    localStorage.setItem(SESSION_KEYS.EMAIL, 'demo@marketpilot.ai');
+    localStorage.setItem(SESSION_KEYS.BIZ, 'GlowSilk Beauty (Demo)');
+    localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, 'Pakistan');
     setUser({
       email: 'demo@marketpilot.ai',
       fullName: 'Demo User',
@@ -306,11 +390,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       targetCountry: 'Pakistan',
     });
     setIsAuthenticated(true);
+    recordUserActivity();
   }, []);
 
   const logout = useCallback(async () => {
-    const token = localStorage.getItem('marketpilot_token');
-    const refreshToken = localStorage.getItem('marketpilot_refresh_token');
+    const token = localStorage.getItem(SESSION_KEYS.TOKEN);
+    const refreshToken = localStorage.getItem(SESSION_KEYS.REFRESH_TOKEN);
 
     if (token) {
       try {
@@ -330,14 +415,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    localStorage.removeItem('marketpilot_token');
-    localStorage.removeItem('marketpilot_refresh_token');
-    localStorage.removeItem('marketpilot_email');
-    localStorage.removeItem('marketpilot_user_id');
-    localStorage.removeItem('marketpilot_full_name');
-    setUser(null);
-    setIsAuthenticated(false);
-  }, []);
+    handleCleanLogout();
+  }, [handleCleanLogout]);
 
   return (
     <AuthContext.Provider
