@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { API_BASE_URL } from '../api/client';
 import {
   isSessionExpired,
@@ -25,7 +25,6 @@ interface AuthContextType {
   register: (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string) => Promise<{ requires_verification: boolean; verification_code?: string; message?: string }>;
   verifyOtp: (email: string, token: string) => Promise<void>;
   updateBusinessName: (newBusinessName: string) => void;
-  enterDemoMode: () => void;
   logout: () => void;
 }
 
@@ -376,23 +375,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     recordUserActivity();
   }, []);
 
-  // Explicit demo mode (only when user deliberately requests it)
-  const enterDemoMode = useCallback(() => {
-    const demoToken = 'demo-preview-' + Date.now();
-    saveAuthSession(demoToken);
-    localStorage.setItem(SESSION_KEYS.EMAIL, 'demo@marketpilot.ai');
-    localStorage.setItem(SESSION_KEYS.BIZ, 'GlowSilk Beauty (Demo)');
-    localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, 'Pakistan');
-    setUser({
-      email: 'demo@marketpilot.ai',
-      fullName: 'Demo User',
-      businessName: 'GlowSilk Beauty (Demo)',
-      targetCountry: 'Pakistan',
-    });
-    setIsAuthenticated(true);
-    recordUserActivity();
-  }, []);
-
   const logout = useCallback(async () => {
     const token = localStorage.getItem(SESSION_KEYS.TOKEN);
     const refreshToken = localStorage.getItem(SESSION_KEYS.REFRESH_TOKEN);
@@ -429,7 +411,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         verifyOtp,
         updateBusinessName,
-        enterDemoMode,
         logout,
       }}
     >

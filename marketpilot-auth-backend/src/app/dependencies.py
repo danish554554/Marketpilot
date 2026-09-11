@@ -16,9 +16,6 @@ def _credentials_error() -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired access token.")
 
 
-DEMO_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
-
-
 def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
 ) -> UserProfile:
@@ -26,21 +23,6 @@ def get_current_user(
         raise _credentials_error()
 
     token = credentials.credentials.strip()
-
-    # Demo tokens are strictly allowed ONLY in local development and NEVER in production
-    settings = get_settings()
-    is_development = str(settings.environment).lower() == "development"
-
-    if token.startswith("demo-") or token.startswith("mock-") or token == "demo-jwt" or token == "test-token":
-        if not is_development:
-            raise _credentials_error()
-        return UserProfile(
-            id=DEMO_USER_ID,
-            email="demo@marketpilot.ai",
-            full_name="Demo Store Owner",
-            avatar_url=None,
-            role=Role.BUSINESS_OWNER,
-        )
 
     try:
         auth_user = get_anon_client().auth.get_user(token).user

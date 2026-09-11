@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { AlertCircle, CheckCircle2, ArrowRight, Sparkles, Clock, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
 import { prewarmBackend } from '../../utils/session';
 
 export function LoginPage() {
-  const { login, enterDemoMode } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -34,16 +34,6 @@ export function LoginPage() {
     }
     return () => clearTimeout(timer);
   }, [loading]);
-
-  const handleDemo = () => {
-    setEmail('admin@marketpilot.local');
-    setPassword('demo123');
-  };
-
-  const handleExploreDemo = () => {
-    enterDemoMode();
-    navigate('/dashboard');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,16 +106,7 @@ export function LoginPage() {
             />
           </div>
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-xs font-bold text-brand-ink">Password</label>
-              <button
-                type="button"
-                onClick={handleDemo}
-                className="text-[11px] font-bold text-brand-green underline hover:text-brand-green-dark"
-              >
-                Fill Demo Credentials
-              </button>
-            </div>
+            <label className="block text-xs font-bold text-brand-ink mb-1">Password</label>
             <input
               type="password"
               required
@@ -158,19 +139,6 @@ export function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* Explicit Demo Mode Button */}
-        <div className="mt-5 pt-4 border-t border-slate-100 text-center space-y-2">
-          <button
-            type="button"
-            onClick={handleExploreDemo}
-            className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs border border-slate-200 transition flex items-center justify-center gap-1.5"
-          >
-            <Sparkles size={13} className="text-amber-600" />
-            <span>Explore Interactive Demo Preview</span>
-            <ArrowRight size={12} />
-          </button>
-        </div>
 
         <div className="mt-5 text-center text-xs text-brand-muted">
           Don't have an account?{' '}

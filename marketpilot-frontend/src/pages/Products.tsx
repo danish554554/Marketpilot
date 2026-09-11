@@ -101,35 +101,11 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
       setFeatures('');
     } catch (err: any) {
       console.error('Backend addProduct error:', err);
-      const isDemo = !localStorage.getItem('marketpilot_token') || user?.id === 'demo-user-123';
-      if (isDemo) {
-        const fallbackProd: Product = {
-          ...(newProd as Product),
-          id: 'prod-' + Date.now(),
-          workspace_id: user?.id || 'ws-default',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        setProducts((prev) => {
-          const updated = [fallbackProd, ...prev];
-          updateCachedProducts(updated);
-          return updated;
-        });
-        setStatusMessage({ type: 'success', text: `[Demo Mode] "${fallbackProd.name}" saved to your local browser.` });
-        setShowAddModal(false);
-        setName('');
-        setDescription('');
-        setPrice('');
-        setCostPrice('');
-        setPainPoints('');
-        setFeatures('');
-      } else {
-        const errDetail = err.response?.data?.detail || err.message || 'Unable to save product to database.';
-        setStatusMessage({
-          type: 'error',
-          text: `Failed to save product to cloud: ${typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail)}.`,
-        });
-      }
+      const errDetail = err.response?.data?.detail || err.message || 'Unable to save product to database.';
+      setStatusMessage({
+        type: 'error',
+        text: `Failed to save product: ${typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail)}.`,
+      });
     } finally {
       setLoading(false);
     }

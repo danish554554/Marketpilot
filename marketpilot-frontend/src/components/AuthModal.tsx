@@ -142,28 +142,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           </button>
         </form>
 
-        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2">
+        <div className="mt-4 pt-4 border-t border-slate-100 text-center">
           <button
             type="button"
-            onClick={() => {
-              setEmail('admin@marketpilot.local');
-              setPassword('MarketPilot123!');
-              setFullName('Administrator');
-            }}
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] py-2 rounded-lg transition-all"
+            onClick={() => setIsRegister(!isRegister)}
+            className="text-xs text-brand-green font-bold hover:underline"
           >
-            Fill Demo Credentials (admin@marketpilot.local)
+            {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
           </button>
-
-          <div className="text-center mt-1">
-            <button
-              type="button"
-              onClick={() => setIsRegister(!isRegister)}
-              className="text-xs text-brand-green font-bold hover:underline"
-            >
-              {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
-            </button>
-          </div>
         </div>
       </div>
     </div>

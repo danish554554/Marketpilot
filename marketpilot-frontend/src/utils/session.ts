@@ -71,8 +71,7 @@ export function isSessionExpired(): boolean {
   const now = Date.now();
 
   // 1. Check JWT expiration claim if present
-  const isDemo = token.startsWith('demo-');
-  if (!isDemo && token.includes('.')) {
+  if (token.includes('.')) {
     const jwtExp = decodeJwtExpiry(token);
     if (jwtExp !== null && now >= jwtExp) {
       return true;
