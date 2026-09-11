@@ -25,12 +25,12 @@ services:
       - key: GEMINI_MODEL
         value: "gemini-3.6-flash"
       - key: SMTP_HOST
-        value: "smtp.gmail.com"
+        sync: false
       - key: SMTP_PORT
-        value: "465"
+        sync: false
       - key: SMTP_USER
-        value: "myworkplace5572205@gmail.com"
+        sync: false
       - key: SMTP_PASSWORD
-        value: "alryzwvtexswmzvq"
+        sync: false
       - key: SMTP_FROM
-        value: "myworkplace5572205@gmail.com"
+        sync: false
