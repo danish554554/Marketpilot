@@ -3,10 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/endpoints';
 import { AlertCircle, CheckCircle2, ArrowRight, Mail, Sparkles, RefreshCw, Send, KeyRound } from 'lucide-react';
+import { prewarmBackend } from '../../utils/session';
 
 export function SignupPage() {
   const { register, verifyOtp } = useAuth();
   const navigate = useNavigate();
+
+  // Eagerly prewarm backend server on page load
+  useEffect(() => {
+    prewarmBackend();
+  }, []);
 
   const [step, setStep] = useState<'signup' | 'verify'>('signup');
   const [businessName, setBusinessName] = useState('');
@@ -17,10 +23,21 @@ export function SignupPage() {
   const [otpCode, setOtpCode] = useState('');
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [slowServerNotice, setSlowServerNotice] = useState(false);
   const [error, setError] = useState('');
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState('');
   const [countdown, setCountdown] = useState(60);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (loading || verifyingOtp) {
+      timer = setTimeout(() => setSlowServerNotice(true), 1500);
+    } else {
+      setSlowServerNotice(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading, verifyingOtp]);
 
   // Background listener: detects when user verifies via Gmail link
   useEffect(() => {
@@ -269,7 +286,7 @@ export function SignupPage() {
               {loading ? (
                 <span className="flex items-center gap-2">
                   <RefreshCw size={14} className="animate-spin" />
-                  Sending verification code...
+                  <span>{slowServerNotice ? 'Connecting to secure server...' : 'Sending verification code...'}</span>
                 </span>
               ) : (
                 <>
@@ -329,7 +346,7 @@ export function SignupPage() {
               {verifyingOtp ? (
                 <span className="flex items-center gap-2">
                   <RefreshCw size={14} className="animate-spin" />
-                  Verifying code & launching workspace...
+                  <span>{slowServerNotice ? 'Connecting to secure server...' : 'Verifying code & launching workspace...'}</span>
                 </span>
               ) : (
                 <>

@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { AlertCircle, CheckCircle2, ArrowRight, Sparkles, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ArrowRight, Sparkles, Clock, RefreshCw } from 'lucide-react';
+import { prewarmBackend } from '../../utils/session';
 
 export function LoginPage() {
   const { login, enterDemoMode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Eagerly prewarm backend server on page load
+  useEffect(() => {
+    prewarmBackend();
+  }, []);
 
   const searchParams = new URLSearchParams(location.search);
   const isSessionExpiredNotice = searchParams.get('reason') === 'expired' || (location.state as any)?.reason === 'expired';
@@ -14,8 +20,20 @@ export function LoginPage() {
   const [email, setEmail] = useState((location.state as any)?.email || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [slowServerNotice, setSlowServerNotice] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState((location.state as any)?.message || '');
+
+  // Detect slow cold-start connection and update button label
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (loading) {
+      timer = setTimeout(() => setSlowServerNotice(true), 1500);
+    } else {
+      setSlowServerNotice(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const handleDemo = () => {
     setEmail('admin@marketpilot.local');
@@ -128,13 +146,13 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-green text-white font-extrabold py-3 rounded-xl hover:bg-brand-green-dark transition flex justify-center items-center mt-6 text-xs shadow-sm"
+            className="w-full bg-brand-green text-white font-extrabold py-3.5 rounded-xl hover:bg-brand-green-dark transition flex justify-center items-center gap-2 mt-6 text-xs shadow-sm cursor-pointer disabled:opacity-85"
           >
             {loading ? (
-              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <span className="flex items-center gap-2">
+                <RefreshCw size={14} className="animate-spin" />
+                <span>{slowServerNotice ? 'Connecting to secure server...' : 'Signing in...'}</span>
+              </span>
             ) : (
               'Log in'
             )}

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Session Lifecycle & Expiration Manager for MarketPilot
  * Enforces professional security practices:
  * - 4 hours idle inactivity timeout
@@ -162,3 +162,27 @@ export function clearAuthSession(broadcast: boolean = true): void {
     } catch {}
   }
 }
+
+/**
+ * Pre-warms the backend API container to avoid cold-start delays.
+ * Fires a lightweight non-blocking ping as soon as auth pages mount.
+ */
+let prewarmPromise: Promise<void> | null = null;
+export function prewarmBackend(): void {
+  if (typeof window === 'undefined') return;
+  if (!prewarmPromise) {
+    const healthUrl = 'https://marketpilot-r22y.onrender.com/health';
+    prewarmPromise = fetch(healthUrl, { method: 'GET', mode: 'cors' })
+      .then(() => {})
+      .catch(() => {});
+  }
+}
+
+// Background keep-alive to prevent Render container from sleeping while user has the tab open
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    const healthUrl = 'https://marketpilot-r22y.onrender.com/health';
+    fetch(healthUrl, { method: 'GET', mode: 'cors' }).catch(() => {});
+  }, 4 * 60 * 1000); // ping every 4 minutes
+}
+
