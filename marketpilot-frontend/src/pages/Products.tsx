@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Package, Plus, Upload, Trash2, AlertCircle, CheckCircle2, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Package, Plus, Upload, Trash2, AlertCircle, CheckCircle2, FileSpreadsheet, Loader2, Sparkles, Video, BarChart2, Layers, Tag } from 'lucide-react';
 import { Product } from '../types';
 import { api } from '../api/endpoints';
 import { useCurrency } from '../context/CurrencyContext';
@@ -8,9 +8,10 @@ import { useAuth } from '../context/AuthContext';
 interface ProductsProps {
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  onNavigate?: (page: string, productId?: string) => void;
 }
 
-export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
+export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNavigate }) => {
   const { user } = useAuth();
   const { formatAmount, currencySymbol, currencyConfig } = useCurrency();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -190,14 +191,15 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase">
-            PRODUCT CATALOGUE & MARGINS
+          <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+            <Package size={12} className="text-brand-green" />
+            MULTI-PRODUCT CATALOGUE & STRATEGIC MARGINS
           </small>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-brand-ink tracking-tight mt-1">
             Products are the foundation of every plan.
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Add manually or upload your CSV catalogue to automatically synchronize inventory and profit margins across sessions.
+            MarketPilot dynamically prioritizes hero items, high-margin drivers, and clearance products for targeted organic and paid campaigns.
           </p>
         </div>
 
@@ -242,14 +244,47 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
         </div>
       </div>
 
+      {/* Catalog KPI Metrics Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white border border-brand-line p-3.5 rounded-xl shadow-soft">
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Active Catalog</span>
+          <b className="text-lg font-display font-bold text-brand-ink">{products.length} Products</b>
+          <small className="text-[10px] text-slate-500 block mt-0.5">Enriched for AI campaigns</small>
+        </div>
+        <div className="bg-white border border-brand-line p-3.5 rounded-xl shadow-soft">
+          <span className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wider block">Hero Tier Items</span>
+          <b className="text-lg font-display font-bold text-emerald-700">{products.filter((p) => Number(p.profit_margin || 0) >= 60 && (p.stock_quantity || 0) >= 20).length} High Margin</b>
+          <small className="text-[10px] text-emerald-600/80 block mt-0.5">Primary organic discovery</small>
+        </div>
+        <div className="bg-white border border-brand-line p-3.5 rounded-xl shadow-soft">
+          <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider block">Avg Profit Margin</span>
+          <b className="text-lg font-display font-bold text-blue-700">
+            {products.length > 0 ? Math.round(products.reduce((acc, p) => acc + Number(p.profit_margin || 0), 0) / products.length) : 0}%
+          </b>
+          <small className="text-[10px] text-blue-600/80 block mt-0.5">Catalog profit health</small>
+        </div>
+        <div className="bg-white border border-brand-line p-3.5 rounded-xl shadow-soft">
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Available Stock</span>
+          <b className="text-lg font-display font-bold text-brand-ink">
+            {products.reduce((acc, p) => acc + (p.stock_quantity || 0), 0)} Units
+          </b>
+          <small className="text-[10px] text-slate-500 block mt-0.5">Ready for fulfillment</small>
+        </div>
+      </div>
+
       {/* Catalogue Table */}
       <article className="bg-white border border-brand-line rounded-2xl shadow-card overflow-hidden">
-        <div className="p-5 border-b border-brand-line flex items-center justify-between">
-          <h2 className="text-sm font-display font-bold text-brand-ink m-0">
-            Active Inventory ({products.length} Products)
-          </h2>
-          <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-md">
-            Cost prices enriched
+        <div className="p-5 border-b border-brand-line flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-display font-bold text-brand-ink m-0">
+              Active Inventory ({products.length} Products)
+            </h2>
+            <p className="text-[11px] text-slate-500 m-0 mt-0.5">
+              Click <strong>Write Script</strong> to launch the AI Studio or <strong>Plan</strong> to generate a multi-pillar campaign.
+            </p>
+          </div>
+          <span className="text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md self-start sm:self-auto">
+            ✓ Multi-Product Auto-Prioritization Active
           </span>
         </div>
 
@@ -257,13 +292,13 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-brand-line text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-4">Product Name</th>
-                <th className="py-3 px-4">Price</th>
-                <th className="py-3 px-4">Cost Price</th>
+                <th className="py-3 px-4">Product & Pain Point</th>
+                <th className="py-3 px-4">Strategic Role</th>
+                <th className="py-3 px-4">Price / Cost</th>
                 <th className="py-3 px-4">Profit Margin</th>
-                <th className="py-3 px-4">Margin Tier</th>
                 <th className="py-3 px-4">In Stock</th>
-                <th className="py-3 px-4 text-right">Action</th>
+                <th className="py-3 px-4">AI Readiness</th>
+                <th className="py-3 px-4 text-right">1-Click AI Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -291,56 +326,126 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts }) => 
                   </td>
                 </tr>
               ) : (
-                products.map((prod) => (
-                  <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-brand-ink">
-                      {prod.name}
-                      {prod.pain_points?.[0] && (
-                        <small className="block text-[10px] text-slate-400 font-normal mt-0.5">
-                          Solves: {prod.pain_points[0]}
+                products.map((prod) => {
+                  const margin = Number(prod.profit_margin || 0);
+                  const stockQty = prod.stock_quantity || 0;
+                  const isHero = margin >= 60 && stockQty >= 20;
+                  const isClearance = stockQty < 20;
+                  
+                  let readiness = 0;
+                  if (prod.name) readiness += 20;
+                  if (prod.price) readiness += 20;
+                  if (prod.cost_price) readiness += 20;
+                  if (prod.pain_points && prod.pain_points.length > 0) readiness += 20;
+                  if (prod.features && prod.features.length > 0) readiness += 20;
+
+                  return (
+                    <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-brand-ink">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{isHero ? '🧴' : isClearance ? '⚡' : '✨'}</span>
+                          <div>
+                            <span className="text-xs font-extrabold text-brand-ink block">{prod.name}</span>
+                            {prod.pain_points?.[0] ? (
+                              <small className="block text-[10px] text-slate-400 font-normal">
+                                Solves: {prod.pain_points[0]}
+                              </small>
+                            ) : (
+                              <small className="text-[10px] text-amber-600">Needs pain point</small>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`text-[9px] font-extrabold px-2.5 py-1 rounded-full border inline-flex items-center gap-1 ${
+                            isHero
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : isClearance
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : 'bg-blue-50 text-blue-800 border-blue-200'
+                          }`}
+                        >
+                          <span>{isHero ? '🌟 Hero Anchor' : isClearance ? '⚡ Clearance / Offer' : '📈 Growth Driver'}</span>
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="text-xs font-bold text-slate-800">{formatAmount(prod.price)}</div>
+                        <small className="text-[10px] text-slate-400 block">
+                          Cost: {prod.cost_price ? formatAmount(prod.cost_price) : '—'}
                         </small>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-700">
-                      {formatAmount(prod.price)}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-500">
-                      {prod.cost_price ? formatAmount(prod.cost_price) : '—'}
-                    </td>
-                    <td className="py-3.5 px-4 font-extrabold text-emerald-700">
-                      {prod.profit_margin ? `${prod.profit_margin}%` : '—'}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full capitalize ${
-                          prod.margin_tier === 'high'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : prod.margin_tier === 'medium'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {prod.margin_tier || 'normal'}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-700">
-                      {prod.stock_quantity > 0 ? (
-                        <span className="text-emerald-700">{prod.stock_quantity} units</span>
-                      ) : (
-                        <span className="text-rose-600">Out of Stock</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleDelete(prod.id)}
-                        className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
-                        title="Delete Product"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-emerald-700">{prod.profit_margin ? `${prod.profit_margin}%` : '—'}</span>
+                          <span
+                            className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded capitalize ${
+                              prod.margin_tier === 'high'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : prod.margin_tier === 'medium'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {prod.margin_tier || 'normal'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-slate-700">
+                        {prod.stock_quantity > 0 ? (
+                          <span className={`${prod.stock_quantity < 20 ? 'text-amber-600 font-extrabold' : 'text-emerald-700'}`}>
+                            {prod.stock_quantity} units
+                          </span>
+                        ) : (
+                          <span className="text-rose-600 font-extrabold">0 units (Restock)</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="w-20">
+                          <div className="flex justify-between items-center text-[9px] font-bold text-slate-500 mb-1">
+                            <span>Ready</span>
+                            <span>{readiness}%</span>
+                          </div>
+                          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                readiness >= 80 ? 'bg-emerald-500' : readiness >= 60 ? 'bg-amber-500' : 'bg-slate-400'
+                              }`}
+                              style={{ width: `${readiness}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => onNavigate?.('studio', prod.id)}
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 shadow-2xs"
+                            title="Generate short-form video scripts or posts for this product"
+                          >
+                            <Video size={11} className="text-emerald-700" />
+                            <span>Write Script</span>
+                          </button>
+                          <button
+                            onClick={() => onNavigate?.('planner', prod.id)}
+                            className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[10px] px-2.5 py-1 rounded-lg transition-all flex items-center gap-1"
+                            title="Plan organic campaign strategy with this product"
+                          >
+                            <BarChart2 size={11} className="text-slate-500" />
+                            <span>Plan</span>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(prod.id)}
+                            className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
+                            title="Delete Product"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

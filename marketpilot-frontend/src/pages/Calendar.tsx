@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Sparkles, Plus, Clock, CheckCircle, TrendingUp, ArrowRight, Video, Instagram, Mail, MessageSquare, CheckSquare, Square, CheckCircle2, AlertCircle } from 'lucide-react';
-import { MarketingStrategy, PlannerContentItem } from '../types';
+import { Calendar as CalendarIcon, Sparkles, Plus, Clock, CheckCircle, TrendingUp, ArrowRight, Video, Instagram, Mail, MessageSquare, CheckSquare, Square, CheckCircle2, AlertCircle, Package, Tag, Layers } from 'lucide-react';
+import { MarketingStrategy, PlannerContentItem, Product } from '../types';
 import { api } from '../api/endpoints';
 
 interface CalendarProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, productId?: string) => void;
   activeStrategy?: MarketingStrategy | null;
+  products?: Product[];
 }
 
-export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }) => {
+export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy, products = [] }) => {
   const [items, setItems] = useState<PlannerContentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [channelFilter, setChannelFilter] = useState('all');
+  const [productFilter, setProductFilter] = useState('all');
   const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
 
   const handleStatusChange = async (itemId: string, newStatus: string) => {
@@ -28,23 +30,7 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
     }
   };
 
-  const fetchCalendar = async () => {
-    setLoading(true);
-    try {
-      const res = await api.getCalendar('2026-08-15', '2026-09-15');
-      if (res && res.length > 0) {
-        setItems(res);
-      } else {
-        generateFromActiveStrategy();
-      }
-    } catch {
-      generateFromActiveStrategy();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateFromActiveStrategy = () => {
+  const generateFromActiveStrategy = (customAdditions: PlannerContentItem[] = []) => {
     if (activeStrategy?.pillars && activeStrategy.pillars.length > 0) {
       const scheduledPillars: PlannerContentItem[] = activeStrategy.pillars.map((p, idx) => {
         const daysAhead = (idx * 2) + 1;
@@ -67,29 +53,37 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
           primary_text: p.creative_angle || 'Educational demonstration highlighting zero pain & smooth finish.',
           structured_content: {},
           call_to_action: p.suggested_ctas?.[0] || 'Shop now',
+          product_name: p.product_name || (products.length > 0 ? products[idx % products.length].name : 'Hero Product'),
+          focus_product_id: p.focus_product_id || (products.length > 0 ? products[idx % products.length].id : undefined),
           strategic_rationale: p.rationale || 'Grounded strategy alignment',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
       });
-      setItems(scheduledPillars);
+      setItems([...customAdditions, ...scheduledPillars]);
     } else {
+      const prodA = products[0]?.name || '2-in-1 Rechargeable Hair Remover';
+      const prodB = products.length > 1 ? products[1]?.name : 'Facial Skincare Kit';
+
       setItems([
+        ...customAdditions,
         {
           id: '1',
           workspace_id: 'ws1',
           created_by: 'u1',
-          title: '[TIKTOK] Short Video: 30-Sec Peach Fuzz Routine',
+          title: `[TIKTOK] Short Video: 30-Sec ${prodA} Routine`,
           channel: 'tiktok',
           channel_type: 'organic',
           format: 'short_video_script',
           status: 'scheduled',
           scheduled_date: '2026-08-27',
           scheduled_time_slot: 'morning_09_00',
-          hook: 'Stop applying foundation over peach fuzz — watch this 30-sec prep',
-          primary_text: 'Close-up split screen showing foundation glide over hair-free skin vs patchy makeup.',
+          hook: `Stop applying foundation over peach fuzz — watch this 30-sec ${prodA} prep`,
+          primary_text: 'Close-up split screen showing smooth foundation glide over skin vs patchy makeup.',
           structured_content: {},
-          call_to_action: 'Get the smooth base tool with 20% off',
+          call_to_action: `Get the ${prodA} with 20% off`,
+          product_name: prodA,
+          focus_product_id: products[0]?.id,
           strategic_rationale: 'Trend alignment with live viral search momentum',
           created_at: '2026-08-26',
           updated_at: '2026-08-26',
@@ -98,17 +92,19 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
           id: '2',
           workspace_id: 'ws1',
           created_by: 'u1',
-          title: '[INSTAGRAM] Paid Ad: Painless Trimmer vs Waxing',
+          title: `[INSTAGRAM] Paid Ad: ${prodB} Problem vs Fix`,
           channel: 'instagram',
           channel_type: 'paid',
           format: 'post_caption',
           status: 'scheduled',
           scheduled_date: '2026-08-29',
           scheduled_time_slot: 'evening_18_00',
-          hook: 'Why pay $80 every month for salon waxing when you can do this in 1 minute?',
-          primary_text: 'Direct-response cost comparison highlighting 78.7% margin and 30-day guarantee.',
+          hook: `Why pay hundreds every month for salon visits when you can do this at home with ${prodB}?`,
+          primary_text: 'Direct-response cost comparison highlighting verified results and 30-day guarantee.',
           structured_content: {},
-          call_to_action: 'Shop the 2-in-1 Hair Remover today',
+          call_to_action: `Shop ${prodB} today`,
+          product_name: prodB,
+          focus_product_id: products[1]?.id || products[0]?.id,
           strategic_rationale: 'Paid customer acquisition',
           created_at: '2026-08-26',
           updated_at: '2026-08-26',
@@ -117,7 +113,7 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
           id: '3',
           workspace_id: 'ws1',
           created_by: 'u1',
-          title: '[EMAIL] VIP Glow Club: Skincare Maintenance Tips',
+          title: `[EMAIL] VIP Glow Club: ${prodA} Maintenance Guide`,
           channel: 'email',
           channel_type: 'organic',
           format: 'email_newsletter',
@@ -128,11 +124,38 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
           primary_text: 'Hygiene and blade care guide with replacement head flash bundle.',
           structured_content: {},
           call_to_action: 'Read the Glow Guide & Save 15%',
+          product_name: prodA,
+          focus_product_id: products[0]?.id,
           strategic_rationale: 'Customer retention & LTV maximization',
           created_at: '2026-08-26',
           updated_at: '2026-08-26',
         },
       ]);
+    }
+  };
+
+  const fetchCalendar = async () => {
+    setLoading(true);
+    const userEmail = localStorage.getItem('marketpilot_email') || 'sarah@glowsilk.com';
+    const customItemsRaw = localStorage.getItem(`marketpilot_custom_calendar_${userEmail}`);
+    let customItems: PlannerContentItem[] = [];
+    if (customItemsRaw) {
+      try {
+        customItems = JSON.parse(customItemsRaw);
+      } catch {}
+    }
+
+    try {
+      const res = await api.getCalendar('2026-08-15', '2026-09-15');
+      if (res && res.length > 0) {
+        setItems([...customItems, ...res]);
+      } else {
+        generateFromActiveStrategy(customItems);
+      }
+    } catch {
+      generateFromActiveStrategy(customItems);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -143,10 +166,10 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
   const handleBatchGenerate = async () => {
     setLoading(true);
     try {
-      const generated = await api.generateBatchCalendar({
-        start_date: '2026-08-26',
-        end_date: '2026-09-15',
-        days_per_week: 3,
+      const generated = await api.batchGenerateCalendar({
+        start_date: '2026-09-01',
+        end_date: '2026-09-30',
+        days_per_week: 4,
       });
       if (generated && generated.length > 0) {
         setItems(generated);
@@ -160,9 +183,29 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
     }
   };
 
-  const filteredItems = items.filter(
-    (i) => channelFilter === 'all' || i.channel === channelFilter
-  );
+  const filteredItems = items.filter((i) => {
+    const matchesChannel = channelFilter === 'all' || i.channel === channelFilter;
+    const matchesProduct =
+      productFilter === 'all' ||
+      (i.product_name && i.product_name.toLowerCase().includes(productFilter.toLowerCase())) ||
+      i.focus_product_id === productFilter;
+    return matchesChannel && matchesProduct;
+  });
+
+  // Catalog Distribution Balance Calculation
+  const productDistribution = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    items.forEach((it) => {
+      const name = it.product_name || 'General Catalog';
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    const total = items.length || 1;
+    return Object.entries(counts).map(([name, count]) => ({
+      name,
+      count,
+      pct: Math.round((count / total) * 100),
+    }));
+  }, [items]);
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -219,64 +262,158 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
 
       {/* Production Progress Bar */}
       {items.length > 0 && (
-        <div className="bg-white border border-brand-line p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-brand-green grid place-items-center font-extrabold text-base shrink-0">
-              ✓
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brand-ink">Content Creation Progress</span>
-                <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                  {items.filter((i) => i.status === 'created' || i.status === 'published').length} / {items.length} Ready
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Check off items as your creative assets and videos are finished in Studio or recorded.
-              </p>
-            </div>
-          </div>
-          <div className="w-full sm:w-48 bg-slate-100 rounded-full h-2.5 overflow-hidden">
-            <div
-              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${Math.round(
+        <div className="space-y-3">
+          <div className="bg-white border border-brand-line p-4 rounded-2xl shadow-card flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 grid place-items-center font-bold text-xs">
+                {Math.round(
                   (items.filter((i) => i.status === 'created' || i.status === 'published').length /
                     (items.length || 1)) *
                     100
-                )}%`,
-              }}
-            />
+                )}%
+              </div>
+              <div>
+                <small className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                  PRODUCTION WORKFLOW VELOCITY
+                </small>
+                <b className="text-xs text-brand-ink">
+                  {items.filter((i) => i.status === 'created' || i.status === 'published').length} of {items.length} Posts Ready to Publish
+                </b>
+              </div>
+            </div>
+
+            <div className="w-44 bg-slate-100 h-2 rounded-full overflow-hidden hidden sm:block">
+              <div
+                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.round(
+                    (items.filter((i) => i.status === 'created' || i.status === 'published').length /
+                      (items.length || 1)) *
+                      100
+                  )}%`,
+                }}
+              />
+            </div>
           </div>
+
+          {/* Multi-Product Organic Coverage Balance Meter */}
+          {items.length > 0 && (
+            <div className="bg-white border border-brand-line p-3.5 rounded-2xl shadow-card space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Layers size={13} className="text-brand-green" />
+                  <strong className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">
+                    Catalog Multi-Product Organic Balance Meter
+                  </strong>
+                </div>
+                <span className="text-[9px] text-emerald-700 font-extrabold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                  ✓ Non-Fatiguing Distribution
+                </span>
+              </div>
+
+              {/* Progress Distribution Bar */}
+              <div className="flex items-center gap-0.5 h-2 rounded-full overflow-hidden bg-slate-100">
+                {productDistribution.map((pd, i) => {
+                  const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-purple-500', 'bg-amber-500'];
+                  return (
+                    <div
+                      key={pd.name}
+                      style={{ width: `${pd.pct}%` }}
+                      className={`h-full ${colors[i % colors.length]}`}
+                      title={`${pd.name}: ${pd.pct}% of posts (${pd.count})`}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-wrap items-center gap-3 pt-0.5">
+                {productDistribution.map((pd, i) => {
+                  const dotColors = ['bg-emerald-500', 'bg-blue-500', 'bg-purple-500', 'bg-amber-500'];
+                  return (
+                    <div key={pd.name} className="flex items-center gap-1 text-[10px] text-slate-600">
+                      <span className={`w-2 h-2 rounded-full ${dotColors[i % dotColors.length]}`} />
+                      <span className="font-bold truncate max-w-[130px]">{pd.name}:</span>
+                      <span>{pd.pct}% ({pd.count} posts)</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Main Schedule Canvas */}
       <article className="bg-white border border-brand-line rounded-2xl p-4 sm:p-6 shadow-card space-y-4 overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-line pb-4">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <b className="text-sm font-display font-bold text-brand-ink">Upcoming Publishing Queue</b>
-            <span className="text-xs text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded-full">
-              {filteredItems.length} Scheduled Drops
-            </span>
+        <div className="flex flex-col gap-3 border-b border-brand-line pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <b className="text-sm font-display font-bold text-brand-ink">Upcoming Publishing Queue</b>
+              <span className="text-xs text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded-full">
+                {filteredItems.length} Scheduled Drops
+              </span>
+            </div>
           </div>
 
-          {/* Filter Channel */}
-          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-xs font-bold bg-slate-50 p-1 rounded-xl border border-slate-100 max-w-full">
-            <span className="text-slate-400 text-[10px] uppercase font-extrabold ml-1 mr-1">Filter:</span>
-            {['all', 'tiktok', 'instagram', 'email', 'whatsapp'].map((c) => (
+          {/* Dual Filter Toolbar: Product Filter + Channel Filter */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            {/* Product Filter */}
+            <div className="flex flex-wrap items-center gap-1 text-xs font-bold bg-slate-50 p-1 rounded-xl border border-slate-100 max-w-full overflow-x-auto">
+              <span className="text-slate-400 text-[10px] uppercase font-extrabold ml-1 mr-1 flex items-center gap-1">
+                <Package size={11} /> Product:
+              </span>
               <button
-                key={c}
-                onClick={() => setChannelFilter(c)}
-                className={`px-2.5 py-1 rounded-lg capitalize text-[10px] transition-all ${
-                  channelFilter === c
+                type="button"
+                onClick={() => setProductFilter('all')}
+                className={`px-2.5 py-1 rounded-lg text-[10px] transition-all cursor-pointer ${
+                  productFilter === 'all'
                     ? 'bg-brand-green text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                {c}
+                All Products ({items.length})
               </button>
-            ))}
+              {products.map((p) => {
+                const count = items.filter(
+                  (it) => it.product_name?.toLowerCase().includes(p.name.toLowerCase()) || it.focus_product_id === p.id
+                ).length;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setProductFilter(p.name)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] transition-all flex items-center gap-1 cursor-pointer ${
+                      productFilter === p.name
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="truncate max-w-[120px]">{p.name}</span>
+                    <span className="text-[9px] opacity-75">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Channel Filter */}
+            <div className="flex flex-wrap items-center gap-1 text-xs font-bold bg-slate-50 p-1 rounded-xl border border-slate-100">
+              <span className="text-slate-400 text-[10px] uppercase font-extrabold ml-1 mr-1">Channel:</span>
+              {['all', 'tiktok', 'instagram', 'email', 'whatsapp'].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setChannelFilter(c)}
+                  className={`px-2.5 py-1 rounded-lg capitalize text-[10px] transition-all cursor-pointer ${
+                    channelFilter === c
+                      ? 'bg-brand-green text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -295,7 +432,7 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
               >
                 <div>
                   {/* Top Bar: Checkbox + Date Slot + Channel */}
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="flex items-center justify-between gap-2 mb-2">
                     <button
                       onClick={() => handleStatusChange(item.id, isCreated ? 'scheduled' : 'created')}
                       className={`flex items-center gap-1.5 text-xs font-bold transition-all px-2 py-1 rounded-lg ${
@@ -319,6 +456,19 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
                       </span>
                     </div>
                   </div>
+
+                  {/* Product Badge */}
+                  {item.product_name && (
+                    <div className="mb-2 bg-blue-50 border border-blue-200/80 rounded-md px-2 py-1 flex items-center justify-between text-[10px] text-blue-900 font-bold">
+                      <span className="flex items-center gap-1 truncate">
+                        <span>🧴</span>
+                        <span className="truncate">{item.product_name}</span>
+                      </span>
+                      <span className="text-[8px] bg-white text-blue-700 font-extrabold px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
+                        {item.channel_type || 'organic'}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Lifecycle Status Dropdown */}
                   <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-200/60">
@@ -359,8 +509,8 @@ export const Calendar: React.FC<CalendarProps> = ({ onNavigate, activeStrategy }
                     CTA: {item.call_to_action}
                   </span>
                   <button
-                    onClick={() => onNavigate('studio')}
-                    className="text-brand-green font-extrabold hover:underline flex items-center gap-0.5"
+                    onClick={() => onNavigate('studio', item.focus_product_id)}
+                    className="text-brand-green font-extrabold hover:underline flex items-center gap-0.5 cursor-pointer"
                   >
                     <span>Edit in Studio</span>
                     <ArrowRight size={11} />

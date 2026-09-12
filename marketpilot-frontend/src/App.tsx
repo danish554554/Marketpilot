@@ -20,10 +20,18 @@ import { useAuth } from './context/AuthContext';
 export function App() {
   const { user, updateBusinessName, isAuthenticated } = useAuth();
   const [activePage, setActivePage] = useState('overview');
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleNavigate = (page: string, productId?: string) => {
+    if (productId) {
+      setSelectedProductId(productId);
+    }
+    setActivePage(page);
+  };
 
   const businessName = user?.businessName || localStorage.getItem('marketpilot_biz') || 'GlowSilk Beauty';
   const userEmail = user?.email || localStorage.getItem('marketpilot_email') || 'sarah@glowsilk.com';
@@ -154,7 +162,7 @@ export function App() {
         <main className="flex-1 p-3.5 sm:p-5 md:p-10 max-w-[1600px] w-full mx-auto min-w-0 overflow-x-hidden">
           {activePage === 'overview' && (
             <Overview
-              onNavigate={setActivePage}
+              onNavigate={handleNavigate}
               products={products}
               trends={trends}
               activeStrategy={activeStrategy}
@@ -169,24 +177,39 @@ export function App() {
               trends={trends}
               activeStrategy={activeStrategy}
               setActiveStrategy={setActiveStrategy}
-              onNavigate={setActivePage}
+              onNavigate={handleNavigate}
+              selectedProductId={selectedProductId}
+              onSelectProduct={setSelectedProductId}
             />
           )}
 
           {activePage === 'trends' && (
-            <Trends trends={trends} setTrends={setTrends} onNavigate={setActivePage} />
+            <Trends trends={trends} setTrends={setTrends} onNavigate={handleNavigate} />
           )}
 
           {activePage === 'calendar' && (
-            <Calendar onNavigate={setActivePage} activeStrategy={activeStrategy} />
+            <Calendar onNavigate={handleNavigate} activeStrategy={activeStrategy} products={products} />
           )}
 
           {activePage === 'studio' && (
-            <Studio products={products} businessName={businessName} activeStrategy={activeStrategy} brandKit={brandKit} trends={trends} />
+            <Studio
+              products={products}
+              businessName={businessName}
+              activeStrategy={activeStrategy}
+              brandKit={brandKit}
+              trends={trends}
+              selectedProductId={selectedProductId}
+              onSelectProduct={setSelectedProductId}
+              onNavigate={handleNavigate}
+            />
           )}
 
           {activePage === 'products' && (
-            <Products products={products} setProducts={setProducts} />
+            <Products
+              products={products}
+              setProducts={setProducts}
+              onNavigate={handleNavigate}
+            />
           )}
 
           {activePage === 'brand' && (
@@ -194,7 +217,7 @@ export function App() {
           )}
 
           {activePage === 'briefs' && (
-            <Briefs activeStrategy={activeStrategy} onNavigate={setActivePage} />
+            <Briefs activeStrategy={activeStrategy} onNavigate={handleNavigate} />
           )}
 
           {activePage === 'performance' && (

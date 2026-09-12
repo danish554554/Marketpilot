@@ -23,7 +23,8 @@ import {
   Volume2,
   VolumeX,
   Mic,
-  Globe
+  Globe,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { BrandKit, MarketingStrategy, Product, TrendSignal } from '../types';
 import { api } from '../api/endpoints';
@@ -36,6 +37,9 @@ interface StudioProps {
   activeStrategy?: MarketingStrategy | null;
   brandKit?: BrandKit | null;
   trends?: TrendSignal[];
+  selectedProductId?: string;
+  onSelectProduct?: (productId: string) => void;
+  onNavigate?: (page: string, productId?: string) => void;
 }
 
 const COUNTRY_DEFAULT_LANG: Record<string, string> = {
@@ -56,19 +60,31 @@ export const Studio: React.FC<StudioProps> = ({
   activeStrategy,
   brandKit,
   trends = [],
+  selectedProductId: externalProductId,
+  onSelectProduct,
+  onNavigate,
 }) => {
   const { formatAmount } = useCurrency();
   const { targetCountry } = useAuth();
   const [activeTab, setActiveTab] = useState<'script' | 'organic' | 'paid' | 'email' | 'whatsapp'>('script');
-  const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id || '');
+  const [selectedProductId, setSelectedProductId] = useState<string>(
+    externalProductId || products[0]?.id || ''
+  );
   const [selectedTrendTopic, setSelectedTrendTopic] = useState<string>(
     trends[0]?.topic || activeStrategy?.pillars?.[0]?.trend_topic || ''
   );
   const [customOffer, setCustomOffer] = useState<string>('20% Off Launch Discount');
   const [selectedPillarIndex, setSelectedPillarIndex] = useState<number>(0);
   const [copied, setCopied] = useState(false);
+  const [scheduledSuccess, setScheduledSuccess] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  useEffect(() => {
+    if (externalProductId && externalProductId !== selectedProductId) {
+      setSelectedProductId(externalProductId);
+    }
+  }, [externalProductId]);
 
   const [activeBrandKit, setActiveBrandKit] = useState<BrandKit | null>(brandKit || null);
   const [guardrailResult, setGuardrailResult] = useState<{
@@ -336,6 +352,43 @@ export const Studio: React.FC<StudioProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleScheduleInCalendar = () => {
+    try {
+      const email = localStorage.getItem('marketpilot_email') || 'sarah@glowsilk.com';
+      const key = `marketpilot_custom_calendar_${email}`;
+      const existingRaw = localStorage.getItem(key) || '[]';
+      const existing = JSON.parse(existingRaw);
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dateStr = tomorrow.toISOString().split('T')[0];
+
+      const newItem = {
+        id: 'cal-studio-' + Date.now(),
+        title: `[${activeTab.toUpperCase()}] ${selectedProduct.name}: ${hook.slice(0, 35)}...`,
+        channel: activeTab === 'script' ? 'tiktok' : activeTab === 'organic' ? 'instagram' : activeTab === 'email' ? 'email' : 'instagram',
+        channel_type: activeTab === 'paid' ? 'paid' : 'organic',
+        format: activeTab === 'script' ? 'short_video_script' : activeTab === 'organic' ? 'carousel_slides' : 'post_caption',
+        status: 'scheduled',
+        scheduled_date: dateStr,
+        scheduled_time_slot: 'morning_09_00',
+        hook,
+        primary_text: caption,
+        call_to_action: cta,
+        product_name: selectedProduct.name,
+        focus_product_id: selectedProduct.id,
+        strategic_rationale: `Saved from AI Studio for ${selectedProduct.name}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      existing.unshift(newItem);
+      localStorage.setItem(key, JSON.stringify(existing));
+      setScheduledSuccess(true);
+      setTimeout(() => setScheduledSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to schedule item:', err);
+    }
+  };
+
   const handlePlayScriptAudio = () => {
     if (isPlayingAudio) {
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -454,6 +507,70 @@ export const Studio: React.FC<StudioProps> = ({
             <Palette size={13} className="text-purple-600" />
             <span>Voice: <strong>{activeBrandKit?.brand_voice?.slice(0, 2).join(', ') || 'Professional'}</strong></span>
           </div>
+        </div>
+      </div>
+
+      {/* Interactive Horizontal Product Ribbon */}
+      <div className="bg-white border border-brand-line rounded-2xl p-4 shadow-soft">
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-1.5">
+            <Package size={13} className="text-brand-green" />
+            <small className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+              Catalog Product Switcher ({products.length} Products Available)
+            </small>
+          </div>
+          <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+            Click any product to switch copywriting & script angle instantly
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+          {products.map((prod) => {
+            const isSelected = prod.id === selectedProductId;
+            const margin = Number(prod.profit_margin || 70);
+            const isHero = margin >= 60;
+            return (
+              <button
+                key={prod.id}
+                type="button"
+                onClick={() => {
+                  setSelectedProductId(prod.id);
+                  onSelectProduct?.(prod.id);
+                  setRegenerationCount(0);
+                  generateAIPost(activeTab, prod, selectedTrendTopic, customOffer, 0);
+                }}
+                className={`flex-shrink-0 text-left p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                    : 'bg-slate-50 border-slate-200 hover:border-slate-300 hover:bg-slate-100/70'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-base">{isHero ? '🧴' : '✨'}</span>
+                  <div>
+                    <strong className={`text-xs block max-w-[160px] truncate ${isSelected ? 'text-emerald-950 font-extrabold' : 'text-slate-800 font-bold'}`}>
+                      {prod.name}
+                    </strong>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      {formatAmount(prod.price)} · {prod.stock_quantity || 100} in stock
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
+                    margin >= 60 ? 'bg-emerald-200/80 text-emerald-900' : 'bg-blue-100 text-blue-900'
+                  }`}>
+                    {margin}% Margin
+                  </span>
+                  {isHero && (
+                    <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                      🌟 Hero
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -794,14 +911,31 @@ export const Studio: React.FC<StudioProps> = ({
               <span>{isGenerating ? 'Gemini 3.6 Flash Writing...' : `Regenerate with Gemini AI${regenerationCount > 0 ? ` (Angle #${(regenerationCount % 4) + 1})` : ''}`}</span>
             </button>
 
-            <button
-              onClick={handleCopy}
-              disabled={isGenerating}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-green hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 w-full sm:w-auto"
-            >
-              {copied ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copied ? 'Copied to Clipboard!' : 'Copy Ready-to-Publish Copy'}</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={handleScheduleInCalendar}
+                disabled={isGenerating}
+                className={`flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  scheduledSuccess
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+                title="Save this copy directly to your scheduled calendar queue"
+              >
+                <CalendarIcon size={13} className={scheduledSuccess ? 'text-emerald-600' : 'text-slate-500'} />
+                <span>{scheduledSuccess ? '✓ Saved to Calendar!' : 'Schedule to Calendar'}</span>
+              </button>
+
+              <button
+                onClick={handleCopy}
+                disabled={isGenerating}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-green hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex-1 sm:flex-initial cursor-pointer"
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                <span>{copied ? 'Copied to Clipboard!' : 'Copy Ready Copy'}</span>
+              </button>
+            </div>
           </div>
         </main>
       </div>

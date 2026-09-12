@@ -9,7 +9,9 @@ interface PlannerProps {
   trends: TrendSignal[];
   activeStrategy: MarketingStrategy | null;
   setActiveStrategy: (strategy: MarketingStrategy) => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, productId?: string) => void;
+  selectedProductId?: string;
+  onSelectProduct?: (productId: string) => void;
 }
 
 export const Planner: React.FC<PlannerProps> = ({
@@ -18,16 +20,27 @@ export const Planner: React.FC<PlannerProps> = ({
   activeStrategy,
   setActiveStrategy,
   onNavigate,
+  selectedProductId: externalProductId,
+  onSelectProduct,
 }) => {
   const { formatAmount, currencySymbol, currencyConfig } = useCurrency();
   const [timeframe, setTimeframe] = useState<'weekly' | 'monthly'>('monthly');
+  const [campaignMode, setCampaignMode] = useState<'single' | 'balanced'>('balanced');
   const [objective, setObjective] = useState('increase_product_awareness');
   const [budget, setBudget] = useState(currencyConfig.code === 'PKR' ? '50000' : '1500');
-  const [selectedProductId, setSelectedProductId] = useState<string>(products[0]?.id || '');
+  const [selectedProductId, setSelectedProductId] = useState<string>(
+    externalProductId || products[0]?.id || ''
+  );
   const [selectedTrendId, setSelectedTrendId] = useState<string>('');
   const [includeTrends, setIncludeTrends] = useState(true);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (externalProductId) {
+      setSelectedProductId(externalProductId);
+    }
+  }, [externalProductId]);
 
   const handleGenerate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -45,47 +58,55 @@ export const Planner: React.FC<PlannerProps> = ({
       });
       setActiveStrategy(result);
     } catch (err) {
-      const prod = products.find((p) => p.id === selectedProductId) || products[0];
+      const prod1 = products.find((p) => p.id === selectedProductId) || products[0];
+      const prod2 = products.length > 1 ? (products[1].id === prod1?.id ? products[0] : products[1]) : prod1;
       const trend = trends.find((t) => t.id === selectedTrendId) || trends[0];
+      const isBalanced = campaignMode === 'balanced' && products.length > 1;
 
       const fallbackStrategy: MarketingStrategy = {
         id: 'strat-' + Date.now(),
         workspace_id: 'ws1',
         created_by: 'u1',
-        title: `${timeframe === 'weekly' ? '7-Day Sprint' : '30-Day Campaign'}: ${prod?.name || 'Hero Product'} Acceleration`,
+        title: isBalanced
+          ? `${timeframe === 'weekly' ? '7-Day Sprint' : '30-Day Campaign'}: Multi-Product Balanced Growth Strategy`
+          : `${timeframe === 'weekly' ? '7-Day Sprint' : '30-Day Campaign'}: ${prod1?.name || 'Hero Product'} Acceleration`,
         timeframe,
         status: 'approved',
-        executive_summary: `Omnichannel strategy connecting our ${prod?.name || 'hero product'} (${prod?.profit_margin || '78.7'}% profit margin) with real-time market trend signals like "${trend?.topic || 'Peach Fuzz Removal'}" to maximize organic reach and paid ROAS.`,
-        target_audience_summary: trend?.target_audience || 'High-intent digital consumers seeking seamless, painless beauty and grooming solutions.',
+        executive_summary: isBalanced
+          ? `Comprehensive omnichannel marketing strategy engineered for balanced catalog discovery across ${products.length} products. Prioritizes ${prod1?.name} for top-of-funnel organic viral reach and ${prod2?.name} for conversion and routine bundles.`
+          : `Omnichannel strategy connecting our ${prod1?.name || 'hero product'} (${prod1?.profit_margin || '78.7'}% profit margin) with real-time market trend signals like "${trend?.topic || 'Peach Fuzz Removal'}" to maximize organic reach and paid ROAS.`,
+        target_audience_summary: trend?.target_audience || 'High-intent digital consumers seeking seamless, quality lifestyle solutions.',
         budget_allocation_summary: {
           total_budget: Number(budget) || 15000,
-          currency: 'USD',
+          currency: currencyConfig.code,
           organic_percentage: 60,
           paid_percentage: 40,
         },
         product_priorities_summary: {
-          hero_products: [{ name: prod?.name || '2-in-1 Rechargeable Hair Remover', margin_tier: 'high', stock_quantity: 650 }],
+          hero_products: products.map((p) => ({ name: p.name, margin_tier: p.margin_tier || 'high', stock_quantity: p.stock_quantity })),
         },
-        strategic_rationale: 'High profit margin combined with surging consumer trend momentum.',
+        strategic_rationale: 'Balanced multi-product catalog distribution prevents audience fatigue and maximizes cross-sell AOV.',
         pillars: [
           {
             id: 'p-1',
             strategy_id: 'strat-1',
-            pillar_name: 'Viral Routine & Problem-Solution Hook',
+            pillar_name: `Hero Spotlight: ${prod1?.name || 'Hero Product'} Organic Educational Funnel`,
             objective: 'increase_product_awareness',
             channel_type: 'organic',
             platform: 'tiktok',
-            product_name: prod?.name || '2-in-1 Rechargeable Hair Remover',
-            trend_topic: trend?.topic || '“30-Second Peach Fuzz Removal Before Makeup”',
-            creative_angle: 'Showing close-up before & after foundation glide over hair-free skin vs patchy makeup',
+            focus_product_id: prod1?.id,
+            product_name: prod1?.name || 'Hero Product',
+            trend_topic: trend?.topic || '30-Second Morning Fix Hack',
+            creative_angle: `Educational storytelling highlighting how ${prod1?.name} solves ${prod1?.pain_points?.[0] || 'daily friction'} with zero fuss`,
             hook_ideas: [
-              'Stop applying foundation over peach fuzz — watch this 30-sec prep',
-              'The #1 mistake ruining your smooth base routine',
+              `Stop ignoring ${prod1?.pain_points?.[0] || 'daily hassle'} — watch this 30-sec prep`,
+              `The #1 mistake people make with their daily routine`,
+              `Why everyone is talking about ${prod1?.name}`,
             ],
-            suggested_ctas: ['Get the smooth base tool with 20% off'],
+            suggested_ctas: [prod1 ? `Try ${prod1.name} today` : 'Shop now with 20% off'],
             content_formats: ['short_video_script', 'carousel_slides'],
             estimated_effort: 'medium',
-            rationale: `Directly capitalizes on the "${trend?.topic || 'Peach Fuzz Removal'}" trend to position our device as the essential pre-makeup step.`,
+            rationale: `Builds organic brand authority around ${prod1?.name} (${prod1?.profit_margin || 70}% margin) with zero paid media friction.`,
             order_index: 1,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -93,21 +114,25 @@ export const Planner: React.FC<PlannerProps> = ({
           {
             id: 'p-2',
             strategy_id: 'strat-1',
-            pillar_name: 'Pain vs Cost-Saving Comparison Reel',
+            pillar_name: isBalanced
+              ? `Direct Response: ${prod2?.name} Conversion Engine`
+              : `Pain vs Cost-Saving Comparison Reel`,
             objective: 'increase_sales',
             channel_type: 'paid',
             platform: 'instagram',
-            product_name: prod?.name || '2-in-1 Rechargeable Hair Remover',
-            trend_topic: 'Painless Home Dermaplaning vs Salon Waxing',
-            creative_angle: 'Splitting screen: painful $80 salon waxing vs zero-pain $39.99 rechargeable trimmer at home',
+            focus_product_id: isBalanced ? prod2?.id : prod1?.id,
+            product_name: isBalanced ? prod2?.name : prod1?.name,
+            trend_topic: 'Direct-Response Product Comparison',
+            creative_angle: `High-converting direct response addressing customer pain point: '${(isBalanced ? prod2 : prod1)?.pain_points?.[0] || 'daily hassle'}'`,
             hook_ideas: [
-              'Why pay $80 every month when you can do this in 1 minute?',
-              'Zero redness. Zero razor burn. How I retired my disposable blades.',
+              `Why pay hundreds every month when you can do this in 1 minute?`,
+              `Watch what happens when you switch to ${(isBalanced ? prod2 : prod1)?.name}`,
+              `Limited stock remaining: Get yours before it is gone`,
             ],
-            suggested_ctas: ['Shop the 2-in-1 Hair Remover today'],
+            suggested_ctas: [`Shop ${(isBalanced ? prod2 : prod1)?.name} today`],
             content_formats: ['short_video_script'],
             estimated_effort: 'low',
-            rationale: 'Direct-response comparative angle driving high ROAS with clear margin advantages.',
+            rationale: `Captures conversion-ready buyers looking for ${(isBalanced ? prod2 : prod1)?.name} with clear ROAS targets.`,
             order_index: 2,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -115,21 +140,22 @@ export const Planner: React.FC<PlannerProps> = ({
           {
             id: 'p-3',
             strategy_id: 'strat-1',
-            pillar_name: 'Micro-Eyebrow Detailing & Precision Hack',
+            pillar_name: `Trend Velocity: ${trend?.topic || 'Viral Lifestyle Hack'}`,
             objective: 'increase_engagement',
             channel_type: 'organic',
-            platform: 'instagram',
-            product_name: prod?.name || '2-in-1 Rechargeable Hair Remover',
-            trend_topic: 'Eyebrow Shaping Hacks for Busy Mornings',
-            creative_angle: 'Quick morning GRWM switching from peach fuzz head to precision brow detailer',
+            platform: 'tiktok',
+            focus_product_id: prod1?.id,
+            product_name: prod1?.name,
+            trend_topic: trend?.topic || 'Morning Routine Trend',
+            creative_angle: `Riding the viral wave of '${trend?.topic || 'viral morning routine'}' with seamless native product integration`,
             hook_ideas: [
-              'How I shape my brows in 45 seconds without plucking tears',
-              'The double-headed hack you didn’t know you needed',
+              `The trend taking over TikTok right now`,
+              `How to get aesthetic salon results at home in 2 minutes`,
             ],
-            suggested_ctas: ['Discover the dual-head secret'],
+            suggested_ctas: ['Tap link in bio to explore'],
             content_formats: ['carousel_slides', 'post_caption'],
             estimated_effort: 'medium',
-            rationale: 'Highlights product versatility and solves painful plucking pain points.',
+            rationale: 'Leverages algorithmic trend velocity to capture low-cost organic reach.',
             order_index: 3,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -137,20 +163,25 @@ export const Planner: React.FC<PlannerProps> = ({
           {
             id: 'p-4',
             strategy_id: 'strat-1',
-            pillar_name: 'VIP Glow Club & Maintenance Retention',
+            pillar_name: isBalanced
+              ? `Routine Synergy: ${prod1?.name} + ${prod2?.name} VIP Bundle`
+              : 'Customer Retention & VIP Community Engagement',
             objective: 'increase_sales',
             channel_type: 'organic',
             platform: 'email',
-            product_name: prod?.name || '2-in-1 Rechargeable Hair Remover',
-            creative_angle: 'Dermatologist hygiene tips & exclusive bundle deals for head replacements',
+            focus_product_id: isBalanced ? prod2?.id : prod1?.id,
+            product_name: isBalanced ? `${prod1?.name} & ${prod2?.name} Bundle` : prod1?.name,
+            creative_angle: isBalanced
+              ? `Complete multi-step routine showing how ${prod1?.name} preps and ${prod2?.name} finishes for peak results`
+              : 'Nurture existing customer relationships with exclusive updates, care guides, and consumable refills',
             hook_ideas: [
-              '3 dermatologist tips to prevent breakouts after facial grooming',
-              'VIP exclusive: Replacement precision head drop',
+              `Step 1 + Step 2: The ultimate combo everyone is buying together`,
+              `VIP exclusive: Get the full bundle with free express delivery`,
             ],
-            suggested_ctas: ['Read the Glow Guide & Save 15%'],
+            suggested_ctas: ['Claim the VIP Bundle Discount'],
             content_formats: ['email_newsletter'],
             estimated_effort: 'low',
-            rationale: 'Boosts customer LTV and builds repeat consumable purchases.',
+            rationale: 'Maximizes customer lifetime value (LTV) and average order value (AOV) by pairing complementary catalog items.',
             order_index: 4,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -226,6 +257,66 @@ export const Planner: React.FC<PlannerProps> = ({
 
           <div>
             <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
+              Catalog Campaign Mode
+            </label>
+            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl mb-2.5">
+              <button
+                type="button"
+                onClick={() => setCampaignMode('balanced')}
+                className={`py-2 rounded-lg text-xs font-extrabold transition-all ${
+                  campaignMode === 'balanced'
+                    ? 'bg-white text-brand-green shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Balanced Multi-Product
+              </button>
+              <button
+                type="button"
+                onClick={() => setCampaignMode('single')}
+                className={`py-2 rounded-lg text-xs font-extrabold transition-all ${
+                  campaignMode === 'single'
+                    ? 'bg-white text-brand-green shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Single Product Launch
+              </button>
+            </div>
+
+            {campaignMode === 'single' ? (
+              <div>
+                <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
+                  Flagship Focus Product
+                </label>
+                <select
+                  value={selectedProductId}
+                  onChange={(e) => {
+                    setSelectedProductId(e.target.value);
+                    onSelectProduct?.(e.target.value);
+                  }}
+                  className="w-full text-xs p-2.5 rounded-lg border border-brand-line bg-white focus:outline-none focus:border-brand-green"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.profit_margin || '70'}% margin · {p.stock_quantity || 100} units)
+                    </option>
+                  ))}
+                  {products.length === 0 && <option value="">2-in-1 Rechargeable Hair Remover</option>}
+                </select>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-center gap-2">
+                <span className="text-base">🌐</span>
+                <div className="text-[11px] leading-snug">
+                  <strong>Multi-Product Optimization:</strong> Distributes organic reach across all <strong>{products.length} catalog items</strong> to prevent content fatigue.
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
               Primary Goal
             </label>
             <select
@@ -237,24 +328,6 @@ export const Planner: React.FC<PlannerProps> = ({
               <option value="increase_sales">Drive Direct Sales & Conversions</option>
               <option value="increase_engagement">Boost Social Engagement & Relatability</option>
               <option value="launch_new_product">Launch New Product Line</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
-              Hero Product Focus
-            </label>
-            <select
-              value={selectedProductId}
-              onChange={(e) => setSelectedProductId(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-lg border border-brand-line bg-white focus:outline-none focus:border-brand-green"
-            >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.profit_margin || '78.7'}% profit margin)
-                </option>
-              ))}
-              {products.length === 0 && <option value="">2-in-1 Rechargeable Hair Remover</option>}
             </select>
           </div>
 
@@ -352,7 +425,7 @@ export const Planner: React.FC<PlannerProps> = ({
                     <h4 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
                       Generated Action Pillars ({activeStrategy.pillars?.length || 4})
                     </h4>
-                    <span className="text-[10px] text-slate-400 font-medium">Click Open in Studio to generate copy</span>
+                    <span className="text-[10px] text-slate-400 font-medium">Click Write in Studio to craft copy</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
@@ -370,6 +443,19 @@ export const Planner: React.FC<PlannerProps> = ({
                               Pillar {idx + 1}
                             </span>
                           </div>
+
+                          {/* Product Chip */}
+                          {pillar.product_name && (
+                            <div className="mb-2 bg-blue-50/80 border border-blue-200/70 rounded-md px-2 py-1 flex items-center justify-between text-[10px] text-blue-900 font-bold">
+                              <span className="flex items-center gap-1 truncate">
+                                <span>🧴</span>
+                                <span className="truncate">{pillar.product_name}</span>
+                              </span>
+                              <span className="text-[8px] bg-white text-blue-700 font-extrabold px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
+                                {pillar.channel_type}
+                              </span>
+                            </div>
+                          )}
 
                           <b className="block text-brand-ink text-[12px] font-bold mb-1 leading-snug">
                             {pillar.pillar_name}
@@ -404,6 +490,14 @@ export const Planner: React.FC<PlannerProps> = ({
 
                         <div className="border-t border-slate-200/60 pt-2 mt-2 flex items-center justify-between text-[9px] text-slate-500">
                           <span className="truncate">CTA: <b>{pillar.suggested_ctas?.[0] || 'Shop now'}</b></span>
+                          <button
+                            type="button"
+                            onClick={() => onNavigate('studio', pillar.focus_product_id)}
+                            className="text-brand-green font-extrabold hover:underline flex items-center gap-0.5 text-[10px]"
+                          >
+                            <span>Write in Studio</span>
+                            <ArrowRight size={10} />
+                          </button>
                         </div>
                       </div>
                     ))}

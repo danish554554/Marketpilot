@@ -188,6 +188,15 @@ export const api = {
     const res = await apiClient.post('/planner/generate-batch', params);
     return res.data.items || [];
   },
+  batchGenerateCalendar: async (params: {
+    start_date: string;
+    end_date: string;
+    days_per_week: number;
+    strategy_id?: string;
+  }): Promise<PlannerContentItem[]> => {
+    const res = await apiClient.post('/planner/generate-batch', params);
+    return res.data.items || [];
+  },
   getCalendar: async (startDate: string, endDate: string): Promise<PlannerContentItem[]> => {
     const res = await apiClient.get(`/planner/calendar?start_date=${startDate}&end_date=${endDate}`);
     return res.data.items || [];
