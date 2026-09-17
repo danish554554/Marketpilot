@@ -199,10 +199,20 @@ def parse_product_spreadsheet(contents: bytes, filename: str = "", column_mappin
     seen_skus: set[str] = set()
 
     for row_number, raw in raw_rows_data:
+        # Auto-truncate string fields to schema maximums
+        if raw.get("name"):
+            raw["name"] = str(raw["name"]).strip()[:200]
+        if raw.get("category"):
+            raw["category"] = str(raw["category"]).strip()[:100]
+        if raw.get("sku"):
+            raw["sku"] = str(raw["sku"]).strip()[:100]
+
         # Auto-default description if omitted
         if not raw.get("description"):
             prod_name = raw.get("name", "Product")
             raw["description"] = f"{prod_name} - Premium quality e-commerce product."
+        else:
+            raw["description"] = str(raw["description"]).strip()[:4900]
 
         # Clean price & cost_price
         if raw.get("price"):
