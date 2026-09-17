@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Package, Plus, Upload, Trash2, AlertCircle, CheckCircle2, FileSpreadsheet, Loader2, Sparkles, Video, BarChart2, Layers, Tag } from 'lucide-react';
+import { Package, Plus, Upload, Trash2, AlertCircle, CheckCircle2, FileSpreadsheet, Loader2, Sparkles, Video, BarChart2, Layers, Tag, Download, HelpCircle, X, FileCheck } from 'lucide-react';
 import { Product } from '../types';
 import { api } from '../api/endpoints';
 import { useCurrency } from '../context/CurrencyContext';
@@ -15,6 +15,8 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
   const { user } = useAuth();
   const { formatAmount, currencySymbol, currencyConfig } = useCurrency();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showFormatGuide, setShowFormatGuide] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -112,12 +114,17 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
     }
   };
 
-  const handleCsvFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSpreadsheetFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setStatusMessage({ type: 'error', text: 'Please select a valid .csv file format.' });
+    const lower = file.name.toLowerCase();
+    const isSupported = lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv');
+    if (!isSupported) {
+      setStatusMessage({
+        type: 'error',
+        text: 'Please select a valid Excel (.xlsx, .xls) or CSV (.csv) file.',
+      });
       return;
     }
 
@@ -125,7 +132,7 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
     setStatusMessage(null);
 
     try {
-      const response = await api.importProductsCsv(file);
+      const response = await api.importProductsSpreadsheet(file);
       try {
         const fresh = await api.getProducts();
         if (Array.isArray(fresh) && fresh.length > 0) {
@@ -136,11 +143,11 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
 
       setStatusMessage({
         type: 'success',
-        text: response.message || `CSV imported successfully! ${response.imported || 0} products added.`,
+        text: response.message || `File imported successfully! ${response.imported || 0} products added.`,
       });
     } catch (err: any) {
-      console.error('CSV import error:', err);
-      const errorDetail = err.response?.data?.detail || err.message || 'Unable to import CSV file.';
+      console.error('Spreadsheet import error:', err);
+      const errorDetail = err.response?.data?.detail || err.message || 'Unable to import file.';
       setStatusMessage({
         type: 'error',
         text: typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail),
@@ -148,6 +155,31 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
     } finally {
       setUploadingCsv(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      await api.downloadProductExcelTemplate();
+    } catch (err) {
+      console.warn('Direct excel template endpoint note, generating download:', err);
+      const headers = ['Product Name', 'Price', 'Cost Price', 'Stock Quantity', 'Category', 'Pain Points', 'Features', 'Description', 'SKU'];
+      const sample = [
+        ['Silk Hydration Serum', '2500', '950', '120', 'Skincare', 'Dry dull skin, fine lines', 'Hyaluronic acid, organic aloe', 'Ultra-hydrating daily serum', 'SKU-SERUM-01'],
+        ['Matte Velvet Lipstick', '1650', '520', '85', 'Cosmetics', 'Cracked chapped lips', 'Long-lasting 16h wear, vitamin E', 'Silky lightweight matte lipstick', 'SKU-LIP-02'],
+        ['Glow Radiance Night Cream', '3200', '1100', '60', 'Skincare', 'Uneven tone, hyperpigmentation', 'Niacinamide, Vitamin C, Retinol', 'Brightening overnight repair cream', 'SKU-NIGHT-03']
+      ];
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...sample.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "marketpilot_products_template.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setDownloadingTemplate(false);
     }
   };
 
@@ -203,22 +235,47 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          {/* Hidden CSV Input */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Hidden Spreadsheet Input */}
           <input
             type="file"
             ref={fileInputRef}
-            accept=".csv"
-            onChange={handleCsvFileSelect}
+            accept=".csv, .xlsx, .xls"
+            onChange={handleSpreadsheetFileSelect}
             className="hidden"
           />
 
-          {/* Upload CSV Button */}
+          {/* Format Guide Button */}
+          <button
+            onClick={() => setShowFormatGuide(true)}
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-brand-line font-semibold text-xs px-3 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
+            title="View Excel / CSV format guidelines and required fields"
+          >
+            <HelpCircle size={14} className="text-emerald-600" />
+            <span className="hidden md:inline">Format Guide</span>
+          </button>
+
+          {/* Download Template Button */}
+          <button
+            onClick={handleDownloadTemplate}
+            disabled={downloadingTemplate}
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-brand-line font-semibold text-xs px-3 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all disabled:opacity-50"
+            title="Download ready-to-use sample Excel template (.xlsx)"
+          >
+            {downloadingTemplate ? (
+              <Loader2 size={14} className="animate-spin text-emerald-600" />
+            ) : (
+              <Download size={14} className="text-emerald-600" />
+            )}
+            <span className="hidden sm:inline">Excel Template</span>
+          </button>
+
+          {/* Upload Excel / CSV Button */}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingCsv}
             className="bg-white hover:bg-slate-50 text-slate-700 border border-brand-line font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all disabled:opacity-50"
-            title="Upload CSV product catalogue"
+            title="Upload Excel (.xlsx, .xls) or CSV product catalogue"
           >
             {uploadingCsv ? (
               <>
@@ -227,8 +284,8 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
               </>
             ) : (
               <>
-                <Upload size={14} className="text-slate-500" />
-                <span>Upload CSV</span>
+                <FileSpreadsheet size={14} className="text-emerald-600" />
+                <span>Upload Excel / CSV</span>
               </>
             )}
           </button>
@@ -306,9 +363,8 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                 <tr>
                   <td colSpan={7} className="py-12 text-center">
                     <Package size={32} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-sm font-bold text-slate-700">No products added yet</p>
-                    <p className="text-xs text-slate-400 mb-3">Add your first product or upload a CSV catalogue to calculate margins and generate campaigns.</p>
-                    <div className="flex items-center justify-center gap-2">
+                    <p className="text-xs text-slate-400 mb-3">Add your first product or import an Excel / CSV catalogue to calculate margins and generate campaigns.</p>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
                       <button
                         onClick={() => setShowAddModal(true)}
                         className="bg-brand-green text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm hover:bg-emerald-700 transition-all"
@@ -320,7 +376,15 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                         className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm hover:bg-slate-50 transition-all flex items-center gap-1.5"
                       >
                         <FileSpreadsheet size={13} className="text-emerald-600" />
-                        <span>Upload CSV</span>
+                        <span>Upload Excel / CSV</span>
+                      </button>
+                      <button
+                        onClick={handleDownloadTemplate}
+                        disabled={downloadingTemplate}
+                        className="bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium px-3.5 py-1.5 rounded-lg shadow-sm hover:bg-slate-100 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <Download size={13} className="text-slate-500" />
+                        <span>Download Template (.xlsx)</span>
                       </button>
                     </div>
                   </td>
@@ -562,6 +626,124 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Format Guide Modal */}
+      {showFormatGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-brand-line max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-brand-line">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-display font-bold text-brand-ink">
+                    Excel & CSV Spreadsheet Format Guide
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Import your entire inventory with automatic profit calculations and AI campaign readiness.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFormatGuide(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 py-4 text-xs">
+              {/* Mandatory Columns */}
+              <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-3.5">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-900 mb-1.5 text-xs">
+                  <CheckCircle2 size={15} className="text-emerald-600" />
+                  <span>Required Columns (Minimum Needed)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
+                  <div className="bg-white p-2.5 rounded-lg border border-emerald-100 shadow-2xs">
+                    <b className="text-brand-ink block">1. Product Name</b>
+                    <span className="text-[11px] text-slate-500">Accepted aliases: <code>Product Name</code>, <code>Name</code>, <code>Title</code></span>
+                    <p className="text-[11px] text-slate-600 mt-1">Example: <em>Silk Hydration Serum</em></p>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-emerald-100 shadow-2xs">
+                    <b className="text-brand-ink block">2. Price</b>
+                    <span className="text-[11px] text-slate-500">Accepted aliases: <code>Price</code>, <code>Selling Price</code>, <code>Price PKR</code>, <code>Retail Price</code></span>
+                    <p className="text-[11px] text-slate-600 mt-1">Example: <em>2500</em> or <em>Rs. 2,500</em></p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recommended Strategic Columns */}
+              <div className="bg-slate-50 border border-brand-line rounded-xl p-3.5">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 mb-1.5 text-xs">
+                  <Sparkles size={15} className="text-amber-500" />
+                  <span>Recommended Columns for Strategic Margins & AI Ad Scripts</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <b className="text-brand-ink block">Cost Price</b>
+                    <span className="text-[10px] text-slate-400">Aliases: <code>Cost Price</code>, <code>Cost</code>, <code>Buying Price</code></span>
+                    <p className="text-[11px] text-slate-600 mt-0.5">Enables profit margin % & Hero Anchor classification.</p>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <b className="text-brand-ink block">Stock Quantity</b>
+                    <span className="text-[10px] text-slate-400">Aliases: <code>Stock Quantity</code>, <code>Stock</code>, <code>Inventory</code>, <code>Qty</code></span>
+                    <p className="text-[11px] text-slate-600 mt-0.5">Auto-defaults to 100 if omitted.</p>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <b className="text-brand-ink block">Audience Pain Points</b>
+                    <span className="text-[10px] text-slate-400">Aliases: <code>Pain Points</code>, <code>Problems</code></span>
+                    <p className="text-[11px] text-slate-600 mt-0.5">Comma-separated problems your product solves for AI hooks.</p>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <b className="text-brand-ink block">Key Features</b>
+                    <span className="text-[10px] text-slate-400">Aliases: <code>Features</code>, <code>Specs</code></span>
+                    <p className="text-[11px] text-slate-600 mt-0.5">Key ingredients, specifications, or USPs for script generation.</p>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <b className="text-brand-ink block">Category</b>
+                    <span className="text-[10px] text-slate-400">Aliases: <code>Category</code>, <code>Product Type</code></span>
+                    <p className="text-[11px] text-slate-600 mt-0.5">E.g., Skincare, Cosmetics, Apparel, Electronics.</p>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <b className="text-brand-ink block">SKU / Code</b>
+                    <span className="text-[10px] text-slate-400">Aliases: <code>SKU</code>, <code>Item Code</code>, <code>Barcode</code></span>
+                    <p className="text-[11px] text-slate-600 mt-0.5">Unique item identifier.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Friendly Tips */}
+              <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-3 text-slate-700 space-y-1">
+                <b className="text-blue-900 block font-bold">✨ Smart Auto-Formatting Features:</b>
+                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-blue-950">
+                  <li><strong>Supported formats:</strong> Microsoft Excel (<code>.xlsx</code>, <code>.xls</code>) and standard CSV (<code>.csv</code>).</li>
+                  <li><strong>Currency resilient:</strong> You can enter plain numbers (<code>2500</code>) or formatted text (<code>Rs. 2,500</code>, <code>PKR 2,500</code>, <code>$25.00</code>)—symbols and commas are automatically stripped.</li>
+                  <li><strong>Missing descriptions:</strong> If your spreadsheet has no description column, MarketPilot automatically creates an SEO-friendly summary from the product name.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-brand-line">
+              <button
+                onClick={handleDownloadTemplate}
+                disabled={downloadingTemplate}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-all disabled:opacity-50"
+              >
+                {downloadingTemplate ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                <span>Download Sample Excel Template</span>
+              </button>
+              <button
+                onClick={() => setShowFormatGuide(false)}
+                className="bg-brand-green hover:bg-brand-green-dark text-white text-xs font-bold px-4 py-2 rounded-xl shadow-sm transition-all"
+              >
+                Got it
+              </button>
+            </div>
           </div>
         </div>
       )}
