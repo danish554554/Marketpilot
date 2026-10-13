@@ -532,16 +532,62 @@ class GeminiService:
                     "call_to_action": f"Tap link to claim {offer}",
                     "hashtags": f"#{product_name.replace(' ', '')} #ProblemSolved #LifeUpgrade"
                 }
+        elif format_type == "linkedin" or channel == "linkedin":
+            return {
+                "hook": f"Most teams lose hours every week to {pain_1}. Here is how we solved it with {product_name}:",
+                "caption": (
+                    f"Across our industry, one bottleneck keeps slowing down growth: **{pain_1}**.\n\n"
+                    f"Adding more manual work doesn't fix a broken workflow. That is why we built **{product_name}** around measurable outcomes:\n\n"
+                    f"✅ **{feat_1}**\n"
+                    f"✅ **{feat_2}**\n\n"
+                    f"📊 **The Result:** Immediate time savings, higher consistency, and stronger ROI from Day 1.\n\n"
+                    f"🎁 **Current Offer:** {offer}\n\n"
+                    f"How is your team handling {pain_1} this quarter? Let's discuss below 👇"
+                ),
+                "call_to_action": f"Book a Demo / Claim {offer}",
+                "hashtags": f"#{product_name.replace(' ', '')} #Innovation #GrowthStrategy #B2B #Leadership"
+            }
+        elif format_type == "fb_post":
+            return {
+                "hook": f"Tired of dealing with {pain_1}? See why everyone in {country} is switching to {product_name}! 🙌",
+                "caption": (
+                    f"When it comes to solving **{pain_1}**, you shouldn't have to compromise on quality or reliability.\n\n"
+                    f"Here is why **{product_name}** has become our #1 community favorite:\n\n"
+                    f"🔥 {feat_1}\n"
+                    f"🔥 {feat_2}\n\n"
+                    f"✨ **Special Offer:** {offer}\n\n"
+                    f"💬 Drop a comment below or send us a message to claim yours today!"
+                ),
+                "call_to_action": f"Send Message & Claim {offer}",
+                "hashtags": f"#{product_name.replace(' ', '')} #CommunityFavorite #SpecialOffer"
+            }
+        elif format_type == "youtube" or channel == "youtube":
+            return {
+                "hook": f"How {product_name} Solves {pain_1} in Minutes! (Full Walkthrough & Honest Review)",
+                "caption": (
+                    f"[0:00 - 0:10 | THE HOOK & PROBLEM]\n"
+                    f"Visual: Presenter / screen-share showing the frustration of {pain_1}.\n"
+                    f"Voiceover: \"If you're still dealing with {pain_1}, stop what you're doing. In the next 60 seconds, I'll show you how {product_name} changes everything.\"\n\n"
+                    f"[0:10 - 0:40 | LIVE WALKTHROUGH & DEMO]\n"
+                    f"Visual: Step-by-step demonstration of {product_name} highlighting {feat_1} and {feat_2}.\n"
+                    f"Voiceover: \"Look at how {product_name} delivers {feat_1} and {feat_2} right out of the box—eliminating {pain_1} completely.\"\n\n"
+                    f"[0:40 - 1:00 | CALL TO ACTION & PINNED LINK]\n"
+                    f"Visual: End-screen callout pointing to description link with {offer} badge.\n"
+                    f"Voiceover: \"Click the first link in the description and pinned comment to claim {offer}, and subscribe for more!\""
+                ),
+                "call_to_action": f"Click 1st Link in Description for {offer}",
+                "hashtags": f"#{product_name.replace(' ', '')} #YouTubeShorts #Walkthrough #Review"
+            }
         elif format_type == "paid":
             return {
                 "hook": f"Stop struggling with {pain_1}. The {product_name} is here.",
                 "caption": (
                     f"Tired of dealing with {pain_1}?\n\n"
                     f"Upgrade your daily routine with the **{product_name}**.\n\n"
-                    f"✅ Built with {feat_1}\n✅ Delivers {feat_2}\n✅ Fast Tracked Shipping (COD Available)\n\n"
-                    f"🏷️ Limited Time Launch Promo: **{offer}**\n\nClick below to claim yours before stock runs out!"
+                    f"✅ Built with {feat_1}\n✅ Delivers {feat_2}\n✅ Fast Tracked Fulfillment\n\n"
+                    f"🏷️ Limited Time Launch Promo: **{offer}**\n\nClick below to claim yours today!"
                 ),
-                "call_to_action": f"Shop Now & Claim {offer}",
+                "call_to_action": f"Claim {offer} Now",
                 "hashtags": f"#{product_name.replace(' ', '')} #DirectResponse #SpecialOffer"
             }
         elif format_type == "email":
@@ -550,35 +596,35 @@ class GeminiService:
                 "caption": (
                     f"Hi there,\n\n"
                     f"If {pain_1} has been slowing you down, we have great news.\n\n"
-                    f"We created the **{product_name}** specifically to make your routine effortless.\n\n"
+                    f"We created the **{product_name}** specifically to make your workflow effortless.\n\n"
                     f"Key Highlights:\n• {feat_1}\n• {feat_2}\n\n"
-                    f"Take advantage of our exclusive offer: **{offer}**.\n\nClick below to order yours today:"
+                    f"Take advantage of our exclusive offer: **{offer}**.\n\nClick below to get started today:"
                 ),
                 "call_to_action": f"Explore {product_name} & Save",
                 "hashtags": ""
             }
         elif format_type == "whatsapp":
             return {
-                "hook": f"✨ VIP Update: {product_name} is in stock!",
+                "hook": f"✨ VIP Update: {product_name} is now available!",
                 "caption": (
-                    f"Hi! Quick VIP update on the **{product_name}**.\n\n"
-                    f"Due to high demand, our latest restock featuring {feat_1} is going fast!\n\n"
-                    f"🎁 VIP Offer: **{offer}** + Free Express Delivery.\n\nReply to this message with **ORDER** to reserve yours now!"
+                    f"Hi! Quick VIP update on **{product_name}**.\n\n"
+                    f"Due to high demand, our latest batch/slot featuring {feat_1} is going fast!\n\n"
+                    f"🎁 VIP Offer: **{offer}**.\n\nReply to this message with **YES** to reserve yours now!"
                 ),
-                "call_to_action": "Order via WhatsApp with 1 Click",
+                "call_to_action": "Reply YES on WhatsApp with 1 Click",
                 "hashtags": ""
             }
         else:  # organic
             return {
-                "hook": f"The 3-step routine change for {pain_1}.",
+                "hook": f"The 3-step upgrade for {pain_1}.",
                 "caption": (
                     f"Most people think dealing with {pain_1} is unavoidable.\n\n"
-                    f"Here is what actually works: Introducing the **{product_name}**.\n\n"
+                    f"Here is what actually works: Introducing **{product_name}**.\n\n"
                     f"✨ {feat_1}\n✨ {feat_2}\n\n"
                     f"🎁 Special Offer: {offer}\n\nDrop a 💬 below or save this post for later!"
                 ),
                 "call_to_action": "Comment INFO for the direct link",
-                "hashtags": f"#{product_name.replace(' ', '')} #MustHave #ProductReview"
+                "hashtags": f"#{product_name.replace(' ', '')} #MustHave #Featured"
             }
 
     @classmethod
@@ -599,7 +645,7 @@ class GeminiService:
     ) -> dict[str, str]:
         """
         Uses Google Gemini to generate highly persuasive, channel-tailored marketing copy
-        accurately referencing the specific product, its real features, and target pain points.
+        accurately referencing the specific product/service/SaaS offering, its real features, and target pain points.
         For video scripts, voiceover lines are natively localized into the target market's language.
         Supports variation_seed to generate diverse hooks and angles on regeneration.
         """
@@ -610,36 +656,39 @@ class GeminiService:
         lang = target_language or ("Urdu" if "pakistan" in country.lower() else "English")
 
         system_instruction = (
-            "You are an elite direct-response e-commerce copywriter and viral video scriptwriter. "
-            "Write production-ready, highly engaging, conversion-optimized marketing copy. "
-            "IMPORTANT: Strictly speak about the specific product given in the prompt, its real features, and the problems it solves. "
-            "Do NOT confuse it with unrelated products. "
+            "You are an elite multi-industry growth copywriter (covering SaaS & Tech, E-Commerce, Food & Restaurant, Fashion, Real Estate, Salon, Logistics, Healthcare, Education, and custom businesses) and viral video scriptwriter. "
+            "Write production-ready, highly engaging, conversion-optimized marketing copy tailored to the business industry and channel. "
+            "IMPORTANT: Strictly speak about the specific product/service/SaaS plan given in the prompt, its real features, and the problems it solves. "
+            "Do NOT confuse it with unrelated offerings. "
             f"TARGET MARKET & LANGUAGE CONTEXT: Target Country is {country}, Spoken Language is {lang}. "
-            "FOR VIDEO SCRIPTS (TikTok / Reels / Shorts): All spoken Voiceover lines and the opening Hook MUST be written in the target country's natural colloquial language (e.g. for Pakistan, write conversational Spoken Roman Urdu so creators can read it fluently on camera, along with native Urdu script). Visual directions, scene timings, and camera cues remain in English. "
+            "FOR VIDEO SCRIPTS (TikTok / Reels / YouTube / Shorts): All spoken Voiceover lines and the opening Hook MUST be written in the target country's natural colloquial language (e.g. for Pakistan, write conversational Spoken Roman Urdu so creators can read it fluently on camera, along with native Urdu script). Visual directions, scene timings, and camera cues remain in English. "
             "Output pure JSON with exactly 4 keys: 'hook', 'caption', 'call_to_action', 'hashtags'."
         )
 
         user_prompt = (
-            f"PRODUCT DETAILS:\n"
-            f"- Product Name: {product_name}\n"
-            f"- Description: {product_description or 'High-quality e-commerce product'}\n"
-            f"- Key Features: {', '.join(product_features) if product_features else 'Premium quality & durable design'}\n"
-            f"- Pain Points It Solves: {', '.join(product_pain_points) if product_pain_points else 'Daily consumer friction'}\n\n"
+            f"OFFERING / PRODUCT DETAILS:\n"
+            f"- Name: {product_name}\n"
+            f"- Description: {product_description or 'High-value business offering'}\n"
+            f"- Key Features: {', '.join(product_features) if product_features else 'Premium quality & reliable performance'}\n"
+            f"- Pain Points It Solves: {', '.join(product_pain_points) if product_pain_points else 'Customer friction & inefficiency'}\n\n"
             f"CAMPAIGN GOAL & FORMAT:\n"
             f"- Target Market Country: {country}\n"
             f"- Spoken Local Language: {lang}\n"
-            f"- Channel: {channel} (e.g. tiktok, instagram, paid ad, email, whatsapp)\n"
+            f"- Channel: {channel} (e.g. linkedin, facebook, youtube, tiktok, instagram, email, whatsapp)\n"
             f"- Format: {format_type}\n"
             f"- Live Trend / Angle: {trend_topic or 'Problem-Solution demonstration'}\n"
             f"- Variation / Angle Index: #{variation_seed} (Generate a distinctly fresh hook and creative angle different from previous variations)\n"
             f"- Optional Hook Seed: {hook_idea or 'None'}\n"
-            f"- Custom Notes: {custom_instructions or 'Focus on fast benefits and high clarity'}\n\n"
+            f"- Industry & Custom Notes: {custom_instructions or 'Focus on fast benefits and high clarity'}\n\n"
             f"INSTRUCTIONS FOR FORMAT:\n"
-            f"- If format is 'script' or 'tiktok': Write a complete timestamped short-form video script with [HOOK - 0:00 to 0:03], [DEMO & BENEFIT - 0:03 to 0:10], and [CALL TO ACTION - 0:10 to 0:15]. All Voiceover lines MUST be in {lang} (for Pakistan, write Roman Urdu and Urdu script so the creator speaks natural Urdu on camera). Visual & camera cues remain in English.\n"
-            "- If format is 'organic' or 'instagram': Write an educational carousel/reel caption highlighting why traditional alternatives fail and how this product solves it, with clean bullet points and engagement question.\n"
-            "- If format is 'paid': Write a high-urgency direct-response ad copy with strong hook, comparison against costly alternatives, risk-reversal guarantee, and compelling discount CTA.\n"
-            "- If format is 'email': Write a complete newsletter with Subject Line, story-driven intro, product benefits, and clear CTA button text.\n"
-            "- If format is 'whatsapp': Write a friendly, conversational 1-click VIP restock / flash sale broadcast message.\n\n"
+            f"- If format is 'linkedin': Write an authoritative, high-engagement LinkedIn post (or carousel text) suitable for founders, B2B buyers, and professionals, breaking down the problem, how {product_name} solves it, bullet points, and an engaging discussion question.\n"
+            f"- If format is 'fb_post': Write a relatable, shareable Facebook Simple Post highlighting community value, clear benefits, active offer, and a conversational CTA.\n"
+            f"- If format is 'youtube': Write a structured YouTube Video / YouTube Short Script with [0:00 - 0:10 THE HOOK & PROBLEM], [0:10 - 0:45 WALKTHROUGH / DEMO], [0:45 - 1:15 PROOF & ROI], and [1:15 - 1:30 CALL TO ACTION]. Voiceover lines in {lang}.\n"
+            f"- If format is 'script' or 'tiktok': Write a complete timestamped short-form video script with [HOOK - 0:00 to 0:03], [DEMO & BENEFIT - 0:03 to 0:10], and [CALL TO ACTION - 0:10 to 0:15]. All Voiceover lines MUST be in {lang} (for Pakistan, write Roman Urdu and Urdu script). Visual & camera cues remain in English.\n"
+            "- If format is 'organic' or 'instagram': Write an educational Instagram carousel/caption highlighting why traditional alternatives fail and how this offering solves it, with clean bullet points and engagement question.\n"
+            "- If format is 'paid': Write a high-urgency direct-response ad copy with strong hook, comparison against costly alternatives, risk-reversal guarantee, and compelling discount/trial CTA.\n"
+            "- If format is 'email': Write a complete newsletter with Subject Line, story-driven intro, key benefits, and clear CTA button text.\n"
+            "- If format is 'whatsapp': Write a friendly, conversational 1-click VIP booking / restock / flash offer broadcast message.\n\n"
             "Return JSON matching:\n"
             "{\n"
             "  \"hook\": \"string\",\n"

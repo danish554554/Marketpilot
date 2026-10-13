@@ -19,13 +19,14 @@ export const api = {
     const res = await apiClient.post('/auth/login', { email, password });
     return res.data;
   },
-  register: async (email: string, password: string, businessName: string, fullName?: string, targetCountry: string = 'Pakistan') => {
+  register: async (email: string, password: string, businessName: string, fullName?: string, targetCountry: string = 'Pakistan', industry: string = 'E-Commerce & Retail') => {
     const res = await apiClient.post('/auth/register', {
       email,
       password,
       full_name: fullName || businessName,
       business_name: businessName,
       target_country: targetCountry,
+      industry,
     });
     return res.data;
   },

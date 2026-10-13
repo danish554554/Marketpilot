@@ -4,6 +4,7 @@ import { Product } from '../types';
 import { api } from '../api/endpoints';
 import { useCurrency } from '../context/CurrencyContext';
 import { useAuth } from '../context/AuthContext';
+import { getIndustryProfile } from '../utils/industry';
 
 interface ProductsProps {
   products: Product[];
@@ -12,7 +13,8 @@ interface ProductsProps {
 }
 
 export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNavigate }) => {
-  const { user } = useAuth();
+  const { user, industry } = useAuth();
+  const activeProfile = getIndustryProfile(industry);
   const { formatAmount, currencySymbol, currencyConfig } = useCurrency();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFormatGuide, setShowFormatGuide] = useState(false);
@@ -225,13 +227,13 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
         <div>
           <small className="text-[9px] font-extrabold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
             <Package size={12} className="text-brand-green" />
-            MULTI-PRODUCT CATALOGUE & STRATEGIC MARGINS
+            {activeProfile.icon} {activeProfile.label.toUpperCase()} — {activeProfile.offeringPlural.toUpperCase()} & MARGINS
           </small>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-brand-ink tracking-tight mt-1">
-            Products are the foundation of every plan.
+            {activeProfile.offeringPlural} are the foundation of every plan.
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            MarketPilot dynamically prioritizes hero items, high-margin drivers, and clearance products for targeted organic and paid campaigns.
+            {activeProfile.growthPlaybook}
           </p>
         </div>
 
@@ -296,7 +298,7 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
             className="bg-brand-green hover:bg-brand-green-dark text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
           >
             <Plus size={14} />
-            <span>+ Add a product</span>
+            <span>+ Add {activeProfile.offeringSingular}</span>
           </button>
         </div>
       </div>
@@ -304,8 +306,8 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
       {/* Catalog KPI Metrics Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white border border-brand-line p-3.5 rounded-xl shadow-soft">
-          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Active Catalog</span>
-          <b className="text-lg font-display font-bold text-brand-ink">{products.length} Products</b>
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Active {activeProfile.offeringPlural}</span>
+          <b className="text-lg font-display font-bold text-brand-ink">{products.length} Active</b>
           <small className="text-[10px] text-slate-500 block mt-0.5">Enriched for AI campaigns</small>
         </div>
         <div className="bg-white border border-brand-line p-3.5 rounded-xl shadow-soft">
@@ -318,12 +320,12 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
           <b className="text-lg font-display font-bold text-blue-700">
             {products.length > 0 ? Math.round(products.reduce((acc, p) => acc + Number(p.profit_margin || 0), 0) / products.length) : 0}%
           </b>
-          <small className="text-[10px] text-blue-600/80 block mt-0.5">Catalog profit health</small>
+          <small className="text-[10px] text-blue-600/80 block mt-0.5">Profit health</small>
         </div>
         <div className="bg-white border border-brand-line p-3.5 rounded-xl shadow-soft">
-          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Available Stock</span>
+          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">{activeProfile.stockLabel}</span>
           <b className="text-lg font-display font-bold text-brand-ink">
-            {products.reduce((acc, p) => acc + (p.stock_quantity || 0), 0)} Units
+            {products.reduce((acc, p) => acc + (p.stock_quantity || 0), 0)}
           </b>
           <small className="text-[10px] text-slate-500 block mt-0.5">Ready for fulfillment</small>
         </div>
@@ -334,14 +336,14 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
         <div className="p-5 border-b border-brand-line flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-display font-bold text-brand-ink m-0">
-              Active Inventory ({products.length} Products)
+              {activeProfile.icon} {activeProfile.offeringPlural} ({products.length})
             </h2>
             <p className="text-[11px] text-slate-500 m-0 mt-0.5">
-              Click <strong>Write Script</strong> to launch the AI Studio or <strong>Plan</strong> to generate a multi-pillar campaign.
+              Click <strong>Write Content</strong> to launch the AI Studio or <strong>Plan</strong> to generate a multi-pillar campaign.
             </p>
           </div>
           <span className="text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md self-start sm:self-auto">
-            ✓ Multi-Product Auto-Prioritization Active
+            ✓ {activeProfile.label} Auto-Prioritization Active
           </span>
         </div>
 
@@ -349,11 +351,11 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-brand-line text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-4">Product & Pain Point</th>
+                <th className="py-3 px-4">{activeProfile.offeringSingular} & Pain Point</th>
                 <th className="py-3 px-4">Strategic Role</th>
-                <th className="py-3 px-4">Price / Cost</th>
+                <th className="py-3 px-4">{activeProfile.priceLabel} / Cost</th>
                 <th className="py-3 px-4">Profit Margin</th>
-                <th className="py-3 px-4">In Stock</th>
+                <th className="py-3 px-4">Capacity / Stock</th>
                 <th className="py-3 px-4">AI Readiness</th>
                 <th className="py-3 px-4 text-right">1-Click AI Actions</th>
               </tr>
@@ -363,13 +365,13 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                 <tr>
                   <td colSpan={7} className="py-12 text-center">
                     <Package size={32} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-xs text-slate-400 mb-3">Add your first product or import an Excel / CSV catalogue to calculate margins and generate campaigns.</p>
+                    <p className="text-xs text-slate-400 mb-3">Add your first {activeProfile.offeringSingular.toLowerCase()} or import an Excel / CSV sheet to calculate margins and generate campaigns.</p>
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <button
                         onClick={() => setShowAddModal(true)}
                         className="bg-brand-green text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm hover:bg-emerald-700 transition-all"
                       >
-                        + Add Product
+                        + Add {activeProfile.offeringSingular}
                       </button>
                       <button
                         onClick={() => fileInputRef.current?.click()}
@@ -407,7 +409,7 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                     <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-4 font-bold text-brand-ink">
                         <div className="flex items-center gap-2">
-                          <span className="text-base">{isHero ? '🧴' : isClearance ? '⚡' : '✨'}</span>
+                          <span className="text-base">{activeProfile.icon}</span>
                           <div>
                             <span className="text-xs font-extrabold text-brand-ink block">{prod.name}</span>
                             {prod.pain_points?.[0] ? (
@@ -430,7 +432,7 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                               : 'bg-blue-50 text-blue-800 border-blue-200'
                           }`}
                         >
-                          <span>{isHero ? '🌟 Hero Anchor' : isClearance ? '⚡ Clearance / Offer' : '📈 Growth Driver'}</span>
+                          <span>{isHero ? '🌟 Hero Anchor' : isClearance ? '⚡ Limited / Promo' : '📈 Growth Driver'}</span>
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
@@ -458,10 +460,10 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                       <td className="py-3.5 px-4 font-bold text-slate-700">
                         {prod.stock_quantity > 0 ? (
                           <span className={`${prod.stock_quantity < 20 ? 'text-amber-600 font-extrabold' : 'text-emerald-700'}`}>
-                            {prod.stock_quantity} units
+                            {prod.stock_quantity}
                           </span>
                         ) : (
-                          <span className="text-rose-600 font-extrabold">0 units (Restock)</span>
+                          <span className="text-rose-600 font-extrabold">0 (Full/Out)</span>
                         )}
                       </td>
                       <td className="py-3.5 px-4">
@@ -485,15 +487,15 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                           <button
                             onClick={() => onNavigate?.('studio', prod.id)}
                             className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 shadow-2xs"
-                            title="Generate short-form video scripts or posts for this product"
+                            title="Generate LinkedIn posts, Reels, YouTube scripts or ads in Studio"
                           >
                             <Video size={11} className="text-emerald-700" />
-                            <span>Write Script</span>
+                            <span>Write Content</span>
                           </button>
                           <button
                             onClick={() => onNavigate?.('planner', prod.id)}
                             className="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[10px] px-2.5 py-1 rounded-lg transition-all flex items-center gap-1"
-                            title="Plan organic campaign strategy with this product"
+                            title="Plan organic + paid campaign strategy"
                           >
                             <BarChart2 size={11} className="text-slate-500" />
                             <span>Plan</span>
@@ -501,7 +503,7 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                           <button
                             onClick={() => handleDelete(prod.id)}
                             className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
-                            title="Delete Product"
+                            title="Delete"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -520,20 +522,24 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 md:p-8 max-w-[460px] w-full relative shadow-2xl border border-brand-line">
-            <h2 className="text-lg font-display font-bold text-brand-ink mb-1">Add New Product</h2>
+            <h2 className="text-lg font-display font-bold text-brand-ink mb-1">
+              Add New {activeProfile.offeringSingular} ({activeProfile.icon} {activeProfile.label})
+            </h2>
             <p className="text-xs text-slate-500 mb-4">
               Enter pricing and cost details in <b>{currencyConfig.code} ({currencySymbol})</b> so the AI Strategist can optimize profit margins.
             </p>
 
             <form onSubmit={handleAddProduct} className="space-y-3">
               <div>
-                <label className="block text-[10px] font-bold text-slate-600 mb-1">Product Name *</label>
+                <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                  {activeProfile.offeringSingular} Name *
+                </label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. 2-in-1 Rechargeable Hair Remover"
+                  placeholder={activeProfile.placeholderName}
                   className="w-full text-xs p-2.5 rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
                 />
               </div>
@@ -544,39 +550,45 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g. Cordless, painless precision grooming tool for daily skincare."
+                  placeholder={`Briefly describe this ${activeProfile.offeringSingular.toLowerCase()} and who it is for...`}
                   className="w-full text-xs p-2.5 rounded-lg border border-brand-line focus:outline-none focus:border-brand-green resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-600 mb-1">Retail Price ({currencySymbol}) *</label>
+                  <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                    {activeProfile.priceLabel} ({currencySymbol}) *
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     required
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder={currencyConfig.code === 'PKR' ? '4500' : '39.99'}
+                    placeholder={currencyConfig.code === 'PKR' ? '4500' : '49.00'}
                     className="w-full text-xs p-2.5 rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-600 mb-1">Cost Price ({currencySymbol})</label>
+                  <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                    Delivery / Unit Cost ({currencySymbol})
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     value={costPrice}
                     onChange={(e) => setCostPrice(e.target.value)}
-                    placeholder={currencyConfig.code === 'PKR' ? '1200' : '8.50'}
+                    placeholder={currencyConfig.code === 'PKR' ? '1200' : '9.50'}
                     className="w-full text-xs p-2.5 rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-600 mb-1">Initial Stock Quantity</label>
+                <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                  {activeProfile.stockLabel}
+                </label>
                 <input
                   type="number"
                   value={stock}
@@ -587,23 +599,27 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-600 mb-1">Audience Pain Points (comma separated)</label>
+                <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                  Customer Pain Points Solved (comma separated)
+                </label>
                 <input
                   type="text"
                   value={painPoints}
                   onChange={(e) => setPainPoints(e.target.value)}
-                  placeholder="Messy bags, Heavy daily carry"
+                  placeholder={activeProfile.placeholderPains}
                   className="w-full text-xs p-2.5 rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-600 mb-1">Key Features (comma separated)</label>
+                <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                  Key Features / Benefits (comma separated)
+                </label>
                 <input
                   type="text"
                   value={features}
                   onChange={(e) => setFeatures(e.target.value)}
-                  placeholder="e.g. USB-C Charging, Hypoallergenic blades"
+                  placeholder={activeProfile.placeholderFeatures}
                   className="w-full text-xs p-2.5 rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
                 />
               </div>

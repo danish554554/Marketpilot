@@ -18,6 +18,7 @@ class RegisterRequest(BaseModel):
     full_name: str = Field(min_length=1, max_length=120)
     business_name: str | None = Field(default=None, max_length=120)
     target_country: str = Field(default="Pakistan", max_length=60)
+    industry: str = Field(default="E-Commerce & Retail", max_length=120)
 
 
 class VerifyOtpRequest(BaseModel):
@@ -64,6 +65,7 @@ class UserProfile(BaseModel):
     avatar_url: str | None = None
     role: Role
     target_country: str | None = "Pakistan"
+    industry: str | None = "E-Commerce & Retail"
 
 
 class AuthSession(BaseModel):

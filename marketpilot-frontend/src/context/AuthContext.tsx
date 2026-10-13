@@ -14,6 +14,7 @@ interface User {
   fullName?: string;
   businessName: string;
   targetCountry: string;
+  industry: string;
 }
 
 interface AuthContextType {
@@ -21,8 +22,10 @@ interface AuthContextType {
   user: User | null;
   targetCountry: string;
   setTargetCountry: (country: string) => void;
+  industry: string;
+  setIndustry: (industry: string) => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string) => Promise<{ requires_verification: boolean; verification_code?: string; message?: string }>;
+  register: (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string, industry?: string) => Promise<{ requires_verification: boolean; verification_code?: string; message?: string }>;
   verifyOtp: (email: string, token: string) => Promise<void>;
   updateBusinessName: (newBusinessName: string) => void;
   logout: () => void;
@@ -41,6 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [targetCountry, setTargetCountryState] = useState<string>(
     () => localStorage.getItem(SESSION_KEYS.TARGET_COUNTRY) || 'Pakistan'
   );
+  const [industry, setIndustryState] = useState<string>(
+    () => localStorage.getItem(SESSION_KEYS.INDUSTRY) || 'E-Commerce & Retail'
+  );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const setTargetCountry = useCallback((country: string) => {
@@ -49,6 +55,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, clean);
     setTargetCountryState(clean);
     setUser((prev) => (prev ? { ...prev, targetCountry: clean } : null));
+  }, []);
+
+  const setIndustry = useCallback((newIndustry: string) => {
+    if (!newIndustry || !newIndustry.trim()) return;
+    const clean = newIndustry.trim();
+    localStorage.setItem(SESSION_KEYS.INDUSTRY, clean);
+    setIndustryState(clean);
+    setUser((prev) => (prev ? { ...prev, industry: clean } : null));
   }, []);
 
   const handleCleanLogout = useCallback((redirectReason?: string) => {
@@ -91,11 +105,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const biz = meta.business_name || 'GlowSilk Beauty';
               const fullName = meta.full_name || '';
               const country = meta.target_country || 'Pakistan';
+              const ind = meta.industry || localStorage.getItem(SESSION_KEYS.INDUSTRY) || 'E-Commerce & Retail';
 
               if (userEmail) localStorage.setItem(SESSION_KEYS.EMAIL, userEmail);
               if (userId) localStorage.setItem(SESSION_KEYS.USER_ID, userId);
               localStorage.setItem(SESSION_KEYS.BIZ, biz);
               localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, country);
+              localStorage.setItem(SESSION_KEYS.INDUSTRY, ind);
+              setIndustryState(ind);
               if (fullName) localStorage.setItem(SESSION_KEYS.FULL_NAME, fullName);
 
               setUser({
@@ -104,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 fullName,
                 businessName: biz,
                 targetCountry: country,
+                industry: ind,
               });
               setIsAuthenticated(true);
               recordUserActivity();
@@ -133,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const savedBiz = localStorage.getItem(SESSION_KEYS.BIZ);
     const savedName = localStorage.getItem(SESSION_KEYS.FULL_NAME);
     const savedCountry = localStorage.getItem(SESSION_KEYS.TARGET_COUNTRY) || 'Pakistan';
+    const savedIndustry = localStorage.getItem(SESSION_KEYS.INDUSTRY) || 'E-Commerce & Retail';
 
     if (token && savedEmail) {
       setUser({
@@ -141,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fullName: savedName || '',
         businessName: savedBiz || 'GlowSilk Beauty',
         targetCountry: savedCountry,
+        industry: savedIndustry,
       });
       setIsAuthenticated(true);
       recordUserActivity();
@@ -253,22 +273,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userId = data.user?.id || '';
     const finalBiz = savedBiz || (fullName && !fullName.toLowerCase().includes('admin') ? fullName : 'GlowSilk Beauty');
     const country = data.user?.target_country || localStorage.getItem(SESSION_KEYS.TARGET_COUNTRY) || 'Pakistan';
+    const ind = data.user?.industry || localStorage.getItem(SESSION_KEYS.INDUSTRY) || 'E-Commerce & Retail';
 
     localStorage.setItem(SESSION_KEYS.EMAIL, email);
     if (userId) localStorage.setItem(SESSION_KEYS.USER_ID, userId);
     localStorage.setItem(SESSION_KEYS.BIZ, finalBiz);
     localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, country);
+    localStorage.setItem(SESSION_KEYS.INDUSTRY, ind);
+    setIndustryState(ind);
     if (fullName) localStorage.setItem(SESSION_KEYS.FULL_NAME, fullName);
 
-    setUser({ id: userId || undefined, email, fullName, businessName: finalBiz, targetCountry: country });
+    setUser({ id: userId || undefined, email, fullName, businessName: finalBiz, targetCountry: country, industry: ind });
     setIsAuthenticated(true);
     recordUserActivity();
   }, []);
 
-  const register = useCallback(async (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string) => {
+  const register = useCallback(async (email: string, password: string, businessName: string, fullName?: string, targetCountry?: string, selectedIndustry?: string) => {
     const cleanBiz = businessName.trim() || 'GlowSilk Beauty';
     const nameToSend = fullName?.trim() || cleanBiz;
     const countryToSend = targetCountry?.trim() || 'Pakistan';
+    const industryToSend = selectedIndustry?.trim() || 'E-Commerce & Retail';
 
     let res: Response;
     try {
@@ -281,6 +305,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: nameToSend,
           business_name: cleanBiz,
           target_country: countryToSend,
+          industry: industryToSend,
         }),
       });
     } catch (err) {
@@ -301,12 +326,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = data.session?.access_token || data.access_token;
     const savedName = data.user?.full_name || nameToSend;
     const savedCountry = data.user?.target_country || countryToSend;
+    const savedInd = data.user?.industry || industryToSend;
     const userId = data.user?.id || '';
     localStorage.setItem(SESSION_KEYS.EMAIL, email);
     if (userId) localStorage.setItem(SESSION_KEYS.USER_ID, userId);
     localStorage.setItem(SESSION_KEYS.BIZ, cleanBiz);
     localStorage.setItem(SESSION_KEYS.FULL_NAME, savedName);
     localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, savedCountry);
+    localStorage.setItem(SESSION_KEYS.INDUSTRY, savedInd);
+    setIndustryState(savedInd);
 
     const requiresVerification = data.requires_verification !== false;
 
@@ -319,6 +347,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fullName: savedName,
         businessName: cleanBiz,
         targetCountry: savedCountry,
+        industry: savedInd,
       });
       setIsAuthenticated(true);
       recordUserActivity();
@@ -363,14 +392,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const fullName = data.user?.full_name || '';
     const userId = data.user?.id || '';
     const country = data.user?.target_country || localStorage.getItem(SESSION_KEYS.TARGET_COUNTRY) || 'Pakistan';
+    const ind = data.user?.industry || localStorage.getItem(SESSION_KEYS.INDUSTRY) || 'E-Commerce & Retail';
 
     localStorage.setItem(SESSION_KEYS.EMAIL, email);
     if (userId) localStorage.setItem(SESSION_KEYS.USER_ID, userId);
     localStorage.setItem(SESSION_KEYS.BIZ, savedBiz);
     localStorage.setItem(SESSION_KEYS.TARGET_COUNTRY, country);
+    localStorage.setItem(SESSION_KEYS.INDUSTRY, ind);
+    setIndustryState(ind);
     if (fullName) localStorage.setItem(SESSION_KEYS.FULL_NAME, fullName);
 
-    setUser({ id: userId || undefined, email, fullName, businessName: savedBiz, targetCountry: country });
+    setUser({ id: userId || undefined, email, fullName, businessName: savedBiz, targetCountry: country, industry: ind });
     setIsAuthenticated(true);
     recordUserActivity();
   }, []);
@@ -407,6 +439,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         targetCountry,
         setTargetCountry,
+        industry,
+        setIndustry,
         login,
         register,
         verifyOtp,

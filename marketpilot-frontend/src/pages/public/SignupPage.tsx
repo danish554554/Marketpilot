@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/endpoints';
-import { AlertCircle, CheckCircle2, ArrowRight, Mail, Sparkles, RefreshCw, Send, KeyRound } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ArrowRight, Mail, Sparkles, RefreshCw, Send, KeyRound, Briefcase } from 'lucide-react';
 import { prewarmBackend } from '../../utils/session';
+import { PRESET_INDUSTRIES, OTHER_INDUSTRY_OPTION, getIndustryProfile, MARKETING_CHANNEL_FORMATS } from '../../utils/industry';
 
 export function SignupPage() {
   const { register, verifyOtp } = useAuth();
@@ -16,6 +17,8 @@ export function SignupPage() {
 
   const [step, setStep] = useState<'signup' | 'verify'>('signup');
   const [businessName, setBusinessName] = useState('');
+  const [selectedIndustry, setSelectedIndustry] = useState(PRESET_INDUSTRIES[0].id);
+  const [customIndustry, setCustomIndustry] = useState('');
   const [targetCountry, setTargetCountry] = useState('Pakistan');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,6 +31,12 @@ export function SignupPage() {
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState('');
   const [countdown, setCountdown] = useState(60);
+
+  const effectiveIndustryName =
+    selectedIndustry === OTHER_INDUSTRY_OPTION
+      ? customIndustry.trim() || 'Custom Business'
+      : selectedIndustry;
+  const activeIndustryProfile = getIndustryProfile(effectiveIndustryName);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -74,6 +83,14 @@ export function SignupPage() {
     e.preventDefault();
     setError('');
 
+    const finalIndustry =
+      selectedIndustry === OTHER_INDUSTRY_OPTION ? customIndustry.trim() : selectedIndustry;
+
+    if (!finalIndustry) {
+      setError('Please specify your custom industry or business category.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please re-enter.');
       return;
@@ -86,7 +103,7 @@ export function SignupPage() {
 
     setLoading(true);
     try {
-      const res = await register(email, password, businessName, undefined, targetCountry);
+      const res = await register(email, password, businessName, undefined, targetCountry, finalIndustry);
       if (res && res.requires_verification === false) {
         navigate('/dashboard');
         return;
@@ -211,9 +228,68 @@ export function SignupPage() {
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink"
-                placeholder="e.g. GlowSilk Beauty"
+                placeholder="e.g. GlowSilk Beauty, CloudPulse SaaS, UrbanBites Cafe"
                 disabled={loading}
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-brand-ink mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Briefcase size={13} className="text-brand-green" />
+                  <span>Business Industry / Category *</span>
+                </span>
+                <span className="text-[10px] text-brand-muted font-normal">Auto-configures channels & AI strategy</span>
+              </label>
+              <select
+                value={selectedIndustry}
+                onChange={(e) => setSelectedIndustry(e.target.value)}
+                className="border border-brand-line rounded-xl px-4 py-3 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink font-semibold"
+                disabled={loading}
+              >
+                {PRESET_INDUSTRIES.map((ind) => (
+                  <option key={ind.id} value={ind.id}>
+                    {ind.icon} {ind.label}
+                  </option>
+                ))}
+                <option value={OTHER_INDUSTRY_OPTION}>➕ Other (Specify Custom Industry...)</option>
+              </select>
+
+              {selectedIndustry === OTHER_INDUSTRY_OPTION && (
+                <div className="mt-2.5 p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl">
+                  <label className="block text-[11px] font-bold text-brand-ink mb-1">
+                    Specify Your Custom Industry / Business Branch *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={customIndustry}
+                    onChange={(e) => setCustomIndustry(e.target.value)}
+                    placeholder="e.g. Solar Energy, Car Detailing, Law Firm, Interior Design, Gym..."
+                    className="border border-emerald-300 rounded-lg px-3.5 py-2.5 w-full text-xs focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green bg-white text-brand-ink"
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-lg px-2.5 py-2">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-1">
+                  Recommended Channels:
+                </span>
+                {activeIndustryProfile.recommendedChannels.map((chId) => {
+                  const ch = MARKETING_CHANNEL_FORMATS.find((c) => c.id === chId);
+                  if (!ch) return null;
+                  return (
+                    <span
+                      key={ch.id}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
+                      style={{ backgroundColor: ch.badgeColor }}
+                    >
+                      {ch.shortLabel}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
 
             <div>

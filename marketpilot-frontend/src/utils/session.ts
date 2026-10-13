@@ -17,6 +17,7 @@ export const SESSION_KEYS = {
   BIZ: 'marketpilot_biz',
   FULL_NAME: 'marketpilot_full_name',
   TARGET_COUNTRY: 'marketpilot_target_country',
+  INDUSTRY: 'marketpilot_industry',
   LOGOUT_BROADCAST: 'marketpilot_logout_broadcast',
 } as const;
 

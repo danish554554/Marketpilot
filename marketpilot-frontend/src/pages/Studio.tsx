@@ -24,12 +24,27 @@ import {
   VolumeX,
   Mic,
   Globe,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Linkedin,
+  Facebook,
+  Youtube,
+  Briefcase
 } from 'lucide-react';
 import { BrandKit, MarketingStrategy, Product, TrendSignal } from '../types';
 import { api } from '../api/endpoints';
 import { useCurrency } from '../context/CurrencyContext';
 import { useAuth } from '../context/AuthContext';
+import { getIndustryProfile, MARKETING_CHANNEL_FORMATS } from '../utils/industry';
+
+export type StudioTabType =
+  | 'script'
+  | 'linkedin'
+  | 'fb_post'
+  | 'youtube'
+  | 'organic'
+  | 'paid'
+  | 'email'
+  | 'whatsapp';
 
 interface StudioProps {
   products: Product[];
@@ -65,8 +80,14 @@ export const Studio: React.FC<StudioProps> = ({
   onNavigate,
 }) => {
   const { formatAmount } = useCurrency();
-  const { targetCountry } = useAuth();
-  const [activeTab, setActiveTab] = useState<'script' | 'organic' | 'paid' | 'email' | 'whatsapp'>('script');
+  const { targetCountry, industry } = useAuth();
+  const activeProfile = getIndustryProfile(industry);
+
+  const [activeTab, setActiveTab] = useState<StudioTabType>(() => {
+    const firstRec = activeProfile.recommendedChannels[0];
+    const matched = MARKETING_CHANNEL_FORMATS.find((c) => c.id === firstRec);
+    return (matched?.studioTab as StudioTabType) || 'script';
+  });
   const [selectedProductId, setSelectedProductId] = useState<string>(
     externalProductId || products[0]?.id || ''
   );
@@ -101,15 +122,15 @@ export const Studio: React.FC<StudioProps> = ({
 
   const selectedProduct = products.find((p) => p.id === selectedProductId) || products[0] || {
     id: 'prod-fallback',
-    name: 'Your Featured Product',
-    description: 'High-quality e-commerce product',
+    name: `Flagship ${activeProfile.offeringSingular}`,
+    description: `High-performing ${activeProfile.label} solution`,
     price: 39.99,
     cost_price: 12.00,
     profit_margin: 70,
     margin_tier: 'high',
     stock_quantity: 150,
     pain_points: ['Daily friction', 'Inefficient alternatives'],
-    features: ['Premium materials', 'Fast results', 'Durable design'],
+    features: ['Premium quality', 'Fast results', 'Reliable performance'],
   };
 
   const selectedTrend = trends.find((t) => t.topic === selectedTrendTopic) || trends[0];
@@ -144,7 +165,6 @@ export const Studio: React.FC<StudioProps> = ({
       });
       setGuardrailResult(res);
     } catch {
-      // Local fallback check
       const lower = fullText.toLowerCase();
       const detected = prohibited.filter((w) => lower.includes(w.toLowerCase()));
       if (detected.length > 0) {
@@ -168,15 +188,18 @@ export const Studio: React.FC<StudioProps> = ({
   const [regenerationCount, setRegenerationCount] = useState(0);
 
   const generateAIPost = async (
-    tab = activeTab,
+    tab: StudioTabType = activeTab,
     prod = selectedProduct,
     trend = selectedTrendTopic,
     offer = customOffer,
     variationSeed = regenerationCount
   ) => {
     setIsGenerating(true);
-    const channelMap: Record<string, string> = {
+    const channelMap: Record<StudioTabType, string> = {
       script: 'tiktok',
+      linkedin: 'linkedin',
+      fb_post: 'facebook',
+      youtube: 'youtube',
       organic: 'instagram',
       paid: 'facebook',
       email: 'email',
@@ -193,7 +216,7 @@ export const Studio: React.FC<StudioProps> = ({
         format: tab,
         trend_topic: trend || activePillar?.trend_topic || undefined,
         hook_idea: activePillar?.hook_ideas?.[variationSeed % (activePillar?.hook_ideas?.length || 1)] || undefined,
-        custom_instructions: `Offer/Promotion: ${offer || 'Standard Pricing'}. Ground strictly in product features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}. Variation Seed: ${variationSeed}`,
+        custom_instructions: `Business Industry: ${activeProfile.label}. Brand Name: ${businessName}. Offer/Promotion: ${offer || 'Standard Pricing'}. Ground strictly in offering features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}. Variation Seed: ${variationSeed}`,
         target_country: targetCountry,
         target_language: COUNTRY_DEFAULT_LANG[targetCountry] || (targetCountry?.toLowerCase() === 'pakistan' ? 'Urdu' : 'English'),
         variation_seed: variationSeed,
@@ -215,18 +238,23 @@ export const Studio: React.FC<StudioProps> = ({
   };
 
   const fallbackLocalCopy = (
-    tab: string,
+    tab: StudioTabType | string,
     prod = selectedProduct,
     trend = selectedTrendTopic,
     offer = customOffer,
     variationSeed = 0
   ) => {
     const prodName = prod.name;
-    const feat1 = prod.features?.[0] || 'innovative high-performance design';
-    const feat2 = prod.features?.[1] || 'effortless salon-quality finish';
-    const pain1 = prod.pain_points?.[0] || 'wasting time on poor alternatives';
+    const feat1 = prod.features?.[0] || 'high-performance automation & quality';
+    const feat2 = prod.features?.[1] || 'measurable daily results';
+    const pain1 = prod.pain_points?.[0] || 'wasting hours on manual alternatives';
     const promo = offer || '20% OFF Launch Discount';
     const isUrduMarket = targetCountry?.toLowerCase() === 'pakistan';
+    const isSaaS =
+      activeProfile.id.toLowerCase().includes('saas') ||
+      activeProfile.id.toLowerCase().includes('tech');
+    const cleanHashtagName = prodName.replace(/[^a-zA-Z0-9]/g, '');
+    const cleanIndTag = activeProfile.label.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
 
     const nameLower = prodName.toLowerCase();
     let category = 'general';
@@ -244,7 +272,74 @@ export const Studio: React.FC<StudioProps> = ({
     let generatedCta = '';
     let generatedTags = '';
 
-    if (tab === 'script') {
+    if (tab === 'linkedin') {
+      generatedHook = isSaaS
+        ? `Most teams lose 10+ hours every single week to ${pain1}. Here is how we automated the entire workflow with ${prodName}:`
+        : `The biggest shift happening in ${activeProfile.label} right now — and how ${businessName || 'our team'} is leading it with ${prodName}:`;
+      generatedCaption =
+        `Over the past few months in the **${activeProfile.label}** space, we noticed a recurring bottleneck:\n` +
+        `Decision-makers and customers are exhausted by **${pain1}**.\n\n` +
+        `Throwing more manual effort at an outdated process doesn't scale. That's why we built **${prodName}** around 3 core pillars:\n\n` +
+        (prod.features && prod.features.length > 0
+          ? prod.features.map((f) => `✅ **${f}**`).join('\n')
+          : `✅ **${feat1}**\n✅ **${feat2}**`) +
+        `\n\n📊 **The Impact:**\n` +
+        `Instead of struggling with ${pain1}, users get immediate, reliable outcomes from Day 1.\n\n` +
+        `🎁 **Special Opportunity:** We are currently offering **${promo}** for early adopters and partners.\n\n` +
+        `What is the #1 bottleneck you are seeing in ${activeProfile.label} this quarter? Let's discuss in the comments 👇`;
+      generatedCta = isSaaS
+        ? `Book a 15-Min Demo or Start Your Free Trial (${promo})`
+        : `Connect with us or claim ${promo} via the link in comments`;
+      generatedTags = `#${cleanHashtagName} #${cleanIndTag} #Innovation #GrowthStrategy #B2B #Leadership`;
+    } else if (tab === 'fb_post') {
+      generatedHook = `Tired of dealing with ${pain1}? See why everyone in ${targetCountry} is switching to ${prodName}! 🙌`;
+      generatedCaption =
+        `Whether you're looking for reliability, speed, or real value in **${activeProfile.label}**, you shouldn't have to compromise.\n\n` +
+        `Here is why **${prodName}** by **${businessName}** has become a community favorite:\n\n` +
+        (prod.features && prod.features.length > 0
+          ? prod.features.map((f) => `🔥 ${f}`).join('\n')
+          : `🔥 ${feat1}\n🔥 ${feat2}`) +
+        `\n\n✨ **Current Special Offer:** ${promo}\n` +
+        `📍 Available across ${targetCountry} — message our page or click the link below to get started today!\n\n` +
+        `💬 Tag a friend or colleague who needs this!`;
+      generatedCta = `Send Message / Claim ${promo} Now`;
+      generatedTags = `#${cleanHashtagName} #${cleanIndTag} #${targetCountry.replace(/\s+/g, '')} #CommunityFavorite #SpecialOffer`;
+    } else if (tab === 'youtube') {
+      if (isUrduMarket) {
+        generatedHook = `How ${prodName} Solves ${pain1} in Minutes! (Complete Walkthrough & Review)`;
+        generatedCaption =
+          `[0:00 - 0:10 | THE HOOK & PROBLEM]\n` +
+          `Visual: Presenter on camera / screen-recording showing the frustration of ${pain1}.\n` +
+          `Voiceover (Roman Urdu): "Agar aap bhi ${activeProfile.label} mein roz roz ${pain1} se pareshan hain, toh aaj ki video aapka time aur paisa dono bachane wali hai!"\n` +
+          `Voiceover (اردو): "اگر آپ بھی روز روز اس مسئلے سے پریشان ہیں تو آج کی ویڈیو آپ کا وقت اور پیسہ دونوں بچانے والی ہے!"\n\n` +
+          `[0:10 - 0:45 | DEEP-DIVE WALKTHROUGH & DEMO]\n` +
+          `Visual: Step-by-step live demonstration of ${prodName}, zooming in on ${feat1} and ${feat2}.\n` +
+          `Voiceover (Roman Urdu): "Yeh hai ${prodName}. Dekhein kaise iska ${feat1} aur ${feat2} purane tareeqon ko mukammal taur par replace kar deta hai—bina kisi jhanjhat ke."\n\n` +
+          `[0:45 - 1:15 | REAL RESULTS & COMPARISON]\n` +
+          `Visual: Side-by-side comparison chart: Traditional Alternatives vs. ${prodName}.\n` +
+          `Voiceover (Roman Urdu): "Jahan aam alternatives mein ghanton lagte hain, wahan ${prodName} aapko deta hai instant aur verified results."\n\n` +
+          `[1:15 - 1:30 | CALL TO ACTION & PINNED LINK]\n` +
+          `Visual: End-screen graphic with link arrow and promo badge (${promo}).\n` +
+          `Voiceover (Roman Urdu): "Description aur pinned comment mein link maujood hai—abhi click karein aur ${promo} hasil karein! Channel ko subscribe karna mat bhoolein."`;
+      } else {
+        generatedHook = `Stop Wasting Time on ${pain1}! Full ${prodName} Walkthrough & Honest Review`;
+        generatedCaption =
+          `[0:00 - 0:10 | THE HOOK & PROBLEM]\n` +
+          `Visual: Fast B-roll / screen-share showing the pain of ${pain1}.\n` +
+          `Voiceover: "If you're still dealing with ${pain1} in ${activeProfile.label}, stop what you're doing. In the next 90 seconds, I'll show you how ${prodName} changes everything."\n\n` +
+          `[0:10 - 0:45 | STEP-BY-STEP PRODUCT DEMO]\n` +
+          `Visual: Close-up walkthrough of ${prodName} showcasing ${feat1} and ${feat2}.\n` +
+          `Voiceover: "First, look at how ${prodName} handles ${feat1}. Combined with ${feat2}, what used to take hours now happens effortlessly."\n\n` +
+          `[0:45 - 1:15 | ROI & WHY IT WINS]\n` +
+          `Visual: On-screen breakdown comparing cost and time saved.\n` +
+          `Voiceover: "Whether you're scaling fast or upgrading your daily workflow, the ROI is immediate."\n\n` +
+          `[1:15 - 1:30 | CALL TO ACTION]\n` +
+          `Visual: Pinned comment callout with ${promo} code.\n` +
+          `Voiceover: "Grab your exclusive ${promo} using the first link in the description below, and hit subscribe for more!"`;
+      }
+      generatedCta = `Click the 1st Link in Description to Claim ${promo}`;
+      generatedTags = `#${cleanHashtagName} #${cleanIndTag} #YouTubeShorts #Walkthrough #Review2026`;
+    } else if (tab === 'script') {
       if (isUrduMarket) {
         if (category === 'hair') {
           const hairAngles = [
@@ -252,26 +347,14 @@ export const Studio: React.FC<StudioProps> = ({
               h: 'Frizzy aur unmanageable baalon se tang aa chuke hain? Pehle yeh 30-second hack dekhein!',
               c: `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing damp, frizzy tangled hair vs. smooth salon blowout transition.\nVoiceover (Roman Urdu): "Har subah baalon ko dry aur style karne mein ghanton zaya karna chhod dein! Pehle yeh 30-second trick dekhein."\nVoiceover (اردو): "ہر صبح بالوں کو ڈرائی اور اسٹائل کرنے میں گھنٹوں ضائع کرنا چھوڑ دیں! پہلے یہ ۳۰ سیکنڈ ہیک دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter effortlessly gliding ${prodName} through hair, showing instant shine and volume (${feat1}).\nVoiceover (Roman Urdu): "Purane bhari dryers aur multiple brushes ka jhanjhat khatam! Yeh ${prodName} baalon ko sukhata bhi hai aur ${feat1} ke sath salon jaisa volumized blowout deta hai sirf chand minutes mein bina kisi heat damage ke!"\nVoiceover (اردو): "پرانے بھاری ڈرائرز کا جھنجھٹ ختم! یہ ${prodName} بالوں کو سکھاتا بھی ہے اور سیلون جیسا باؤنسی بلو آؤٹ دیتا ہے بغیر کسی نقصان کے!"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Smiling presenter showing silky, styled hair holding ${prodName}.\nVoiceover (Roman Urdu): "Salon ke hazaron rupay bachayein! Neeche diye gaye link par click karein aur launch sale mein poora ${promo} hasil karein!"\nVoiceover (اردو): "سیلون کے ہزاروں روپے بچائیں! نیچے دیے گئے لنک پر کلک کریں اور لانچ سیل میں پورا ${promo} حاصل کریں!"`,
               cta: `Neeche link par click karein aur ${promo} hasil karein`,
-              tags: `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #HairHacksPK #SalonAtHome #HairStylingUrdu #BeautyPK`
+              tags: `#${cleanHashtagName} #HairHacksPK #SalonAtHome #HairStylingUrdu #BeautyPK`
             },
             {
               h: 'Salon ke mehnge blowouts par paise zaya karna band karein!',
               c: `[HOOK - 0:00 to 0:03]\nVisual: Split-screen comparing expensive salon bill vs. doing it at home with ${prodName}.\nVoiceover (Roman Urdu): "Kiya aap bhi har event ke liye salon ke hazaron rupay kharch karte hain? Yeh video aapke bohot paise bachane wali hai!"\nVoiceover (اردو): "کیا آپ بھی ہر ایونٹ کے لیے سیلون کے ہزاروں روپے خرچ کرتے ہیں؟ یہ ویڈیو آپ کے بہت پیسے بچانے والی ہے!"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Demonstrating ${feat2} on damp hair, instantly creating smooth silky finish.\nVoiceover (Roman Urdu): "Is ${prodName} ka advanced airflow aur ${feat1} frizzy baalon ko instantly tame karta hai aur deta hai super smooth finish bina kisi salon appointment ke."\nVoiceover (اردو): "اس ${prodName} کا جدید ایئر فلو الجھے بالوں کو فوری چمکدار بناتا ہے اور دیتا ہے سیلون جیسی فنشنگ۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Final gorgeous hair flip holding ${prodName} box with Cash on Delivery banner.\nVoiceover (Roman Urdu): "Stock limited hai! Abhi order karein aur Cash on Delivery ke sath ${promo} hasil karein!"\nVoiceover (اردو): "اسٹاک محدود ہے! ابھی آرڈر کریں اور کیش آن ڈلیوری کے ساتھ خصوصی رعایت حاصل کریں!"`,
               cta: `Order Now with Cash on Delivery & Claim ${promo}`,
-              tags: `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #BlowoutHacks #PakistaniBeauties #TrendingPK #GlowHair`
+              tags: `#${cleanHashtagName} #BlowoutHacks #PakistaniBeauties #TrendingPK #GlowHair`
             },
-            {
-              h: 'The 1-step styling secret TikTok doesn\'t want you to miss!',
-              c: `[HOOK - 0:00 to 0:03]\nVisual: Fast-paced side-by-side: half head styled in 2 minutes vs messy half.\nVoiceover (Roman Urdu): "Agar aapke paas subah tayyar hone ke liye sirf 5 minute hotay hain, toh yeh device aapki life badal dega!"\nVoiceover (اردو): "اگر آپ کے پاس صبح تیار ہونے کے لیے صرف ۵ منٹ ہوتے ہیں تو یہ ڈیوائس آپ کی زندگی بدل دے گا!"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Rotating close-up of ${prodName} styling damp curls into sleek waves effortlessly.\nVoiceover (Roman Urdu): "Yeh ek hi waqt mein sukhata bhi hai aur professional style bhi karta hai. ${feat1} ke sath baal rehte hain bilkul soft aur shiny."\nVoiceover (اردو): "یہ ایک ہی وقت میں سکھاتا بھی ہے اور پروفیشنل اسٹائل بھی کرتا ہے، بغیر وقت ضائع کیے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Presenter flashing big smile with product in hand.\nVoiceover (Roman Urdu): "Toh der kis baat ki? Bio mein diye gaye link se abhi order karein aur flat ${promo} hasil karein!"\nVoiceover (اردو): "تو دیر کس بات کی؟ بائیو میں دیے گئے لنک سے ابھی آرڈر کریں اور خصوصی ڈسکاؤنٹ پائیں۔"`,
-              cta: `Bio link par click karein aur ${promo} hasil karein`,
-              tags: `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralGadgetsPK #HairCareRoutine #PakistanTrends`
-            },
-            {
-              h: 'Kharab aur damaged baalon ka sabse aasan aur safe solution!',
-              c: `[HOOK - 0:00 to 0:03]\nVisual: Shocked face pointing at burning flat iron vs gentle styling with ${prodName}.\nVoiceover (Roman Urdu): "High heat se baal jalana band karein! Yeh smart device dekhein jo heat damage ke baghair kaam karta hai."\nVoiceover (اردو): "زیادہ گرمی سے بال جلانا بند کریں! یہ اسمارٹ ڈیوائس دیکھیں جو بالوں کو خراب کیے بغیر اسٹائل کرتا ہے۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Smooth brush strokes gliding down showing heat-control technology and ${feat2}.\nVoiceover (Roman Urdu): "Iska intelligent heat distribution system aur ${feat1} aapke baalon ki natural moisture ko lock karta hai."\nVoiceover (اردو): "اس کا جدید سسٹم بالوں کی قدرتی چمک کو برقرار رکھتا ہے اور دیتا ہے شاندار لک۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Gorgeous final look with verified customer review popup.\nVoiceover (Roman Urdu): "Launch sale sirf is hafte ke liye hai! Abhi shop karein aur Cash on Delivery pay karein!"\nVoiceover (اردو): "لانچ سیل صرف اس ہفتے کے لیے ہے! ابھی شاپ کریں اور ڈسکاؤنٹ حاصل کریں۔"`,
-              cta: `Shop Now with COD & Claim ${promo}`,
-              tags: `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #HealthyHairPK #StyleHacks #MustHave`
-            }
           ];
           const choice = hairAngles[angle % hairAngles.length];
           generatedHook = choice.h;
@@ -282,54 +365,54 @@ export const Studio: React.FC<StudioProps> = ({
           generatedHook = `Dull aur dry skin se pareshan hain? Watch this 10-second glow hack!`;
           generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: Split-screen close-up showing dull skin vs instant luminous glow.\nVoiceover (Roman Urdu): "Mehnge treatments par paise zaya karna band karein! Pehle yeh natural skin glow hack dekhein."\nVoiceover (اردو): "مہنگے ٹریٹمنٹس پر پیسے ضائع کرنا بند کریں! پہلے یہ قدرتی گلو ہیک دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter applying ${prodName} highlighting ${feat1}.\nVoiceover (Roman Urdu): "Yeh ${prodName} ${feat1} ke sath skin ko deeply hydrate aur brighten karta hai bina kisi chipchipahat ke."\nVoiceover (اردو): "یہ ${prodName} جلد کو گہرائی سے ہائیڈریٹ اور چمکدار بناتا ہے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Clean finished look with product in hand.\nVoiceover (Roman Urdu): "Abhi neeche diye gaye link par click karein aur poora ${promo} hasil karein!"\nVoiceover (اردو): "ابھی نیچے دیے گئے لنک سے آرڈر کریں اور رعایت حاصل کریں!"`;
           generatedCta = `Shop Now & Claim ${promo}`;
-          generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #SkincareUrdu #GlowRoutinePK #BeautyHacks`;
+          generatedTags = `#${cleanHashtagName} #SkincareUrdu #GlowRoutinePK #BeautyHacks`;
         } else {
-          generatedHook = `Stop struggling with ${pain1}! Pehle yeh 30-second fix dekhein.`;
-          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: Frustrated reaction to daily problem with ${pain1}.\nVoiceover (Roman Urdu): "Agar aap bhi roz roz ${pain1} se tang hain, toh yeh 30-second video zaroor dekhein!"\nVoiceover (اردو): "اگر آپ بھی روز کے مسائل سے تنگ ہیں تو یہ ویڈیو دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter using ${prodName} highlighting ${feat1}.\nVoiceover (Roman Urdu): "Purane aur nakara tareeqon ko chhod dein. Yeh ${prodName} ${feat1} ke sath aapka time aur paisa dono bachata hai."\nVoiceover (اردو): "یہ ${prodName} آپ کا وقت اور پیسے دونوں بچاتا ہے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Product packaging with Cash on Delivery banner.\nVoiceover (Roman Urdu): "Cash on Delivery available hai! Abhi order karein aur flat ${promo} hasil karein!"\nVoiceover (اردو): "کیش آن ڈلیوری کے ساتھ ابھی آرڈر کریں اور رعایت پائیں!"`;
-          generatedCta = `Order with Cash on Delivery & Claim ${promo}`;
-          generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralFindsPK #ProblemSolved #LifeHacks`;
+          generatedHook = `Stop struggling with ${pain1} in ${activeProfile.label}! Pehle yeh 30-second fix dekhein.`;
+          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: Fast hook showing the daily frustration of ${pain1}.\nVoiceover (Roman Urdu): "Agar aap bhi roz roz ${pain1} se tang hain, toh yeh 30-second reel zaroor dekhein!"\nVoiceover (اردو): "اگر آپ بھی روز کے مسائل سے تنگ ہیں تو یہ ویڈیو دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Showcasing ${prodName} in action highlighting ${feat1} and ${feat2}.\nVoiceover (Roman Urdu): "Purane tareeqon ko chhod dein. Yeh ${prodName} ${feat1} ke sath aapka time aur paisa dono bachata hai."\nVoiceover (اردو): "یہ ${prodName} آپ کا وقت اور پیسے دونوں بچاتا ہے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Clear CTA overlay with ${promo} offer.\nVoiceover (Roman Urdu): "Abhi bio link par click karein ya message karein aur flat ${promo} hasil karein!"\nVoiceover (اردو): "ابھی لنک پر کلک کریں اور خصوصی رعایت پائیں!"`;
+          generatedCta = isSaaS ? `Start Free Trial & Claim ${promo}` : `Order / Book Now & Claim ${promo}`;
+          generatedTags = `#${cleanHashtagName} #${cleanIndTag} #ReelsPK #ProblemSolved`;
         }
       } else {
-        generatedHook = `Still struggling with ${pain1}? Watch this.`;
+        generatedHook = `Still struggling with ${pain1}? Watch this 30-second ${activeProfile.label} fix.`;
         generatedCaption = (
-          `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing the daily problem with ${pain1}.\nVoiceover: "Tired of ${pain1}? Watch this 10-second fix."\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter using ${prodName} highlighting ${feat1}.\nVoiceover: "The ${prodName} fixes this in seconds. Designed with ${feat1} for smooth, effortless results."\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Showing clean finished look with product in hand.\nVoiceover: "Tap the link below to get yours with ${promo} before stock runs out!"`
+          `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing the daily problem with ${pain1}.\nVoiceover: "Tired of ${pain1}? Watch this 15-second fix."\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter demonstrating ${prodName} highlighting ${feat1}.\nVoiceover: "The ${prodName} solves this in seconds. Built with ${feat1} and ${feat2} for effortless results."\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Showing final results with ${prodName}.\nVoiceover: "Tap the link in bio to get started with ${promo} today!"`
         );
         generatedCta = `Tap link in bio to claim ${promo}`;
-        generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ViralFinds #ProblemSolved #LifeHacks`;
+        generatedTags = `#${cleanHashtagName} #${cleanIndTag} #Reels #ProblemSolved`;
       }
     } else if (tab === 'organic') {
-      generatedHook = `Why most people struggle with ${pain1} (and the 30-second fix).`;
+      generatedHook = `Why most people struggle with ${pain1} in ${activeProfile.label} (and the 3-step fix).`;
       generatedCaption = (
-        `If you've been dealing with ${pain1}, you're not alone.\n\nMeet the **${prodName}**:\n`
+        `If you've been dealing with ${pain1}, you're not alone.\n\nMeet **${prodName}** by **${businessName}**:\n`
         + (prod.features || []).map(f => `✨ ${f}`).join('\n')
-        + `\n\n🎁 Special Offer: ${promo}\n\nDrop a 💬 below or save this post for your next order!`
+        + `\n\n🎁 Special Offer: ${promo}\n\nDrop a 💬 below or save this carousel for later!`
       );
       generatedCta = 'Comment "INFO" for the direct link';
-      generatedTags = `#${prodName.replace(/[^a-zA-Z0-9]/g, '')} #ProductReview #MustHave`;
+      generatedTags = `#${cleanHashtagName} #${cleanIndTag} #Carousel #MustHave`;
     } else if (tab === 'paid') {
-      generatedHook = `Stop dealing with ${pain1}. Upgrade to ${prodName}.`;
+      generatedHook = `Stop losing time & money to ${pain1}. Upgrade to ${prodName}.`;
       generatedCaption = (
-        `Upgrade your daily routine with the **${prodName}**.\n\n`
+        `Ready to transform your ${activeProfile.label} results with **${prodName}**?\n\n`
         + (prod.features || []).map(f => `✅ ${f}`).join('\n')
-        + `\n\n🛡️ 30-Day Satisfaction Guarantee\n🚚 Fast Tracked Shipping (COD Available)\n🏷️ Offer: ${promo}\n\nClick below to claim your discount today!`
+        + `\n\n🛡️ Verified Quality & Satisfaction Guarantee\n⚡ Instant Onboarding / Fast Fulfillment\n🏷️ Limited-Time Offer: **${promo}**\n\nClick below to claim your offer today!`
       );
-      generatedCta = `Shop Now & Claim ${promo}`;
-      generatedTags = '#LimitedTimeOffer #SpecialDiscount';
+      generatedCta = isSaaS ? `Start Free Trial (${promo})` : `Claim ${promo} Now`;
+      generatedTags = `#${cleanHashtagName} #${cleanIndTag} #Sponsored #SpecialOffer`;
     } else if (tab === 'email') {
-      generatedHook = `Subject: The smartest way to tackle ${pain1} ✨`;
+      generatedHook = `Subject: The smartest way to eliminate ${pain1} in ${activeProfile.label} ✨`;
       generatedCaption = (
-        `Hi there,\n\nIf ${pain1} has been holding you back, we built the **${prodName}** just for you.\n\nKey Highlights:\n`
+        `Hi there,\n\nIf ${pain1} has been slowing you down, we built **${prodName}** specifically to solve it.\n\nKey Highlights:\n`
         + (prod.features || []).map(f => `• **${f}**`).join('\n')
-        + `\n\n🎉 Limited Time Offer: ${promo}\n\nClick below to order yours today:`
+        + `\n\n🎉 Exclusive Subscriber Offer: **${promo}**\n\nClick below to get started today:`
       );
-      generatedCta = `Claim Your ${prodName}`;
+      generatedCta = `Explore ${prodName} & Claim ${promo}`;
       generatedTags = '';
     } else {
-      generatedHook = `✨ VIP Restock: ${prodName}`;
+      generatedHook = `✨ VIP Update from ${businessName}: ${prodName}`;
       generatedCaption = (
-        `Hi! Quick VIP update on the **${prodName}**.\n\nDue to high demand, our latest restock featuring ${feat1} is going fast!\n\n🎁 Exclusive Offer: **${promo}** + Free Express Delivery.\n\nReply YES to confirm your order or click below:`
+        `Hi! Quick VIP update on **${prodName}** (${activeProfile.label}).\n\nOur latest slot/batch featuring ${feat1} is now live!\n\n🎁 Exclusive WhatsApp Offer: **${promo}**.\n\nReply **YES** to this message to book/order in 1 click:`
       );
-      generatedCta = 'Order via WhatsApp with 1 Click';
+      generatedCta = 'Reply YES on WhatsApp to Claim';
       generatedTags = '';
     }
 
@@ -343,7 +426,7 @@ export const Studio: React.FC<StudioProps> = ({
 
   useEffect(() => {
     generateAIPost(activeTab, selectedProduct, selectedTrendTopic, customOffer, 0);
-  }, [activeTab, selectedProductId, selectedTrendTopic, selectedPillarIndex, activeStrategy]);
+  }, [activeTab, selectedProductId, selectedTrendTopic, selectedPillarIndex, activeStrategy, industry]);
 
   const handleCopy = () => {
     const fullText = `${hook}\n\n${caption}\n\n👉 CTA: ${cta}\n\n${hashtags}`;
@@ -362,12 +445,34 @@ export const Studio: React.FC<StudioProps> = ({
       tomorrow.setDate(tomorrow.getDate() + 1);
       const dateStr = tomorrow.toISOString().split('T')[0];
 
+      const channelByTab: Record<StudioTabType, string> = {
+        script: 'tiktok',
+        linkedin: 'linkedin',
+        fb_post: 'facebook',
+        youtube: 'youtube',
+        organic: 'instagram',
+        paid: 'facebook',
+        email: 'email',
+        whatsapp: 'whatsapp',
+      };
+
+      const formatByTab: Record<StudioTabType, string> = {
+        script: 'short_video_script',
+        linkedin: 'post_caption',
+        fb_post: 'post_caption',
+        youtube: 'short_video_script',
+        organic: 'carousel_slides',
+        paid: 'post_caption',
+        email: 'email_newsletter',
+        whatsapp: 'direct_message',
+      };
+
       const newItem = {
         id: 'cal-studio-' + Date.now(),
         title: `[${activeTab.toUpperCase()}] ${selectedProduct.name}: ${hook.slice(0, 35)}...`,
-        channel: activeTab === 'script' ? 'tiktok' : activeTab === 'organic' ? 'instagram' : activeTab === 'email' ? 'email' : 'instagram',
+        channel: channelByTab[activeTab] || 'instagram',
         channel_type: activeTab === 'paid' ? 'paid' : 'organic',
-        format: activeTab === 'script' ? 'short_video_script' : activeTab === 'organic' ? 'carousel_slides' : 'post_caption',
+        format: formatByTab[activeTab] || 'post_caption',
         status: 'scheduled',
         scheduled_date: dateStr,
         scheduled_time_slot: 'morning_09_00',
@@ -376,7 +481,7 @@ export const Studio: React.FC<StudioProps> = ({
         call_to_action: cta,
         product_name: selectedProduct.name,
         focus_product_id: selectedProduct.id,
-        strategic_rationale: `Saved from AI Studio for ${selectedProduct.name}`,
+        strategic_rationale: `Saved from AI Studio (${activeProfile.label}) for ${selectedProduct.name}`,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -474,10 +579,18 @@ export const Studio: React.FC<StudioProps> = ({
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <span className="text-[10px] font-extrabold text-slate-400 uppercase mr-1">BASED ON:</span>
 
+          {/* Industry Badge */}
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold">
+            <Briefcase size={13} className="text-brand-green shrink-0" />
+            <span>
+              Industry: <strong>{activeProfile.icon} {activeProfile.label}</strong>
+            </span>
+          </div>
+
           {/* Product Badge */}
           <div className="bg-slate-50 border border-slate-200 text-brand-ink text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold max-w-full truncate">
             <Package size={13} className="text-brand-green shrink-0" />
-            <span className="truncate">Product: <strong className="text-brand-green truncate max-w-[140px] sm:max-w-none inline-block align-bottom">{selectedProduct.name}</strong></span>
+            <span className="truncate">{activeProfile.offeringSingular}: <strong className="text-brand-green truncate max-w-[140px] sm:max-w-none inline-block align-bottom">{selectedProduct.name}</strong></span>
             {selectedProduct.profit_margin && (
               <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold shrink-0">
                 {selectedProduct.profit_margin}% Margin
@@ -516,11 +629,11 @@ export const Studio: React.FC<StudioProps> = ({
           <div className="flex items-center gap-1.5">
             <Package size={13} className="text-brand-green" />
             <small className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-              Catalog Product Switcher ({products.length} Products Available)
+              {activeProfile.offeringPlural} Switcher ({products.length} Available)
             </small>
           </div>
           <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
-            Click any product to switch copywriting & script angle instantly
+            Click any {activeProfile.offeringSingular.toLowerCase()} to switch copywriting & script angle instantly
           </span>
         </div>
 
@@ -546,13 +659,13 @@ export const Studio: React.FC<StudioProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-base">{isHero ? '🧴' : '✨'}</span>
+                  <span className="text-base">{activeProfile.icon}</span>
                   <div>
                     <strong className={`text-xs block max-w-[160px] truncate ${isSelected ? 'text-emerald-950 font-extrabold' : 'text-slate-800 font-bold'}`}>
                       {prod.name}
                     </strong>
                     <span className="text-[10px] text-slate-500 font-medium">
-                      {formatAmount(prod.price)} · {prod.stock_quantity || 100} in stock
+                      {formatAmount(prod.price)} · {prod.stock_quantity || 100} capacity
                     </span>
                   </div>
                 </div>
@@ -586,8 +699,8 @@ export const Studio: React.FC<StudioProps> = ({
                 <span>Grounding Completeness Warning</span>
               </div>
               <ul className="text-[11px] text-amber-800 space-y-1 pl-5 list-disc">
-                {missingPainPoints && <li>Missing customer pain points on this product.</li>}
-                {missingFeatures && <li>Missing product features.</li>}
+                {missingPainPoints && <li>Missing customer pain points on this item.</li>}
+                {missingFeatures && <li>Missing key features.</li>}
                 {missingTrends && <li>No live trends ingested yet (using evergreen angles).</li>}
               </ul>
             </div>
@@ -607,7 +720,7 @@ export const Studio: React.FC<StudioProps> = ({
             {/* 1. Product Selector */}
             <div>
               <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1 flex items-center gap-1">
-                <Package size={12} className="text-brand-green" /> 1. Source Product
+                <Package size={12} className="text-brand-green" /> 1. Source {activeProfile.offeringSingular}
               </label>
               <select
                 value={selectedProductId}
@@ -622,7 +735,7 @@ export const Studio: React.FC<StudioProps> = ({
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.profit_margin ? `${p.profit_margin}% margin` : 'In stock'})
+                    {p.name} ({p.profit_margin ? `${p.profit_margin}% margin` : 'Active'})
                   </option>
                 ))}
                 {products.length === 0 && <option value="">{selectedProduct.name}</option>}
@@ -631,7 +744,7 @@ export const Studio: React.FC<StudioProps> = ({
               {/* Product Pricing Details */}
               <div className="mt-2 p-2.5 bg-slate-50 rounded-xl text-[11px] space-y-1 border border-slate-100">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Retail Price:</span>
+                  <span className="text-slate-500">{activeProfile.priceLabel}:</span>
                   <b className="text-brand-ink">{formatAmount(selectedProduct.price || 39.99)}</b>
                 </div>
                 <div className="flex justify-between">
@@ -639,8 +752,8 @@ export const Studio: React.FC<StudioProps> = ({
                   <b className="text-emerald-700">{selectedProduct.profit_margin || 65}% ({selectedProduct.margin_tier || 'high'} tier)</b>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">In Stock:</span>
-                  <b className="text-brand-ink">{selectedProduct.stock_quantity || 100} units</b>
+                  <span className="text-slate-500">{activeProfile.stockLabel}:</span>
+                  <b className="text-brand-ink">{selectedProduct.stock_quantity || 100}</b>
                 </div>
               </div>
             </div>
@@ -654,7 +767,7 @@ export const Studio: React.FC<StudioProps> = ({
                 type="text"
                 value={customOffer}
                 onChange={(e) => setCustomOffer(e.target.value)}
-                placeholder="e.g. 20% Off Launch Discount, Free Delivery"
+                placeholder="e.g. 14-Day Free Trial, 20% Off Launch Discount"
                 className="w-full text-xs p-2.5 rounded-xl border border-brand-line bg-white font-medium focus:outline-none focus:border-brand-green"
               />
             </div>
@@ -686,10 +799,10 @@ export const Studio: React.FC<StudioProps> = ({
             <div className="bg-[#f8faf9] border border-[#e2eae6] rounded-xl p-3 space-y-1.5">
               <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-emerald-800 uppercase">
                 <HelpCircle size={12} className="text-emerald-700" />
-                Why this content was chosen:
+                Why this content was chosen ({activeProfile.label}):
               </div>
               <p className="text-[11px] text-slate-600 leading-relaxed m-0">
-                Grounded in high stock inventory ({selectedProduct.stock_quantity || 100} units) with {selectedProduct.profit_margin || 65}% margin. Connects customer pain point ({selectedProduct.pain_points?.[0] || 'daily friction'}) directly to the "{selectedTrendTopic || 'Problem-Solution'}" trend angle for maximum ROAS.
+                {activeProfile.growthPlaybook} Connects customer pain point ({selectedProduct.pain_points?.[0] || 'daily friction'}) directly to "{selectedTrendTopic || 'Problem-Solution'}" for maximum conversion.
               </p>
             </div>
           </div>
@@ -724,66 +837,54 @@ export const Studio: React.FC<StudioProps> = ({
         {/* Right Multi-Channel Editor (8 cols) */}
         <main className="lg:col-span-8 bg-white border border-brand-line rounded-2xl p-4 sm:p-6 shadow-card space-y-5 overflow-hidden">
           {/* Format / Channel Tabs */}
-          <div className="flex overflow-x-auto pb-2 sm:pb-3 sm:flex-wrap items-center gap-1.5 sm:gap-2 border-b border-brand-line">
-            <button
-              onClick={() => setActiveTab('script')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'script'
-                  ? 'bg-brand-green text-white shadow-sm'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Video size={13} />
-              <span>TikTok Video Script</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('organic')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'organic'
-                  ? 'bg-brand-green text-white shadow-sm'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Instagram size={13} />
-              <span>Instagram Carousel</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('paid')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'paid'
-                  ? 'bg-brand-green text-white shadow-sm'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Sparkles size={13} />
-              <span>Paid Direct-Response Ad</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('email')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'email'
-                  ? 'bg-brand-green text-white shadow-sm'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Mail size={13} />
-              <span>Email Newsletter</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('whatsapp')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'whatsapp'
-                  ? 'bg-brand-green text-white shadow-sm'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <MessageSquare size={13} />
-              <span>WhatsApp VIP Restock</span>
-            </button>
+          <div className="space-y-2 border-b border-brand-line pb-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                Select Channel & Format (★ = Recommended for {activeProfile.label})
+              </span>
+            </div>
+            <div className="flex overflow-x-auto sm:flex-wrap items-center gap-1.5">
+              {[
+                { tab: 'linkedin' as StudioTabType, channelId: 'linkedin_post', label: 'LinkedIn Post', icon: <Linkedin size={13} /> },
+                { tab: 'fb_post' as StudioTabType, channelId: 'fb_post', label: 'FB Simple Post', icon: <Facebook size={13} /> },
+                { tab: 'script' as StudioTabType, channelId: 'reels_tiktok', label: 'Reels / TikTok Script', icon: <Video size={13} /> },
+                { tab: 'youtube' as StudioTabType, channelId: 'youtube_video', label: 'YouTube Video / Short', icon: <Youtube size={13} /> },
+                { tab: 'organic' as StudioTabType, channelId: 'ig_carousel', label: 'IG Carousel', icon: <Instagram size={13} /> },
+                { tab: 'paid' as StudioTabType, channelId: 'paid_ad', label: 'Paid Ad Copy', icon: <Sparkles size={13} /> },
+                { tab: 'email' as StudioTabType, channelId: 'email_newsletter', label: 'Email Sequence', icon: <Mail size={13} /> },
+                { tab: 'whatsapp' as StudioTabType, channelId: 'whatsapp_broadcast', label: 'WhatsApp VIP', icon: <MessageSquare size={13} /> },
+              ].map((item) => {
+                const isActive = activeTab === item.tab;
+                const isRec = activeProfile.recommendedChannels.includes(item.channelId);
+                return (
+                  <button
+                    key={item.tab}
+                    type="button"
+                    onClick={() => setActiveTab(item.tab)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      isActive
+                        ? 'bg-brand-green text-white shadow-sm'
+                        : isRec
+                        ? 'bg-emerald-50/70 text-brand-ink border border-emerald-200 hover:bg-emerald-100/70'
+                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                    {isRec && (
+                      <span
+                        className={`text-[9px] font-black ${
+                          isActive ? 'text-amber-200' : 'text-brand-green'
+                        }`}
+                        title={`Recommended for ${activeProfile.label}`}
+                      >
+                        ★
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Editor Area */}
@@ -792,7 +893,12 @@ export const Studio: React.FC<StudioProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-[10px] font-extrabold text-slate-600 uppercase flex items-center gap-1">
-                  <Lightbulb size={12} className="text-amber-500" /> Viral Opening Hook (First 3 Seconds)
+                  <Lightbulb size={12} className="text-amber-500" />{' '}
+                  {activeTab === 'youtube'
+                    ? 'YouTube Video Title & 5-Second Hook'
+                    : activeTab === 'linkedin'
+                    ? 'LinkedIn Scroll-Stopping Opening Line'
+                    : 'Viral Opening Hook (First 3 Seconds)'}
                 </label>
                 <span className="text-[9px] text-slate-400 font-bold flex items-center gap-1">
                   <Edit3 size={10} /> Editable
@@ -816,9 +922,11 @@ export const Studio: React.FC<StudioProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
                 <div className="flex items-center gap-2">
                   <label className="text-[10px] font-extrabold text-slate-600 uppercase">
-                    {activeTab === 'script' ? 'Video Script with Localized Voiceover' : 'Generated Copy / Body Content'}
+                    {activeTab === 'script' || activeTab === 'youtube'
+                      ? 'Video Script with Localized Voiceover'
+                      : 'Generated Copy / Body Content'}
                   </label>
-                  {activeTab === 'script' && (
+                  {(activeTab === 'script' || activeTab === 'youtube') && (
                     <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md flex items-center gap-1">
                       🗣️ Voiceover: {targetCountry === 'Pakistan' ? 'Urdu (Roman & Native Script)' : targetCountry}
                     </span>
@@ -826,7 +934,7 @@ export const Studio: React.FC<StudioProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {activeTab === 'script' && (
+                  {(activeTab === 'script' || activeTab === 'youtube') && (
                     <button
                       type="button"
                       onClick={handlePlayScriptAudio}
@@ -851,7 +959,7 @@ export const Studio: React.FC<StudioProps> = ({
                 </div>
               </div>
               <textarea
-                rows={activeTab === 'script' ? 12 : 8}
+                rows={activeTab === 'script' || activeTab === 'youtube' ? 12 : 9}
                 value={caption}
                 onChange={(e) => {
                   setCaption(e.target.value);

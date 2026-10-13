@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Lock, Mail, User, CheckCircle2, AlertCircle, Briefcase } from 'lucide-react';
 import { api } from '../api/endpoints';
 import { setAuthToken } from '../api/client';
+import { PRESET_INDUSTRIES, OTHER_INDUSTRY_OPTION } from '../utils/industry';
+import { SESSION_KEYS } from '../utils/session';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -14,6 +16,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [selectedIndustry, setSelectedIndustry] = useState(PRESET_INDUSTRIES[0].id);
+  const [customIndustry, setCustomIndustry] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -28,7 +32,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
     try {
       if (isRegister) {
-        const res = await api.register(email, password, fullName);
+        const finalIndustry =
+          selectedIndustry === OTHER_INDUSTRY_OPTION
+            ? customIndustry.trim() || 'Custom Business'
+            : selectedIndustry;
+        localStorage.setItem(SESSION_KEYS.INDUSTRY, finalIndustry);
+        const res = await api.register(email, password, fullName, fullName, 'Pakistan', finalIndustry);
         if (res.access_token) {
           setAuthToken(res.access_token);
           onSuccess(email);
@@ -87,20 +96,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {isRegister && (
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 mb-1">Full Name</label>
-              <div className="relative">
-                <User size={15} className="absolute left-3 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Sarah Khan"
-                  className="w-full pl-9 pr-3 py-2.5 text-xs rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
-                />
+            <>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">Business / Brand Name</label>
+                <div className="relative">
+                  <User size={15} className="absolute left-3 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="GlowSilk Beauty / CloudPulse SaaS"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs rounded-lg border border-brand-line focus:outline-none focus:border-brand-green"
+                  />
+                </div>
               </div>
-            </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
+                  <Briefcase size={12} className="text-brand-green" />
+                  <span>Business Industry *</span>
+                </label>
+                <select
+                  value={selectedIndustry}
+                  onChange={(e) => setSelectedIndustry(e.target.value)}
+                  className="w-full px-3 py-2.5 text-xs rounded-lg border border-brand-line focus:outline-none focus:border-brand-green bg-white font-semibold"
+                >
+                  {PRESET_INDUSTRIES.map((ind) => (
+                    <option key={ind.id} value={ind.id}>
+                      {ind.icon} {ind.label}
+                    </option>
+                  ))}
+                  <option value={OTHER_INDUSTRY_OPTION}>➕ Other (Specify Custom Industry...)</option>
+                </select>
+                {selectedIndustry === OTHER_INDUSTRY_OPTION && (
+                  <input
+                    type="text"
+                    required
+                    value={customIndustry}
+                    onChange={(e) => setCustomIndustry(e.target.value)}
+                    placeholder="Specify custom industry (e.g. Solar, Salon, Real Estate)..."
+                    className="mt-2 w-full px-3 py-2 text-xs rounded-lg border border-emerald-300 focus:outline-none focus:border-brand-green"
+                  />
+                )}
+              </div>
+            </>
           )}
 
           <div>

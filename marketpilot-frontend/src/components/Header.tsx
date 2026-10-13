@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Menu, Bell, Sparkles, User, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CurrencySelector } from './CurrencySelector';
+import { getIndustryProfile, PRESET_INDUSTRIES } from '../utils/industry';
 
 interface HeaderProps {
   activePage: string;
@@ -35,16 +36,26 @@ export const Header: React.FC<HeaderProps> = ({
   isLoggedIn,
 }) => {
   const current = pageTitles[activePage] || { title: 'MarketPilot AI', kicker: 'WORKSPACE' };
-  const { logout } = useAuth();
+  const { logout, industry, setIndustry } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showIndustryMenu, setShowIndustryMenu] = useState(false);
+  const [customIndustryInput, setCustomIndustryInput] = useState('');
+  const [isCustomMode, setIsCustomMode] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const industryMenuRef = useRef<HTMLDivElement>(null);
+
+  const activeProfile = getIndustryProfile(industry);
 
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
+      }
+      if (industryMenuRef.current && !industryMenuRef.current.contains(event.target as Node)) {
+        setShowIndustryMenu(false);
+        setIsCustomMode(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -55,6 +66,21 @@ export const Header: React.FC<HeaderProps> = ({
     setShowUserMenu(false);
     logout();
     navigate('/');
+  };
+
+  const handleSelectIndustry = (indId: string) => {
+    setIndustry(indId);
+    setShowIndustryMenu(false);
+    setIsCustomMode(false);
+  };
+
+  const handleSaveCustomIndustry = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customIndustryInput.trim()) return;
+    setIndustry(customIndustryInput.trim());
+    setCustomIndustryInput('');
+    setIsCustomMode(false);
+    setShowIndustryMenu(false);
   };
 
   return (
@@ -80,6 +106,99 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* Industry Switcher */}
+        <div className="relative" ref={industryMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowIndustryMenu(!showIndustryMenu)}
+            className="flex items-center gap-1.5 bg-slate-50 hover:bg-emerald-50/70 border border-brand-line hover:border-brand-green/40 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-brand-ink transition-all cursor-pointer"
+            title="Switch Business Industry / Niche"
+          >
+            <span>{activeProfile.icon}</span>
+            <span className="hidden md:inline max-w-[135px] truncate">{activeProfile.label}</span>
+            <span className="text-[9px] text-slate-400">▾</span>
+          </button>
+
+          {showIndustryMenu && (
+            <div className="absolute right-0 top-full mt-2 bg-white border border-brand-line rounded-2xl shadow-xl p-2 w-72 z-50">
+              <div className="px-2.5 py-1.5 border-b border-slate-100 mb-1">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Active Business Industry
+                </p>
+                <p className="text-xs font-bold text-brand-ink truncate">
+                  {activeProfile.icon} {industry}
+                </p>
+              </div>
+
+              <div className="max-h-60 overflow-y-auto space-y-0.5 pr-0.5">
+                {PRESET_INDUSTRIES.map((ind) => {
+                  const isSelected = ind.id.toLowerCase() === industry.toLowerCase();
+                  return (
+                    <button
+                      key={ind.id}
+                      type="button"
+                      onClick={() => handleSelectIndustry(ind.id)}
+                      className={`w-full text-left px-2.5 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-50 text-brand-green font-extrabold'
+                          : 'text-slate-700 hover:bg-slate-50 font-semibold'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <span>{ind.icon}</span>
+                        <span className="truncate">{ind.label}</span>
+                      </span>
+                      {isSelected && <span className="text-[10px] text-brand-green font-black">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+                {!isCustomMode ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomMode(true)}
+                    className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-extrabold text-brand-green hover:bg-emerald-50 flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <span>➕</span>
+                    <span>Other (Specify Custom Industry...)</span>
+                  </button>
+                ) : (
+                  <form onSubmit={handleSaveCustomIndustry} className="p-1.5 bg-slate-50 rounded-xl space-y-2">
+                    <label className="block text-[10px] font-bold text-slate-600">
+                      Enter Any Business Branch / Industry:
+                    </label>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={customIndustryInput}
+                      onChange={(e) => setCustomIndustryInput(e.target.value)}
+                      placeholder="e.g. Solar Energy, Salon, Real Estate..."
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-brand-line rounded-lg focus:outline-none focus:border-brand-green"
+                    />
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomMode(false)}
+                        className="px-2 py-1 text-[10px] font-bold text-slate-500 hover:text-slate-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-2.5 py-1 text-[10px] font-extrabold bg-brand-green text-white rounded-lg hover:bg-brand-green-dark"
+                      >
+                        Apply Industry
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Currency Switcher */}
         <CurrencySelector />
 
@@ -105,6 +224,9 @@ export const Header: React.FC<HeaderProps> = ({
               {isLoggedIn && userEmail && (
                 <div className="px-4 py-2.5 border-b border-slate-100">
                   <p className="text-xs font-bold text-brand-ink truncate">{userEmail}</p>
+                  <p className="text-[10px] text-emerald-700 font-bold truncate mt-0.5">
+                    {activeProfile.icon} {industry}
+                  </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                     <p className="text-[10px] text-slate-400 font-medium">Logged in</p>
