@@ -38,6 +38,7 @@ class LoginRequest(BaseModel):
 
 class PasswordResetEmailRequest(BaseModel):
     email: EmailStr
+    redirect_url: str | None = None
 
 
 class PasswordUpdateRequest(BaseModel):

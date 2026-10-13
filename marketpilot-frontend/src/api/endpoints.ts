@@ -45,8 +45,12 @@ export const api = {
     const res = await apiClient.post('/auth/resend-otp', { email });
     return res.data;
   },
-  requestPasswordReset: async (email: string) => {
-    const res = await apiClient.post('/auth/password-reset', { email });
+  requestPasswordReset: async (email: string, redirectUrl?: string) => {
+    const defaultRedirect = typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined;
+    const res = await apiClient.post('/auth/password-reset', {
+      email,
+      redirect_url: redirectUrl || defaultRedirect,
+    });
     return res.data;
   },
   updatePassword: async (newPassword: string) => {

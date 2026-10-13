@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 import httpx
+import os
 
 from app.dependencies import CurrentUser
 from app.schemas import (
@@ -12,6 +13,35 @@ from app.supabase_client import get_anon_client, get_service_client
 import threading
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+def _get_base_frontend_url(request: Request | None = None) -> str:
+    """
+    Returns the appropriate frontend URL (Vercel production or local).
+    Defaults to live production https://marketpilot-iota.vercel.app so emails always work live.
+    """
+    from app.config import get_settings
+    settings = get_settings()
+
+    if request:
+        origin = request.headers.get("origin") or request.headers.get("referer")
+        if origin:
+            clean_origin = origin.rstrip("/")
+            if "://" in clean_origin:
+                scheme_host = "/".join(clean_origin.split("/")[:3])
+                if "localhost" in scheme_host or "127.0.0.1" in scheme_host:
+                    return scheme_host
+                if "vercel.app" in scheme_host or "marketpilot" in scheme_host:
+                    return scheme_host
+
+    if settings.environment.lower() == "production" or os.environ.get("RENDER"):
+        return "https://marketpilot-iota.vercel.app"
+
+    configured = str(settings.password_reset_redirect_url)
+    if "vercel" in configured:
+        return "https://marketpilot-iota.vercel.app"
+
+    return "https://marketpilot-iota.vercel.app"
 
 
 def _profile_for(
@@ -88,11 +118,12 @@ def _generate_otp(email: str, user_id: str | None = None) -> str:
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest) -> AuthResponse:
+def register(payload: RegisterRequest, request: Request) -> AuthResponse:
     try:
         email_clean = str(payload.email).strip().lower()
         biz_name = payload.business_name.strip() if payload.business_name and payload.business_name.strip() else payload.full_name
         target_country = payload.target_country.strip() if payload.target_country else "Pakistan"
+        frontend_base = _get_base_frontend_url(request)
         
         # Determine initial country code and currency defaults
         country_code = "PK" if "pakistan" in target_country.lower() else "US"
@@ -142,7 +173,7 @@ def register(payload: RegisterRequest) -> AuthResponse:
                         link_res = service_client.auth.admin.generate_link({
                             "type": "magiclink",
                             "email": email_clean,
-                            "options": {"redirect_to": "http://localhost:3000"}
+                            "options": {"redirect_to": frontend_base}
                         })
                         if link_res and link_res.properties:
                             action_link = link_res.properties.action_link
@@ -184,7 +215,7 @@ def register(payload: RegisterRequest) -> AuthResponse:
                 "email": email_clean,
                 "password": payload.password,
                 "options": {
-                    "email_redirect_to": "https://marketpilot-iota.vercel.app",
+                    "email_redirect_to": frontend_base,
                     "data": {
                         "full_name": payload.full_name,
                         "business_name": biz_name,
@@ -207,7 +238,7 @@ def register(payload: RegisterRequest) -> AuthResponse:
                     "email": email_clean,
                     "password": payload.password,
                     "options": {
-                        "redirect_to": "https://marketpilot-iota.vercel.app",
+                        "redirect_to": frontend_base,
                         "data": {
                             "full_name": payload.full_name,
                             "business_name": biz_name,
@@ -351,11 +382,12 @@ def register(payload: RegisterRequest) -> AuthResponse:
 
 
 @router.post("/resend-otp", response_model=MessageResponse)
-def resend_otp(payload: ResendOtpRequest) -> MessageResponse:
+def resend_otp(payload: ResendOtpRequest, request: Request) -> MessageResponse:
     email_clean = str(payload.email).strip().lower()
     service_client = get_service_client()
     user_id = None
     biz_name = "MarketPilot AI"
+    frontend_base = _get_base_frontend_url(request)
     try:
         users = service_client.auth.admin.list_users()
         matching_user = next((u for u in users if u.email and u.email.lower() == email_clean), None)
@@ -374,7 +406,7 @@ def resend_otp(payload: ResendOtpRequest) -> MessageResponse:
         link_res = service_client.auth.admin.generate_link({
             "type": "magiclink",
             "email": email_clean,
-            "options": {"redirect_to": "http://localhost:3000"}
+            "options": {"redirect_to": frontend_base}
         })
         if link_res and link_res.properties:
             action_link = link_res.properties.action_link
@@ -576,11 +608,12 @@ def login(payload: LoginRequest) -> AuthResponse:
 
 
 @router.post("/password-reset", response_model=MessageResponse)
-def request_password_reset(payload: PasswordResetEmailRequest) -> MessageResponse:
+def request_password_reset(payload: PasswordResetEmailRequest, request: Request) -> MessageResponse:
     email_clean = str(payload.email).strip().lower()
     try:
         from app.config import get_settings
-        redirect_url = str(get_settings().password_reset_redirect_url)
+        frontend_base = _get_base_frontend_url(request)
+        redirect_url = payload.redirect_url or f"{frontend_base}/reset-password"
         service_client = get_service_client()
         link_res = service_client.auth.admin.generate_link({
             "type": "recovery",
@@ -600,9 +633,11 @@ def request_password_reset(payload: PasswordResetEmailRequest) -> MessageRespons
         print(f"Notice: Password reset link generation error: {exc}")
         try:
             from app.config import get_settings
+            frontend_base = _get_base_frontend_url(request)
+            fallback_url = payload.redirect_url or f"{frontend_base}/reset-password"
             get_anon_client().auth.reset_password_for_email(
                 email_clean,
-                {"redirect_to": str(get_settings().password_reset_redirect_url)}
+                {"redirect_to": fallback_url}
             )
         except Exception:
             pass
