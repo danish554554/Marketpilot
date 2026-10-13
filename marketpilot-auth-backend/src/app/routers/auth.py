@@ -104,10 +104,73 @@ def register(payload: RegisterRequest) -> AuthResponse:
         try:
             existing_prof = service_client.table("profiles").select("id,email").eq("email", email_clean).maybe_single().execute()
             if existing_prof and existing_prof.data:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="This email is already registered. Please log in with your password.",
-                )
+                is_user_verified = False
+                existing_user_id = str(existing_prof.data.get("id"))
+                try:
+                    admin = service_client.auth.admin
+                    sb_user = admin.get_user_by_id(existing_user_id)
+                    if sb_user and sb_user.user:
+                        meta = sb_user.user.user_metadata or {}
+                        is_user_verified = bool(meta.get("is_verified", False))
+                except Exception:
+                    pass
+
+                if is_user_verified:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="This email is already registered. Please log in with your password.",
+                    )
+                else:
+                    # User registered previously but has not verified yet: update password and resend fresh OTP
+                    try:
+                        service_client.auth.admin.update_user_by_id(existing_user_id, {
+                            "password": payload.password,
+                            "user_metadata": {
+                                "business_name": biz_name,
+                                "full_name": payload.full_name,
+                                "target_country": target_country,
+                                "industry": payload.industry,
+                                "is_verified": False,
+                            }
+                        })
+                    except Exception:
+                        pass
+
+                    otp_code = _generate_otp(email_clean, existing_user_id)
+                    action_link = None
+                    try:
+                        link_res = service_client.auth.admin.generate_link({
+                            "type": "magiclink",
+                            "email": email_clean,
+                            "options": {"redirect_to": "http://localhost:3000"}
+                        })
+                        if link_res and link_res.properties:
+                            action_link = link_res.properties.action_link
+                    except Exception:
+                        pass
+
+                    def _resend_unverified_bg():
+                        try:
+                            from app.services.email_service import send_verification_email
+                            send_verification_email(
+                                to_email=email_clean,
+                                otp_code=otp_code,
+                                business_name=biz_name,
+                                action_link=action_link,
+                            )
+                        except Exception as e:
+                            print(f"Notice: resend unverified error: {e}")
+
+                    threading.Thread(target=_resend_unverified_bg, daemon=True).start()
+
+                    profile = _profile_for(existing_user_id, fallback_email=email_clean, fallback_name=payload.full_name)
+                    return AuthResponse(
+                        user=profile,
+                        session=None,
+                        requires_verification=True,
+                        verification_code=None,
+                        message=f"A fresh verification code has been sent to {payload.email}. Please check your Gmail inbox.",
+                    )
         except HTTPException:
             raise
         except Exception:
@@ -289,14 +352,17 @@ def register(payload: RegisterRequest) -> AuthResponse:
 
 @router.post("/resend-otp", response_model=MessageResponse)
 def resend_otp(payload: ResendOtpRequest) -> MessageResponse:
-    email_clean = str(payload.email).lower()
+    email_clean = str(payload.email).strip().lower()
     service_client = get_service_client()
     user_id = None
+    biz_name = "MarketPilot AI"
     try:
         users = service_client.auth.admin.list_users()
         matching_user = next((u for u in users if u.email and u.email.lower() == email_clean), None)
         if matching_user:
             user_id = str(matching_user.id)
+            meta = matching_user.user_metadata or {}
+            biz_name = meta.get("business_name") or "MarketPilot AI"
     except Exception:
         pass
 
@@ -308,42 +374,44 @@ def resend_otp(payload: ResendOtpRequest) -> MessageResponse:
         link_res = service_client.auth.admin.generate_link({
             "type": "magiclink",
             "email": email_clean,
-            "options": {"redirect_to": "https://marketpilot-iota.vercel.app"}
+            "options": {"redirect_to": "http://localhost:3000"}
         })
         if link_res and link_res.properties:
             action_link = link_res.properties.action_link
+            if link_res.properties.email_otp:
+                f_otp = str(link_res.properties.email_otp).strip()
+                if email_clean in _OTP_CACHE:
+                    _OTP_CACHE[email_clean].setdefault("valid_tokens", []).append(f_otp)
+                _OTP_CACHE[f_otp] = email_clean
     except Exception as e:
         print(f"Notice: Admin generate_link on resend: {e}")
 
-    # Dispatch emails asynchronously in background thread so resend response returns in milliseconds
-    def _send_resend_emails():
-        # Dispatch email with link directly to Gmail inbox
-        if action_link:
-            try:
-                from app.services.email_service import send_verification_link_email
-                send_verification_link_email(email_clean, action_link)
-            except Exception as email_err:
-                print(f"Notice: Direct email delivery on resend link: {email_err}")
-
-        # Also send 6-digit backup code email
+    # Dispatch ONE comprehensive email with both OTP code and auto-confirm button
+    def _send_resend_email():
         try:
             from app.services.email_service import send_verification_email
-            send_verification_email(email_clean, otp_code)
-        except Exception:
-            pass
+            send_verification_email(
+                to_email=email_clean,
+                otp_code=otp_code,
+                business_name=biz_name,
+                action_link=action_link,
+            )
+            print(f"Resend OTP {otp_code} dispatched to {email_clean} via Gmail SMTP")
+        except Exception as email_err:
+            print(f"Notice: Direct email delivery on resend: {email_err}")
 
-    threading.Thread(target=_send_resend_emails, daemon=True).start()
+    threading.Thread(target=_send_resend_email, daemon=True).start()
 
     return MessageResponse(
-        message=f"A fresh verification link was sent to {payload.email}. Please check your Gmail inbox.",
+        message=f"A fresh verification code was sent to {payload.email}. Please check your Gmail inbox.",
         verification_code=None,
     )
 
 
 @router.post("/verify-otp", response_model=AuthResponse)
 def verify_otp(payload: VerifyOtpRequest) -> AuthResponse:
-    email_clean = str(payload.email).lower()
-    token = str(payload.token).strip()
+    email_clean = str(payload.email).strip().lower()
+    token = str(payload.token).strip().replace("-", "").replace(" ", "")
     is_valid = False
     user_id = None
     service_client = get_service_client()
@@ -442,28 +510,33 @@ def verify_otp(payload: VerifyOtpRequest) -> AuthResponse:
     # Generate an active Supabase session for the verified user
     try:
         link_res = service_client.auth.admin.generate_link({"type": "magiclink", "email": email_clean})
-        supa_otp = link_res.properties.email_otp
-        verify_res = get_anon_client().auth.verify_otp({
-            "email": email_clean,
-            "token": supa_otp,
-            "type": "magiclink",
-        })
-        if verify_res.session:
-            profile = _profile_for(verify_res.user.id, fallback_email=email_clean, fallback_meta=verify_res.user.user_metadata)
-            session = AuthSession(
-                access_token=verify_res.session.access_token,
-                refresh_token=verify_res.session.refresh_token,
-                expires_in=verify_res.session.expires_in,
-                token_type=verify_res.session.token_type,
-            )
-            return AuthResponse(
-                user=profile,
-                session=session,
-                message="Email verified successfully. Welcome to MarketPilot!",
-                requires_verification=False,
-            )
+        if link_res and link_res.properties and link_res.properties.action_link:
+            import urllib.parse
+            resp = httpx.get(link_res.properties.action_link, follow_redirects=False, timeout=8)
+            loc = resp.headers.get("location") or ""
+            if "#" in loc:
+                fragment = loc.split("#", 1)[1]
+                q_params = urllib.parse.parse_qs(fragment)
+                acc_tok = q_params.get("access_token", [None])[0]
+                ref_tok = q_params.get("refresh_token", [None])[0]
+                exp_in = int(q_params.get("expires_in", [3600])[0])
+                tok_type = q_params.get("token_type", ["bearer"])[0]
+                if acc_tok:
+                    profile = _profile_for(user_id or email_clean, fallback_email=email_clean)
+                    session = AuthSession(
+                        access_token=acc_tok,
+                        refresh_token=ref_tok or acc_tok,
+                        expires_in=exp_in,
+                        token_type=tok_type,
+                    )
+                    return AuthResponse(
+                        user=profile,
+                        session=session,
+                        message="Email verified successfully. Welcome to MarketPilot!",
+                        requires_verification=False,
+                    )
     except Exception as exc:
-        print(f"Notice: Magiclink session generation fallback: {exc}")
+        print(f"Notice: Magiclink session generation: {exc}")
 
     # Fallback profile if session couldn't be generated via magiclink
     profile = _profile_for(user_id or email_clean, fallback_email=email_clean)
@@ -504,12 +577,35 @@ def login(payload: LoginRequest) -> AuthResponse:
 
 @router.post("/password-reset", response_model=MessageResponse)
 def request_password_reset(payload: PasswordResetEmailRequest) -> MessageResponse:
-    # Deliberately return the same response for every address to avoid account enumeration.
+    email_clean = str(payload.email).strip().lower()
     try:
         from app.config import get_settings
-        get_anon_client().auth.reset_password_for_email(str(payload.email), {"redirect_to": str(get_settings().password_reset_redirect_url)})
-    except Exception:
-        pass
+        redirect_url = str(get_settings().password_reset_redirect_url)
+        service_client = get_service_client()
+        link_res = service_client.auth.admin.generate_link({
+            "type": "recovery",
+            "email": email_clean,
+            "options": {"redirect_to": redirect_url}
+        })
+        if link_res and link_res.properties and link_res.properties.action_link:
+            action_link = link_res.properties.action_link
+            def _send_reset_email_bg():
+                try:
+                    from app.services.email_service import send_password_reset_email
+                    send_password_reset_email(email_clean, action_link)
+                except Exception as e:
+                    print(f"Notice: direct password reset email error: {e}")
+            threading.Thread(target=_send_reset_email_bg, daemon=True).start()
+    except Exception as exc:
+        print(f"Notice: Password reset link generation error: {exc}")
+        try:
+            from app.config import get_settings
+            get_anon_client().auth.reset_password_for_email(
+                email_clean,
+                {"redirect_to": str(get_settings().password_reset_redirect_url)}
+            )
+        except Exception:
+            pass
     return MessageResponse(message="If that email belongs to an account, a password-reset link has been sent.")
 
 

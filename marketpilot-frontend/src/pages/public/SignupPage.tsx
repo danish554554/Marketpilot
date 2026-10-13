@@ -125,7 +125,7 @@ export function SignupPage() {
 
   const handleVerifyOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const cleanCode = otpCode.trim();
+    const cleanCode = otpCode.replace(/[\s-]+/g, '').trim();
     if (!cleanCode) {
       setError('Please enter the verification code sent to your Gmail.');
       return;
@@ -403,7 +403,7 @@ export function SignupPage() {
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\s+/g, ''))}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/[\s-]+/g, ''))}
                   className="border-2 border-brand-line focus:border-brand-green rounded-xl px-4 py-3.5 w-full text-center text-xl tracking-[0.35em] font-mono font-bold focus:outline-none focus:ring-4 focus:ring-brand-green/20 bg-slate-50/50 text-brand-ink transition placeholder:text-slate-300 placeholder:tracking-normal"
                   placeholder="• • • • • •"
                   disabled={verifyingOtp}

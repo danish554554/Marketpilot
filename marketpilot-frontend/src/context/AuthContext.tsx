@@ -82,13 +82,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Detect and handle Supabase email verification / magic-link redirect in URL hash
     try {
       const hash = window.location.hash;
-      if (hash && (hash.includes('access_token=') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
+      if (hash && (hash.includes('access_token=') || hash.includes('type=signup') || hash.includes('type=magiclink') || hash.includes('type=recovery'))) {
         const hashClean = hash.startsWith('#') ? hash.substring(1) : hash;
         const params = new URLSearchParams(hashClean);
         const hashAccessToken = params.get('access_token');
         const hashRefreshToken = params.get('refresh_token');
+        const callbackType = params.get('type');
 
         if (hashAccessToken) {
+          // If this is a password recovery link, route to /reset-password
+          if (callbackType === 'recovery' || hash.includes('type=recovery')) {
+            sessionStorage.setItem('marketpilot_recovery_token', hashAccessToken);
+            saveAuthSession(hashAccessToken, hashRefreshToken || undefined);
+            if (!window.location.pathname.includes('/reset-password')) {
+              window.location.href = '/reset-password';
+              return;
+            }
+          }
+
           saveAuthSession(hashAccessToken, hashRefreshToken || undefined);
 
           // Clean up the hash fragment from address bar cleanly

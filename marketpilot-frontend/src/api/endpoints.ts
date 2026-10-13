@@ -49,6 +49,10 @@ export const api = {
     const res = await apiClient.post('/auth/password-reset', { email });
     return res.data;
   },
+  updatePassword: async (newPassword: string) => {
+    const res = await apiClient.put('/auth/password', { new_password: newPassword });
+    return res.data;
+  },
   getProfile: async (): Promise<UserProfile> => {
     const res = await apiClient.get('/profile');
     return res.data;

@@ -220,3 +220,99 @@ def send_verification_link_email(to_email: str, action_link: str, business_name:
         logger.error("Failed to send verification link email via SMTP: %s", exc)
         return False
 
+
+def send_password_reset_email(to_email: str, reset_link: str) -> bool:
+    """
+    Sends a secure password reset link directly via Gmail SMTP.
+    """
+    settings = get_settings()
+
+    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
+        return False
+
+    from_addr = settings.smtp_from or settings.smtp_user
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Reset your MarketPilot AI password"
+    msg["From"] = f"MarketPilot AI <{from_addr}>"
+    msg["To"] = to_email
+
+    plain_text = (
+        f"Hello,\n\n"
+        f"We received a request to reset your MarketPilot AI password.\n\n"
+        f"Click the link below to set a new password:\n{reset_link}\n\n"
+        f"This link is valid for 1 hour. If you did not request this, you can safely ignore this email.\n\n"
+        f"- The MarketPilot AI Team"
+    )
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Reset your password</title>
+      <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; color: #1e293b; }}
+        .wrapper {{ width: 100%; max-width: 540px; margin: 30px auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }}
+        .header {{ background-color: #165823; padding: 28px 24px; text-align: center; }}
+        .header h1 {{ color: #ffffff; font-size: 22px; margin: 0; font-weight: 800; letter-spacing: -0.5px; }}
+        .content {{ padding: 32px 28px; }}
+        .greeting {{ font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #0f172a; }}
+        .text {{ font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }}
+        .btn-container {{ text-align: center; margin: 32px 0; }}
+        .btn {{ display: inline-block; background-color: #165823; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 700; box-shadow: 0 2px 4px rgba(22, 88, 35, 0.2); }}
+        .link-alt {{ font-size: 12px; color: #64748b; word-break: break-all; margin-top: 20px; }}
+        .divider {{ border-top: 1px solid #e2e8f0; margin: 28px 0 20px 0; }}
+        .footer {{ font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; }}
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="header">
+          <h1>◇ MarketPilot AI</h1>
+        </div>
+        <div class="content">
+          <div class="greeting">Reset your password</div>
+          <p class="text">
+            We received a request to reset your password for your <strong>MarketPilot AI</strong> account.
+            Click the button below to choose a new password:
+          </p>
+          <div class="btn-container">
+            <a href="{reset_link}" class="btn" target="_blank">Reset Password ➔</a>
+          </div>
+          <p class="link-alt">
+            Or paste this link into your browser:<br>
+            <a href="{reset_link}" style="color: #165823;">{reset_link}</a>
+          </p>
+          <p class="text" style="font-size: 12px; color: #64748b; margin-top: 20px;">
+            This link is valid for 1 hour. If you didn't ask to reset your password, you can safely ignore this email.
+          </p>
+          <div class="divider"></div>
+          <div class="footer">
+            &copy; 2026 MarketPilot AI. Autonomous Marketing Intelligence.
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+
+    msg.attach(MIMEText(plain_text, "plain"))
+    msg.attach(MIMEText(html_content, "html"))
+
+    try:
+        if settings.smtp_port == 465:
+            server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=10)
+        else:
+            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
+            server.starttls()
+
+        server.login(settings.smtp_user, settings.smtp_password)
+        server.send_message(msg)
+        server.quit()
+        logger.info("Password reset email sent successfully to %s", to_email)
+        return True
+    except Exception as exc:
+        logger.error("Failed to send password reset email via SMTP: %s", exc)
+        return False
+
