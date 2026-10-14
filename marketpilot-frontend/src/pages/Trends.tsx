@@ -54,7 +54,8 @@ export const Trends: React.FC<TrendsProps> = ({ trends, setTrends, onNavigate })
     setIsIngesting(true);
     setStatusMessage(null);
 
-    const geoCode = targetCountry.toLowerCase() === 'pakistan' ? 'PK' : 'US';
+    const matchedCountry = COUNTRIES.find((c) => c.name.toLowerCase() === targetCountry.toLowerCase());
+    const geoCode = trendScope === 'global' ? 'US' : (matchedCountry?.code || 'PK');
     try {
       const res = await api.ingestLiveTrends({ geo: geoCode, limit_per_source: 6 });
       await fetchScopedTrends();
