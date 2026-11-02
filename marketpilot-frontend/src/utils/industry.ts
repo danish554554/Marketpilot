@@ -87,6 +87,7 @@ export interface IndustryPreset {
   id: string;
   label: string;
   icon: string;
+  isTech?: boolean;
   offeringSingular: string;
   offeringPlural: string;
   stockLabel: string;
@@ -102,7 +103,84 @@ export interface IndustryPreset {
   growthPlaybook: string;
 }
 
+export function isTechIndustry(industryIdOrName?: string | null): boolean {
+  if (!industryIdOrName) return false;
+  const lower = industryIdOrName.toLowerCase();
+  return (
+    lower.includes('saas') ||
+    lower.includes('tech') ||
+    lower.includes('ai') ||
+    lower.includes('gaas') ||
+    lower.includes('game') ||
+    lower.includes('gaming') ||
+    lower.includes('software') ||
+    lower.includes('app') ||
+    lower.includes('digital') ||
+    lower.includes('cloud') ||
+    lower.includes('api') ||
+    lower.includes('bot') ||
+    lower.includes('proof')
+  );
+}
+
 export const PRESET_INDUSTRIES: IndustryPreset[] = [
+  {
+    id: 'SaaS & Tech Products',
+    label: 'SaaS, Cloud & Software',
+    icon: '💻',
+    isTech: true,
+    offeringSingular: 'Tech / SaaS Product',
+    offeringPlural: 'SaaS & Software Products',
+    stockLabel: 'License / Active User Capacity',
+    priceLabel: 'Monthly Subscription / MRR Price',
+    placeholderName: 'e.g. Packing Proof App / Invoicing Cloud Engine',
+    placeholderFeatures: 'Barcode scan trigger, 1080p video recording, 1-click dispute link, cloud sync',
+    placeholderPains: 'Lost customer chargebacks, fake damage claims, hours of manual CCTV searching',
+    recommendedChannels: ['linkedin_post', 'youtube_video', 'reels_tiktok', 'fb_post', 'email_newsletter', 'paid_ad'],
+    defaultPromoMode: 'hybrid',
+    organicRatio: 65,
+    paidRatio: 35,
+    audienceSummary: 'Founders, e-commerce merchants, B2B operators & developers looking for automation and operational ROI.',
+    growthPlaybook: 'Deploy LinkedIn Founder Posts, YouTube Walkthroughs & 45s Feature Reels (Organic) + retargeting Lead Ads & Trial Email Drips (Paid).',
+  },
+  {
+    id: 'AI Tech & Agents',
+    label: 'AI Tech & Autonomous Agents',
+    icon: '🤖',
+    isTech: true,
+    offeringSingular: 'AI Tool / Agent',
+    offeringPlural: 'AI Tools & Agents',
+    stockLabel: 'API / Token Credit Tier',
+    priceLabel: 'Plan / Usage Price',
+    placeholderName: 'e.g. MarketPilot AI / Autonomous Customer Agent',
+    placeholderFeatures: 'Real-time LLM orchestration, multimodal OCR analysis, 1-click webhook integrations',
+    placeholderPains: 'High agency retainers, slow manual copywriting, fragmented analytics',
+    recommendedChannels: ['linkedin_post', 'reels_tiktok', 'youtube_video', 'fb_post', 'paid_ad'],
+    defaultPromoMode: 'hybrid',
+    organicRatio: 70,
+    paidRatio: 30,
+    audienceSummary: 'Marketers, agencies, creators, and business leaders seeking intelligent AI automation.',
+    growthPlaybook: 'Publish viral AI prompt breakdowns & before/after workflow comparisons (Organic) + Free Trial & Sandbox demo ads (Paid).',
+  },
+  {
+    id: 'Gaming & GaaS',
+    label: 'Gaming & GaaS (Games as a Service)',
+    icon: '🎮',
+    isTech: true,
+    offeringSingular: 'Game / GaaS Feature',
+    offeringPlural: 'Games & In-Game Passes',
+    stockLabel: 'Server Player Capacity',
+    priceLabel: 'Battle Pass / Sub Price',
+    placeholderName: 'e.g. CyberStrike BattlePass / Multiplayer RPG Engine',
+    placeholderFeatures: 'Low-latency multiplayer sync, weekly seasonal quests, cross-platform cloud saves',
+    placeholderPains: 'High player churn, repetitive gameplay, slow matchmaking queues',
+    recommendedChannels: ['reels_tiktok', 'youtube_video', 'fb_post', 'paid_ad', 'whatsapp_broadcast'],
+    defaultPromoMode: 'hybrid',
+    organicRatio: 60,
+    paidRatio: 40,
+    audienceSummary: 'Competitive gamers, gaming content streamers, and online gaming communities.',
+    growthPlaybook: 'Showcase high-energy gameplay clips & teaser trailers (Organic) + Community Discord and Season Launch Ads (Paid).',
+  },
   {
     id: 'E-Commerce & Retail',
     label: 'E-Commerce & D2C Retail',
