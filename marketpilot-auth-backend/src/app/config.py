@@ -20,12 +20,12 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-3.6-flash"
 
-    # Optional Custom SMTP Email Delivery
-    smtp_host: str | None = None
-    smtp_port: int = 587
-    smtp_user: str | None = None
-    smtp_password: str | None = None
-    smtp_from: str | None = None
+    # Custom SMTP Email Delivery via Google
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 465
+    smtp_user: str = "myworkplace5572205@gmail.com"
+    smtp_password: str = "alryzwvtexswmzvq"
+    smtp_from: str = "myworkplace5572205@gmail.com"
 
     @property
     def cors_origins(self) -> list[str]:

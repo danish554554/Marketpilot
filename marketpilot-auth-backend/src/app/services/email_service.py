@@ -8,6 +8,34 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+def _dispatch_smtp_message(msg: MIMEMultipart, to_email: str) -> bool:
+    settings = get_settings()
+    host = settings.smtp_host or "smtp.gmail.com"
+    user = settings.smtp_user or "myworkplace5572205@gmail.com"
+    password = settings.smtp_password or "alryzwvtexswmzvq"
+    primary_port = int(settings.smtp_port) if settings.smtp_port else 465
+
+    ports_to_try = [primary_port, 587 if primary_port == 465 else 465]
+
+    for port in ports_to_try:
+        try:
+            if port == 465:
+                server = smtplib.SMTP_SSL(host, port, timeout=12)
+            else:
+                server = smtplib.SMTP(host, port, timeout=12)
+                server.starttls()
+            server.login(user, password)
+            server.send_message(msg)
+            server.quit()
+            logger.info("Email dispatched successfully to %s via %s:%d", to_email, host, port)
+            return True
+        except Exception as exc:
+            logger.warning("SMTP delivery attempt to %s via %s:%d failed: %s", to_email, host, port, exc)
+
+    logger.error("All SMTP delivery attempts failed for %s", to_email)
+    return False
+
+
 def send_verification_email(to_email: str, otp_code: str, business_name: str | None = None, action_link: str | None = None) -> bool:
     """
     Sends a verification code email to the specified recipient.
@@ -15,17 +43,9 @@ def send_verification_email(to_email: str, otp_code: str, business_name: str | N
     Delivers directly via Gmail SMTP.
     """
     settings = get_settings()
-
-    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
-        logger.info(
-            "SMTP credentials not configured; custom email delivery skipped. "
-            "Verification code stored for email: %s",
-            to_email,
-        )
-        return False
-
+    user = settings.smtp_user or "myworkplace5572205@gmail.com"
     brand = business_name or "MarketPilot AI"
-    from_addr = settings.smtp_from or settings.smtp_user
+    from_addr = settings.smtp_from or user
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"{otp_code} is your MarketPilot AI verification code"
@@ -103,21 +123,7 @@ def send_verification_email(to_email: str, otp_code: str, business_name: str | N
     msg.attach(MIMEText(plain_text, "plain"))
     msg.attach(MIMEText(html_content, "html"))
 
-    try:
-        if settings.smtp_port == 465:
-            server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=10)
-        else:
-            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
-            server.starttls()
-
-        server.login(settings.smtp_user, settings.smtp_password)
-        server.send_message(msg)
-        server.quit()
-        logger.info("Verification code email sent successfully to %s", to_email)
-        return True
-    except Exception as exc:
-        logger.error("Failed to send verification email via SMTP: %s", exc)
-        return False
+    return _dispatch_smtp_message(msg, to_email)
 
 
 def send_verification_link_email(to_email: str, action_link: str, business_name: str | None = None) -> bool:
@@ -126,17 +132,9 @@ def send_verification_link_email(to_email: str, action_link: str, business_name:
     Delivers directly via Gmail SMTP / configured SMTP server.
     """
     settings = get_settings()
-
-    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
-        logger.info(
-            "SMTP credentials not configured; verification link email skipped. "
-            "Link generated for email: %s",
-            to_email,
-        )
-        return False
-
+    user = settings.smtp_user or "myworkplace5572205@gmail.com"
     brand = business_name or "MarketPilot AI"
-    from_addr = settings.smtp_from or settings.smtp_user
+    from_addr = settings.smtp_from or user
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "Verify your email to activate MarketPilot AI"
@@ -204,21 +202,7 @@ def send_verification_link_email(to_email: str, action_link: str, business_name:
     msg.attach(MIMEText(plain_text, "plain"))
     msg.attach(MIMEText(html_content, "html"))
 
-    try:
-        if settings.smtp_port == 465:
-            server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=10)
-        else:
-            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
-            server.starttls()
-
-        server.login(settings.smtp_user, settings.smtp_password)
-        server.send_message(msg)
-        server.quit()
-        logger.info("Verification link email sent successfully to %s", to_email)
-        return True
-    except Exception as exc:
-        logger.error("Failed to send verification link email via SMTP: %s", exc)
-        return False
+    return _dispatch_smtp_message(msg, to_email)
 
 
 def send_password_reset_email(to_email: str, reset_link: str) -> bool:
@@ -226,11 +210,8 @@ def send_password_reset_email(to_email: str, reset_link: str) -> bool:
     Sends a secure password reset link directly via Gmail SMTP.
     """
     settings = get_settings()
-
-    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
-        return False
-
-    from_addr = settings.smtp_from or settings.smtp_user
+    user = settings.smtp_user or "myworkplace5572205@gmail.com"
+    from_addr = settings.smtp_from or user
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "Reset your MarketPilot AI password"
     msg["From"] = f"MarketPilot AI <{from_addr}>"
@@ -300,19 +281,5 @@ def send_password_reset_email(to_email: str, reset_link: str) -> bool:
     msg.attach(MIMEText(plain_text, "plain"))
     msg.attach(MIMEText(html_content, "html"))
 
-    try:
-        if settings.smtp_port == 465:
-            server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=10)
-        else:
-            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
-            server.starttls()
-
-        server.login(settings.smtp_user, settings.smtp_password)
-        server.send_message(msg)
-        server.quit()
-        logger.info("Password reset email sent successfully to %s", to_email)
-        return True
-    except Exception as exc:
-        logger.error("Failed to send password reset email via SMTP: %s", exc)
-        return False
+    return _dispatch_smtp_message(msg, to_email)
 
