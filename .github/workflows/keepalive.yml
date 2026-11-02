@@ -1,0 +1,36 @@
+name: Supabase & Services Keepalive
+
+on:
+  schedule:
+    # Runs twice daily at 00:00 UTC and 12:00 UTC (keeps Supabase from pausing and Render warm)
+    - cron: '0 0,12 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI anytime
+
+jobs:
+  ping-keepalive:
+    name: Ping Supabase & Backend Services
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ping Backend Keepalive (Warms up Render & Queries Supabase)
+        run: |
+          echo "Pinging MarketPilot backend keepalive..."
+          RESPONSE=$(curl -sS --retry 3 --retry-delay 5 --retry-connrefused --max-time 60 "https://marketpilot-r22y.onrender.com/keepalive")
+          echo "Backend Response: $RESPONSE"
+
+      - name: Direct Ping to Supabase REST API (Redundant Inactivity Reset)
+        run: |
+          echo "Pinging Supabase REST database endpoint directly..."
+          SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhbm5haXhudmxsdWp4cmtpcG5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMjI2NzMsImV4cCI6MjEwMjc5ODY3M30.BHa-sqh8b_RepL97qjMW0aYSrT4taJTvXZ1pkndcP5c"
+          SUPA_RES=$(curl -sS --retry 3 --retry-delay 3 --max-time 30 \
+            -H "apikey: $SUPA_KEY" \
+            -H "Authorization: Bearer $SUPA_KEY" \
+            "https://iannaixnvllujxrkipnl.supabase.co/rest/v1/profiles?select=id&limit=1")
+          echo "Supabase Direct Response: $SUPA_RES"
+
+      - name: Ping Vercel Frontend
+        run: |
+          echo "Pinging Vercel frontend..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "https://marketpilot-iota.vercel.app")
+          echo "Frontend HTTP Status: $HTTP_STATUS"

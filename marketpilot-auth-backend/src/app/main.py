@@ -36,3 +36,29 @@ app.include_router(reporting.router, prefix=settings.api_v1_prefix)
 def health() -> dict[str, str]:
     return {"status": "ok", "environment": settings.environment}
 
+
+@app.get("/keepalive", tags=["Health"])
+def keepalive() -> dict:
+    """
+    Keep-alive endpoint to prevent Supabase inactivity hibernation and warm up Render backend.
+    Can be pinged periodically by GitHub Actions, Cron-job.org, or UptimeRobot.
+    """
+    import datetime
+    from app.supabase_client import get_service_client
+    supabase_status = "ok"
+    try:
+        service_client = get_service_client()
+        res = service_client.table("profiles").select("id").limit(1).execute()
+        count = len(res.data) if res and res.data else 0
+    except Exception as e:
+        supabase_status = f"error: {str(e)}"
+        count = 0
+
+    return {
+        "status": "ok",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "supabase_connection": supabase_status,
+        "sample_records": count,
+        "environment": settings.environment,
+    }
+
