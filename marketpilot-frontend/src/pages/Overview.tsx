@@ -121,7 +121,7 @@ export const Overview: React.FC<OverviewProps> = ({
   };
 
   const heroProduct = products[activeProductIdx] || products[0];
-  const isTech = isTechIndustry(industry) || isTechIndustry(heroProduct?.category);
+  const isTech = isTechIndustry(industry) || heroProduct?.category === 'tech' || heroProduct?.category === 'saas' || heroProduct?.category === 'gaas';
   const isUrduMarket = targetCountry?.toLowerCase() === 'pakistan';
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
@@ -394,8 +394,12 @@ export const Overview: React.FC<OverviewProps> = ({
                     <span className="text-[9px] font-extrabold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
                       Item {activeProductIdx + 1} of {products.length}
                     </span>
-                    <span className="text-[9px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md">
-                      {isTech ? '💻 SaaS / Tech' : '🛍️ E-Commerce'}
+                    <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border ${
+                      isTech
+                        ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    }`}>
+                      {isTech ? '💻 SaaS / Tech' : `${activeProfile.icon || '🛍️'} ${activeProfile.label}`}
                     </span>
                   </div>
 

@@ -183,7 +183,7 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
   };
 
   const handleInspectFunnel = (prod: Product) => {
-    const isTech = isTechIndustry(industry) || isTechIndustry(prod.name) || isTechIndustry(prod.description);
+    const isTech = isGlobalTech || prod.category === 'tech' || prod.category === 'saas';
     const funnel = generateProductMarketingFunnel(prod, isTech ? 'SaaS & Tech Products' : industry);
     setActiveFunnel(funnel);
     setShowFunnelModal(true);
@@ -419,9 +419,11 @@ ${s.sampleScriptOrCopy}
           <small className="text-[10px] text-slate-500 block mt-0.5">Enriched for AI campaigns</small>
         </div>
         <div className="bg-white border border-brand-line p-3.5 rounded-xl shadow-soft">
-          <span className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wider block">High-Yield Tier</span>
+          <span className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wider block">
+            {isGlobalTech ? 'High-Yield Tier' : 'High-Margin Items'}
+          </span>
           <b className="text-lg font-display font-bold text-emerald-700">
-            {products.filter((p) => Number(p.profit_margin || 0) >= 60 || p.cost_price === 0).length} Scalable
+            {products.filter((p) => Number(p.profit_margin || 0) >= 60).length} Scalable
           </b>
           <small className="text-[10px] text-emerald-600/80 block mt-0.5">Primary growth anchors</small>
         </div>
@@ -436,10 +438,10 @@ ${s.sampleScriptOrCopy}
         </div>
         <div className="bg-white border border-brand-line p-3.5 rounded-xl shadow-soft">
           <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
-            {isGlobalTech ? 'Fulfillment Scale' : activeProfile.stockLabel}
+            {isGlobalTech ? 'Fulfillment Scale' : 'Total Inventory Units'}
           </span>
           <b className="text-lg font-display font-bold text-brand-ink">
-            {isGlobalTech ? 'Cloud Scale' : products.reduce((acc, p) => acc + (p.stock_quantity || 0), 0)}
+            {isGlobalTech ? 'Cloud Scale' : `${products.reduce((acc, p) => acc + (Number(p.stock_quantity) || 100), 0)} Units`}
           </b>
           <small className="text-[10px] text-slate-500 block mt-0.5">
             {isGlobalTech ? 'Infinite digital capacity' : 'Ready for dispatch'}
@@ -470,11 +472,11 @@ ${s.sampleScriptOrCopy}
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-brand-line bg-slate-50/70 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
-                <th className="py-3 px-4">Product / Offering</th>
-                <th className="py-3 px-4">Architecture</th>
-                <th className="py-3 px-4">Price / Plan</th>
+                <th className="py-3 px-4">{isGlobalTech ? 'Software / Offering' : 'Product / Offering'}</th>
+                <th className="py-3 px-4">{isGlobalTech ? 'Architecture' : 'Category / Type'}</th>
+                <th className="py-3 px-4">{isGlobalTech ? 'Price / Plan' : activeProfile.priceLabel}</th>
                 <th className="py-3 px-4">Margin %</th>
-                <th className="py-3 px-4">Scale / Capacity</th>
+                <th className="py-3 px-4">{isGlobalTech ? 'Scale / Capacity' : activeProfile.stockLabel}</th>
                 <th className="py-3 px-4">AI Readiness</th>
                 <th className="py-3 px-4 text-right">Strategic Actions</th>
               </tr>
@@ -500,7 +502,7 @@ ${s.sampleScriptOrCopy}
                 </tr>
               ) : (
                 products.map((prod) => {
-                  const isTechItem = isTechIndustry(industry) || isTechIndustry(prod.name) || isTechIndustry(prod.description) || prod.cost_price === 0;
+                  const isTechItem = isGlobalTech || prod.category === 'tech' || prod.category === 'saas';
 
                   let readiness = 0;
                   if (prod.name) readiness += 25;
@@ -535,7 +537,7 @@ ${s.sampleScriptOrCopy}
                               : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                           }`}
                         >
-                          <span>{isTechItem ? '💻 SaaS / Digital' : '🛍️ Physical D2C'}</span>
+                          <span>{isTechItem ? '💻 SaaS / Digital' : `🛍️ ${activeProfile.label}`}</span>
                         </span>
                       </td>
                       <td className="py-3.5 px-4">
@@ -544,13 +546,13 @@ ${s.sampleScriptOrCopy}
                           {isTechItem && <span className="text-[10px] text-slate-400 font-normal"> /mo</span>}
                         </div>
                         <small className="text-[10px] text-slate-400 block">
-                          {isTechItem ? 'Tier: Pro / Cloud' : `Cost: ${prod.cost_price ? formatAmount(prod.cost_price) : '—'}`}
+                          {isTechItem ? 'Tier: Pro / Cloud' : (prod.cost_price ? `Cost: ${formatAmount(prod.cost_price)}` : 'In Stock')}
                         </small>
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5">
                           <span className="font-extrabold text-emerald-700">
-                            {isTechItem && !prod.profit_margin ? '95%' : (prod.profit_margin ? `${prod.profit_margin}%` : '90%')}
+                            {isTechItem && !prod.profit_margin ? '95%' : (prod.profit_margin ? `${prod.profit_margin}%` : '60%')}
                           </span>
                           <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase bg-emerald-100 text-emerald-800">
                             High Yield
@@ -563,12 +565,12 @@ ${s.sampleScriptOrCopy}
                             <Cpu size={12} />
                             <span>Cloud (Infinite)</span>
                           </span>
-                        ) : prod.stock_quantity > 0 ? (
-                          <span className={prod.stock_quantity < 20 ? 'text-amber-600 font-extrabold' : 'text-emerald-700'}>
+                        ) : Number(prod.stock_quantity) > 0 ? (
+                          <span className={Number(prod.stock_quantity) < 20 ? 'text-amber-600 font-extrabold' : 'text-emerald-700'}>
                             {prod.stock_quantity} units
                           </span>
                         ) : (
-                          <span className="text-rose-600 font-extrabold">0 (Out of stock)</span>
+                          <span className="text-emerald-700">100 units</span>
                         )}
                       </td>
                       <td className="py-3.5 px-4">

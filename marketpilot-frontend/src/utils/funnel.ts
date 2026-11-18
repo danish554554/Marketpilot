@@ -41,7 +41,11 @@ export function generateProductMarketingFunnel(
 ): ProductMarketingFunnel {
   const prodName = product.name?.trim() || 'Tech Product';
   const desc = product.description?.trim() || `${prodName} solves operational inefficiencies and delivers measurable ROI.`;
-  const isTech = isTechIndustry(industryName) || isTechIndustry(prodName) || isTechIndustry(desc);
+  const isTech =
+    isTechIndustry(industryName) ||
+    product.category === 'tech' ||
+    product.category === 'saas' ||
+    product.category === 'gaas';
 
   const priceVal = product.price ? String(product.price) : '29';
   const priceDisplay = priceVal.startsWith('$') || priceVal.startsWith('Rs') ? priceVal : `$${priceVal}`;
