@@ -168,6 +168,8 @@ export function App() {
               activeStrategy={activeStrategy}
               businessName={businessName}
               brandKit={brandKit}
+              selectedProductId={selectedProductId}
+              onSelectProduct={setSelectedProductId}
             />
           )}
 

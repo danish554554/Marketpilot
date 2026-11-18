@@ -28,7 +28,11 @@ import {
   Linkedin,
   Facebook,
   Youtube,
-  Briefcase
+  Briefcase,
+  Layers,
+  Flame,
+  Truck,
+  Boxes
 } from 'lucide-react';
 import { BrandKit, MarketingStrategy, Product, TrendSignal } from '../types';
 import { api } from '../api/endpoints';
@@ -100,6 +104,23 @@ export const Studio: React.FC<StudioProps> = ({
   const [scheduledSuccess, setScheduledSuccess] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  const [funnelStage, setFunnelStage] = useState<'tofu' | 'mofu' | 'bofu'>(() => {
+    try {
+      const saved = localStorage.getItem('marketpilot_studio_funnel_tier');
+      if (saved === 'tofu' || saved === 'mofu' || saved === 'bofu') return saved;
+    } catch {}
+    return 'mofu';
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('marketpilot_studio_funnel_tier');
+      if (saved === 'tofu' || saved === 'mofu' || saved === 'bofu') {
+        setFunnelStage(saved);
+      }
+    } catch {}
+  }, [externalProductId]);
 
   useEffect(() => {
     if (externalProductId && externalProductId !== selectedProductId) {
@@ -192,7 +213,8 @@ export const Studio: React.FC<StudioProps> = ({
     prod = selectedProduct,
     trend = selectedTrendTopic,
     offer = customOffer,
-    variationSeed = regenerationCount
+    variationSeed = regenerationCount,
+    stage = funnelStage
   ) => {
     setIsGenerating(true);
     const channelMap: Record<StudioTabType, string> = {
@@ -216,7 +238,7 @@ export const Studio: React.FC<StudioProps> = ({
         format: tab,
         trend_topic: trend || activePillar?.trend_topic || undefined,
         hook_idea: activePillar?.hook_ideas?.[variationSeed % (activePillar?.hook_ideas?.length || 1)] || undefined,
-        custom_instructions: `Business Industry: ${activeProfile.label}. Brand Name: ${businessName}. Offer/Promotion: ${offer || 'Standard Pricing'}. Ground strictly in offering features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}. Variation Seed: ${variationSeed}`,
+        custom_instructions: `Business Industry: ${activeProfile.label}. Brand Name: ${businessName}. Offer/Promotion: ${offer || 'Standard Pricing'}. Funnel Tier Strategy: ${stage.toUpperCase()} (${stage === 'tofu' ? 'Tier 1 Top of Funnel: Relatable Lifestyle / Behind the scenes hustle hook without hard sell. Build watch time & profile visits.' : stage === 'mofu' ? 'Tier 2 Middle of Funnel: Direct problem-solution demonstration (Seedhe CTA) showing feature in action with direct order link.' : 'Tier 3 Bottom of Funnel: Authentic social proof, stock unboxing (Bora khul raha hai), live parcel packing, and quality warranty.'}). Ground strictly in offering features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}. Variation Seed: ${variationSeed}`,
         target_country: targetCountry,
         target_language: COUNTRY_DEFAULT_LANG[targetCountry] || (targetCountry?.toLowerCase() === 'pakistan' ? 'Urdu' : 'English'),
         variation_seed: variationSeed,
@@ -231,7 +253,7 @@ export const Studio: React.FC<StudioProps> = ({
       runLiveGuardrailCheck(`${res.hook}\n${res.caption}\n${res.call_to_action}`);
     } catch (err) {
       console.warn('Backend copywriting fallback:', err);
-      fallbackLocalCopy(tab, prod, trend, offer, variationSeed);
+      fallbackLocalCopy(tab, prod, trend, offer, variationSeed, stage);
     } finally {
       setIsGenerating(false);
     }
@@ -242,7 +264,8 @@ export const Studio: React.FC<StudioProps> = ({
     prod = selectedProduct,
     trend = selectedTrendTopic,
     offer = customOffer,
-    variationSeed = 0
+    variationSeed = 0,
+    stage = funnelStage
   ) => {
     const prodName = prod.name;
     const feat1 = prod.features?.[0] || 'high-performance automation & quality';
@@ -340,7 +363,39 @@ export const Studio: React.FC<StudioProps> = ({
       generatedCta = `Click the 1st Link in Description to Claim ${promo}`;
       generatedTags = `#${cleanHashtagName} #${cleanIndTag} #YouTubeShorts #Walkthrough #Review2026`;
     } else if (tab === 'script') {
-      if (isUrduMarket) {
+      if (stage === 'tofu') {
+        if (isUrduMarket) {
+          generatedHook = isSaaS
+            ? `Jab client bole '10 minute mein deliver kardo' aur manual kaam mein 4 ghante lagte hain... Pehle yeh hack dekhein!`
+            : `Dukaan kholte hi jab subah subah pehla customer yeh ajeeb masla le aaye... Har kisi ka rozana ka masla!`;
+          generatedCaption = isSaaS
+            ? `[HOOK - 0:00 to 0:03]\nVisual: Relatable developer/founder desk scene with piled up tasks.\nVoiceover (Roman Urdu): "Jab client achanak keh de ke agle adhe ghante mein saara kaam chahiye, toh haath paon phool jaate hain!"\nVoiceover (اردو): "جب کلائنٹ کہے کہ آدھے گھنٹے میں سارا کام چاہیے تو ہاتھ پاؤں پھول جاتے ہیں!"\n\n[RELATABLE STRUGGLE - 0:03 to 0:10]\nVisual: Candid screen-share showing repetitive manual steps causing burnout.\nVoiceover (Roman Urdu): "Pehle main bhi ghanton manual sheets aur copy-paste mein laga rehta tha, phir humne is problem ko permanently automate kiya."\nVoiceover (اردو): "پہلے میں بھی گھنٹوں مینوئل کاپی پیسٹ میں لگا رہتا تھا، پھر ہم نے اس مسئلے کو مستقل حل کیا۔"\n\n[PROFILE VISIT CTA - 0:10 to 0:15]\nVisual: Arrow pointing to profile picture and pinned link.\nVoiceover (Roman Urdu): "Agar aap bhi is frustration se bachna chahte hain, toh abhi profile visit karein aur hamari pinned demo video check karein!"\nVoiceover (اردو): "اگر آپ بھی اس پریشانی سے بچنا چاہتے ہیں تو ابھی پروفائل وزٹ کریں اور پن ویڈیو دیکھیں۔"`
+            : `[HOOK - 0:00 to 0:03]\nVisual: Candid shop scene / morning rush unpacking boxes in a hurry.\nVoiceover (Roman Urdu): "Ghar se nikla tha main dukaan jaldi mein... aur aate hi subah yeh shararat ho gayi!"\nVoiceover (اردو): "گھر سے نکلا تھا میں دکان جلدی میں... اور آتے ہی صبح یہ شوشہ ہو گیا!"\n\n[BEHIND THE SCENES - 0:03 to 0:10]\nVisual: Unscripted moment showing genuine daily e-commerce hustle and dealing with ${pain1}.\nVoiceover (Roman Urdu): "Rozana 100 log aakar yahi masla batate hain ke '${pain1}'... aur humne socha kyun na iska permanent tareeqa nikala jaye!"\nVoiceover (اردو): "روزانہ لوگ آ کر یہی مسئلہ بتاتے ہیں کہ اس کا کوئی پکا حل نہیں مل رہا۔"\n\n[PROFILE VISIT CTA - 0:10 to 0:15]\nVisual: Pointing to profile link with curious smile.\nVoiceover (Roman Urdu): "Aapke paas bhi yeh masla hai? Bio link khol kar dekhein hamara 30-second fix!"\nVoiceover (اردو): "آپ کے پاس بھی یہ مسئلہ ہے؟ بائیو لنک کھول کر دیکھیں ہمارا ۳۰ سیکنڈ فکس!"`;
+          generatedCta = `Check Our Profile Link for the 30-Sec Fix`;
+          generatedTags = `#${cleanHashtagName} #DailyHustlePK #EcommercePakistan #RelatableReels`;
+        } else {
+          generatedHook = `Tell me why nobody talks about how much time is wasted on ${pain1} every single day!`;
+          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: Fast-paced candid routine showing the daily frustration.\nVoiceover: "Tell me why nobody talks about how much time is wasted on ${pain1} every single day!"\n\n[BEHIND THE SCENES - 0:03 to 0:10]\nVisual: Candid reaction showing realization that manual struggle was unnecessary.\nVoiceover: "I thought it was just me until we tested this workflow with ${prodName}."\n\n[PROFILE CTA - 0:10 to 0:15]\nVisual: On-screen arrow to profile.\nVoiceover: "Head over to our profile to see the full 30-second walkthrough!"`;
+          generatedCta = `Visit Profile to Watch the Pinned Walkthrough`;
+          generatedTags = `#${cleanHashtagName} #FounderBTS #RelatableWork #LifeHacks`;
+        }
+      } else if (stage === 'bofu') {
+        if (isUrduMarket) {
+          generatedHook = isSaaS
+            ? `Live dashboard proof: Dekhein kaise ek user ne real client ka 2 ghante ka kaam sirf 5 minute mein complete kiya!`
+            : `Stock unboxing & packing! Aaj ke 50+ parcels live dispatch ho rahe hain — Cash on Delivery proof!`;
+          generatedCaption = isSaaS
+            ? `[HOOK - 0:00 to 0:03]\nVisual: Screen recording showing active user analytics and completed tasks in real time.\nVoiceover (Roman Urdu): "Proof dekhna chahte hain? Yeh live screen recording dekhein jo kal ek user ne share ki!"\nVoiceover (اردو): "ثبوت دیکھنا چاہتے ہیں؟ یہ لائیو اسکرین ریکارڈنگ دیکھیں۔"\n\n[WORKFLOW PROOF - 0:03 to 0:10]\nVisual: Zooming into ${feat1} and timestamp completing a heavy workflow in seconds.\nVoiceover (Roman Urdu): "Jo kaam pehle 2 ghante leta tha, ${prodName} ne usko sirf 5 clicks mein execute kar diya bina kisi error ke."\nVoiceover (اردو): "جو کام پہلے دو گھنٹے لیتا تھا وہ اب چند کلکس میں مکمل ہو گیا۔"\n\n[DIRECT ACTION CTA - 0:10 to 0:15]\nVisual: Free trial dashboard banner with promo code (${promo}).\nVoiceover (Roman Urdu): "Aap bhi abhi apna free trial activate karein aur launch offer mein ${promo} hasil karein!"\nVoiceover (اردو): "آپ بھی ابھی فری ٹرائل شروع کریں اور خصوصی رعایت پائیں!"`
+            : `[HOOK - 0:00 to 0:03]\nVisual: Warehouse cutter opening fresh packing cartons / boxes of ${prodName}.\nVoiceover (Roman Urdu): "Stock unboxing! Bora khul gaya hai aur fresh batch warehouse mein land ho chuka hai!"\nVoiceover (اردو): "اسٹاک ان باکسنگ! نیا فریش بیچ گودام میں پہنچ چکا ہے!"\n\n[DISPATCH & QUALITY PROOF - 0:03 to 0:10]\nVisual: Packing flyers, barcode scanning, and bubble wrapping each unit with quality seal.\nVoiceover (Roman Urdu): "Yeh dekhein aaj ke 80+ customer parcels pack ho rahe hain! Har piece testing ke baad 7 din ki check warranty ke sath dispatch hota hai."\nVoiceover (اردو): "یہ دیکھیں آج کے پارسلز پیک ہو رہے ہیں مکمل کوالٹی ٹیسٹنگ کے بعد۔"\n\n[CASH ON DELIVERY CTA - 0:10 to 0:15]\nVisual: Ready parcels stacked with courier rider waiting.\nVoiceover (Roman Urdu): "Cash on Delivery poore Pakistan mein available hai — abhi neeche diye gaye link se apna order confirm karein aur ${promo} hasil karein!"\nVoiceover (اردو): "کیش آن ڈلیوری پورے پاکستان میں دستیاب ہے — ابھی آرڈر کنفرم کریں اور رعایت پائیں!"`;
+          generatedCta = isSaaS ? `Start Free Trial (${promo})` : `Order Now with Cash on Delivery & Claim ${promo}`;
+          generatedTags = `#${cleanHashtagName} #DispatchDay #StockUnboxing #CashOnDelivery #RealCustomerReviews`;
+        } else {
+          generatedHook = `Warehouse dispatch day! Packing orders live with verified quality check & ${promo}`;
+          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: High-energy warehouse order packing station.\nVoiceover: "Packing today's orders of ${prodName} — here is why everyone is ordering right now!"\n\n[QUALITY & PACKING PROOF - 0:03 to 0:10]\nVisual: Close-up of careful bubble wrapping and quality seal.\nVoiceover: "Every single unit undergoes thorough quality inspection and comes with our hassle-free warranty."\n\n[CLOSING CTA - 0:10 to 0:15]\nVisual: Stacking sealed boxes with priority shipping label.\nVoiceover: "Grab yours today with free priority shipping and ${promo} using the link below!"`;
+          generatedCta = `Order Today with Fast Shipping & ${promo}`;
+          generatedTags = `#${cleanHashtagName} #OrderPacking #SmallBusinessProof #FastShipping`;
+        }
+      } else if (isUrduMarket) {
         if (category === 'hair') {
           const hairAngles = [
             {
@@ -425,8 +480,8 @@ export const Studio: React.FC<StudioProps> = ({
   };
 
   useEffect(() => {
-    generateAIPost(activeTab, selectedProduct, selectedTrendTopic, customOffer, 0);
-  }, [activeTab, selectedProductId, selectedTrendTopic, selectedPillarIndex, activeStrategy, industry]);
+    generateAIPost(activeTab, selectedProduct, selectedTrendTopic, customOffer, 0, funnelStage);
+  }, [activeTab, selectedProductId, selectedTrendTopic, selectedPillarIndex, activeStrategy, industry, funnelStage]);
 
   const handleCopy = () => {
     const fullText = `${hook}\n\n${caption}\n\n👉 CTA: ${cta}\n\n${hashtags}`;
@@ -889,6 +944,94 @@ export const Studio: React.FC<StudioProps> = ({
 
           {/* Editor Area */}
           <div className="space-y-4">
+            {/* 3-Tier Daily Video Funnel Selector (Business Video Strategy) */}
+            {activeTab === 'script' && (
+              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <Layers size={13} className="text-brand-green" />
+                    <span className="text-[10px] font-extrabold text-brand-ink uppercase tracking-wider">
+                      Daily Video Funnel Cadence (3 Tiers · 5–6 Videos / Day)
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-bold text-slate-500">
+                    {funnelStage === 'tofu' ? 'Tier 1 (2/day) · Relatable Story Hook' : funnelStage === 'mofu' ? 'Tier 2 (2-3/day) · Direct Offer Demo' : 'Tier 3 (1/day) · Trust & Stock Unboxing'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFunnelStage('tofu');
+                      try { localStorage.setItem('marketpilot_studio_funnel_tier', 'tofu'); } catch {}
+                      generateAIPost('script', selectedProduct, selectedTrendTopic, customOffer, regenerationCount, 'tofu');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      funnelStage === 'tofu'
+                        ? 'bg-amber-100/80 border-amber-400 ring-2 ring-amber-400/20 shadow-2xs'
+                        : 'bg-white border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[9px] font-black uppercase text-amber-900 bg-amber-200/70 px-1.5 py-0.2 rounded">
+                        Tier 1 · TOFU
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-bold">2/day</span>
+                    </div>
+                    <strong className="text-xs font-bold text-brand-ink block truncate">🎣 Relatable Story Hook</strong>
+                    <span className="text-[10px] text-slate-500 block truncate">"Chawal / Hustle" Angle</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFunnelStage('mofu');
+                      try { localStorage.setItem('marketpilot_studio_funnel_tier', 'mofu'); } catch {}
+                      generateAIPost('script', selectedProduct, selectedTrendTopic, customOffer, regenerationCount, 'mofu');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      funnelStage === 'mofu'
+                        ? 'bg-emerald-100/80 border-emerald-500 ring-2 ring-emerald-500/20 shadow-2xs'
+                        : 'bg-white border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[9px] font-black uppercase text-emerald-900 bg-emerald-200/70 px-1.5 py-0.2 rounded">
+                        Tier 2 · MOFU
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-bold">2–3/day</span>
+                    </div>
+                    <strong className="text-xs font-bold text-brand-ink block truncate">⚡ Direct Solution Demo</strong>
+                    <span className="text-[10px] text-slate-500 block truncate">"Seedhe CTA" Angle</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFunnelStage('bofu');
+                      try { localStorage.setItem('marketpilot_studio_funnel_tier', 'bofu'); } catch {}
+                      generateAIPost('script', selectedProduct, selectedTrendTopic, customOffer, regenerationCount, 'bofu');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      funnelStage === 'bofu'
+                        ? 'bg-blue-100/80 border-blue-500 ring-2 ring-blue-500/20 shadow-2xs'
+                        : 'bg-white border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[9px] font-black uppercase text-blue-900 bg-blue-200/70 px-1.5 py-0.2 rounded">
+                        Tier 3 · BOFU
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-bold">1/day</span>
+                    </div>
+                    <strong className="text-xs font-bold text-brand-ink block truncate">📦 Trust & Packing Proof</strong>
+                    <span className="text-[10px] text-slate-500 block truncate">"Bora Khul Gaya" Proof</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Opening Hook */}
             <div>
               <div className="flex items-center justify-between mb-1">

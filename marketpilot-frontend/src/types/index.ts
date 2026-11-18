@@ -59,6 +59,7 @@ export interface Product {
   name: string;
   description: string;
   sku?: string;
+  category?: string;
   price: string | number;
   cost_price?: string | number;
   profit_margin?: string | number;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Package,
   Calendar as CalendarIcon,
@@ -10,6 +10,8 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Video,
   Instagram,
   PlusCircle,
@@ -18,17 +20,31 @@ import {
   Palette,
   DollarSign,
   Flame,
-  Check
+  Check,
+  RefreshCw,
+  Boxes,
+  Truck,
+  ShieldCheck,
+  Play,
+  Layers,
+  ShoppingBag,
+  ExternalLink,
+  Laptop
 } from 'lucide-react';
 import { BrandKit, MarketingStrategy, Product, TrendSignal } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { getIndustryProfile, isTechIndustry } from '../utils/industry';
 
 interface OverviewProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, productId?: string) => void;
   products: Product[];
   trends: TrendSignal[];
   activeStrategy: MarketingStrategy | null;
   businessName: string;
   brandKit?: BrandKit | null;
+  selectedProductId?: string;
+  onSelectProduct?: (productId: string) => void;
 }
 
 export const Overview: React.FC<OverviewProps> = ({
@@ -38,11 +54,75 @@ export const Overview: React.FC<OverviewProps> = ({
   activeStrategy,
   businessName,
   brandKit,
+  selectedProductId,
+  onSelectProduct,
 }) => {
   const [checklistOpen, setChecklistOpen] = useState(true);
+  const { targetCountry, industry } = useAuth();
+  const { formatAmount } = useCurrency();
+  const activeProfile = getIndustryProfile(industry);
 
-  const heroProduct = products.find((p) => p.margin_tier === 'high') || products[0];
-  const topTrend = trends[0];
+  // Deterministic daily rotation seed: every day of the month highlights a different product!
+  const today = new Date();
+  const daySeed = today.getFullYear() * 365 + today.getMonth() * 31 + today.getDate();
+
+  const getInitialIndex = () => {
+    if (!products || products.length === 0) return 0;
+    if (selectedProductId) {
+      const idx = products.findIndex((p) => p.id === selectedProductId);
+      if (idx !== -1) return idx;
+    }
+    return daySeed % products.length;
+  };
+
+  const [activeProductIdx, setActiveProductIdx] = useState<number>(getInitialIndex);
+  const [activeFunnelTier, setActiveFunnelTier] = useState<'tofu' | 'mofu' | 'bofu'>('mofu');
+
+  // Synchronize when selectedProductId updates from elsewhere
+  useEffect(() => {
+    if (selectedProductId && products.length > 0) {
+      const idx = products.findIndex((p) => p.id === selectedProductId);
+      if (idx !== -1 && idx !== activeProductIdx) {
+        setActiveProductIdx(idx);
+      }
+    }
+  }, [selectedProductId, products]);
+
+  const handleNextProduct = () => {
+    if (products.length <= 1) return;
+    const nextIdx = (activeProductIdx + 1) % products.length;
+    setActiveProductIdx(nextIdx);
+    onSelectProduct?.(products[nextIdx].id);
+  };
+
+  const handlePrevProduct = () => {
+    if (products.length <= 1) return;
+    const prevIdx = (activeProductIdx - 1 + products.length) % products.length;
+    setActiveProductIdx(prevIdx);
+    onSelectProduct?.(products[prevIdx].id);
+  };
+
+  const handleShuffleProduct = () => {
+    if (products.length <= 1) return;
+    let nextIdx = Math.floor(Math.random() * products.length);
+    if (nextIdx === activeProductIdx) {
+      nextIdx = (activeProductIdx + 1) % products.length;
+    }
+    setActiveProductIdx(nextIdx);
+    onSelectProduct?.(products[nextIdx].id);
+  };
+
+  const handleSelectProduct = (prodId: string) => {
+    const idx = products.findIndex((p) => p.id === prodId);
+    if (idx !== -1) {
+      setActiveProductIdx(idx);
+      onSelectProduct?.(prodId);
+    }
+  };
+
+  const heroProduct = products[activeProductIdx] || products[0];
+  const isTech = isTechIndustry(industry) || isTechIndustry(heroProduct?.category);
+  const isUrduMarket = targetCountry?.toLowerCase() === 'pakistan';
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -106,6 +186,18 @@ export const Overview: React.FC<OverviewProps> = ({
   const completedCount = steps.filter((s) => s.completed).length;
   const progressPercent = Math.round((completedCount / steps.length) * 100);
 
+  const handleLaunchStudio = (tier: 'tofu' | 'mofu' | 'bofu' = activeFunnelTier) => {
+    try {
+      localStorage.setItem('marketpilot_studio_funnel_tier', tier);
+    } catch {}
+    if (heroProduct) {
+      onSelectProduct?.(heroProduct.id);
+      onNavigate('studio', heroProduct.id);
+    } else {
+      onNavigate('studio');
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
       {/* Intro Greeting */}
@@ -118,7 +210,7 @@ export const Overview: React.FC<OverviewProps> = ({
             Good morning, {businessName || 'Store Owner'} <em className="not-italic text-brand-green">✦</em>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Your AI Marketing Copilot has analyzed your products, profit margins, and viral trends for today.
+            Your AI Marketing Copilot has analyzed your products, profit margins, and viral daily content funnels for today.
           </p>
         </div>
         <button
@@ -290,63 +382,257 @@ export const Overview: React.FC<OverviewProps> = ({
         {/* Today's Recommended Post (7 cols) */}
         <article className="lg:col-span-7 bg-white border border-brand-line rounded-2xl p-4 sm:p-5 md:p-6 shadow-card flex flex-col justify-between overflow-hidden">
           {heroProduct ? (
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
+            <div className="space-y-4">
+              {/* Product Header & Dynamic Rotation Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div className="min-w-0 flex-1">
-                  <small className="text-[8px] sm:text-[9px] font-extrabold tracking-wider text-emerald-700 uppercase flex items-center gap-1.5 flex-wrap">
-                    <Sparkles size={12} className="text-brand-green shrink-0" />
-                    <span>WHAT TO POST TODAY · AI COPILOT RECOMMENDATION</span>
-                  </small>
-                  <h2 className="text-base sm:text-lg font-display font-bold text-brand-ink mt-0.5 break-words">
-                    Publish a TikTok Video & Instagram Reel for {heroProduct.name}.
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <small className="text-[9px] font-extrabold tracking-wider text-emerald-700 uppercase flex items-center gap-1.5">
+                      <Sparkles size={12} className="text-brand-green shrink-0" />
+                      <span>DAILY AI FUNNEL COPILOT</span>
+                    </small>
+                    <span className="text-[9px] font-extrabold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                      Item {activeProductIdx + 1} of {products.length}
+                    </span>
+                    <span className="text-[9px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md">
+                      {isTech ? '💻 SaaS / Tech' : '🛍️ E-Commerce'}
+                    </span>
+                  </div>
+
+                  <h2 className="text-base sm:text-lg font-display font-bold text-brand-ink mt-1 break-words">
+                    Today's Content Funnel for: <span className="text-emerald-800">{heroProduct.name}</span>
                   </h2>
                 </div>
-                <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-1 rounded-md self-start shrink-0">
-                  {heroProduct.profit_margin ? `${heroProduct.profit_margin}% margin` : 'Hero SKU'}
-                </span>
+
+                {/* Carousel / Switcher Controls */}
+                <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0">
+                  <button
+                    onClick={handlePrevProduct}
+                    disabled={products.length <= 1}
+                    className="p-1.5 rounded-lg border border-brand-line bg-white hover:bg-slate-50 disabled:opacity-40 text-slate-700 transition-all shadow-2xs"
+                    title="Previous Product"
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                  <button
+                    onClick={handleShuffleProduct}
+                    disabled={products.length <= 1}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-brand-line bg-white hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 text-xs font-bold transition-all shadow-2xs"
+                    title="Shuffle Daily Focus Product"
+                  >
+                    <RefreshCw size={12} className="text-brand-green" />
+                    <span>Shuffle</span>
+                  </button>
+                  <button
+                    onClick={handleNextProduct}
+                    disabled={products.length <= 1}
+                    className="p-1.5 rounded-lg border border-brand-line bg-white hover:bg-slate-50 disabled:opacity-40 text-slate-700 transition-all shadow-2xs"
+                    title="Next Product"
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
               </div>
 
-              {/* Product info banner */}
-              <div className="flex items-center gap-3 p-2.5 sm:p-3 rounded-xl bg-slate-50 border border-slate-100 my-3 sm:my-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-emerald-800 to-emerald-950 text-white flex flex-col items-center justify-center font-display font-extrabold text-[8px] sm:text-[9px] leading-tight text-center shrink-0">
-                  <span>HERO</span>
-                  <small className="text-[6px] sm:text-[7px] font-sans opacity-80">item</small>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase block">Target Product</span>
-                  <h3 className="text-xs sm:text-sm font-bold text-brand-ink truncate">{heroProduct.name}</h3>
-                  <small className="text-[9px] sm:text-[10px] text-emerald-700 font-bold block truncate">
-                    ● In stock · {heroProduct.stock_quantity || 100} units · {heroProduct.profit_margin || '65'}% margin
-                  </small>
-                </div>
-              </div>
-
-              {/* AI Grounded Reason */}
-              <div className="bg-[#f5f8f7] border border-[#e4eae8] rounded-xl p-3 sm:p-3.5 flex gap-2 sm:gap-2.5 my-3">
-                <Sparkles size={15} className="text-brand-green shrink-0 mt-0.5" />
-                <div className="text-[11px] leading-relaxed min-w-0">
-                  <strong className="text-brand-ink font-bold block mb-0.5">Why this content today?</strong>
-                  <p className="text-slate-600 m-0 break-words">
-                    High margin profitability tier combined with top consumer pain point: <em>"{heroProduct.pain_points?.[0] || 'daily routine frustration'}"</em>. Direct problem-solution hooks deliver the highest conversion rate today.
-                  </p>
+              {/* Quick Product Jump Dropdown */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50 border border-slate-200/80 p-2.5 rounded-xl">
+                <span className="text-[10px] font-extrabold text-slate-500 uppercase shrink-0">Select Product:</span>
+                <select
+                  value={heroProduct.id}
+                  onChange={(e) => handleSelectProduct(e.target.value)}
+                  className="flex-1 text-xs font-bold bg-white border border-brand-line rounded-lg px-2.5 py-1.5 text-brand-ink focus:outline-none focus:border-brand-green shadow-2xs truncate"
+                >
+                  {products.map((p, idx) => (
+                    <option key={p.id} value={p.id}>
+                      #{idx + 1}: {p.name} ({p.profit_margin ? `${p.profit_margin}% margin` : formatAmount(p.price)})
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-2 shrink-0 justify-end">
+                  <span className="text-[10px] font-bold text-slate-500">
+                    {formatAmount(heroProduct.price)}
+                  </span>
+                  <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                    {heroProduct.profit_margin ? `${heroProduct.profit_margin}% margin` : 'Active'}
+                  </span>
                 </div>
               </div>
 
-              {/* Today's Recommended Channels */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 my-4">
-                <div className="border-l-2 border-brand-green pl-2.5 py-1 bg-emerald-50/40 rounded-r-lg min-w-0">
-                  <small className="text-[8px] font-extrabold text-brand-green tracking-wider uppercase flex items-center gap-1">
-                    <Video size={10} className="shrink-0" /> TIKTOK VIDEO HOOK
-                  </small>
-                  <b className="text-xs text-brand-ink block my-0.5 truncate">3-Second Problem Split-Screen</b>
-                  <span className="text-[10px] text-slate-500 truncate block">“Watch this 30-sec demo fix”</span>
+              {/* 3-Tier Daily Content Funnel Tabs (From Business Video Strategy) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Layers size={13} className="text-brand-green" />
+                    <small className="text-[10px] font-extrabold text-brand-ink uppercase tracking-wider">
+                      The 3-Video Daily Content Formula
+                    </small>
+                  </div>
+                  <span className="text-[10px] font-medium text-slate-400">
+                    Strategy: 5–6 Daily Drops across 3 Tiers
+                  </span>
                 </div>
-                <div className="border-l-2 border-brand-blue pl-2.5 py-1 bg-blue-50/40 rounded-r-lg min-w-0">
-                  <small className="text-[8px] font-extrabold text-brand-blue tracking-wider uppercase flex items-center gap-1">
-                    <Instagram size={10} className="shrink-0" /> INSTAGRAM CAROUSEL
-                  </small>
-                  <b className="text-xs text-brand-ink block my-0.5 truncate">3 Routine Mistakes Breakdown</b>
-                  <span className="text-[10px] text-slate-500 truncate block">Educate & drive DM sales</span>
+
+                {/* Tier Switcher Pills */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveFunnelTier('tofu')}
+                    className={`p-2 sm:p-2.5 rounded-xl border text-left transition-all ${
+                      activeFunnelTier === 'tofu'
+                        ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-400/20 shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9px] font-black uppercase text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded">
+                        Tier 1 · TOFU
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-bold">2/day</span>
+                    </div>
+                    <strong className="text-xs font-bold text-brand-ink block truncate">
+                      🎣 Relatable Story Hook
+                    </strong>
+                    <span className="text-[10px] text-slate-500 block truncate">
+                      Viral watch-time & profile clicks
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveFunnelTier('mofu')}
+                    className={`p-2 sm:p-2.5 rounded-xl border text-left transition-all ${
+                      activeFunnelTier === 'mofu'
+                        ? 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-500/20 shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9px] font-black uppercase text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded">
+                        Tier 2 · MOFU
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-bold">2–3/day</span>
+                    </div>
+                    <strong className="text-xs font-bold text-brand-ink block truncate">
+                      ⚡ Direct Solution Demo
+                    </strong>
+                    <span className="text-[10px] text-slate-500 block truncate">
+                      "Seedhe CTA" problem fix
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveFunnelTier('bofu')}
+                    className={`p-2 sm:p-2.5 rounded-xl border text-left transition-all ${
+                      activeFunnelTier === 'bofu'
+                        ? 'bg-blue-50/80 border-blue-400 ring-2 ring-blue-400/20 shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9px] font-black uppercase text-blue-800 bg-blue-100 px-1.5 py-0.2 rounded">
+                        Tier 3 · BOFU
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-bold">1/day</span>
+                    </div>
+                    <strong className="text-xs font-bold text-brand-ink block truncate">
+                      📦 Trust & Packing Proof
+                    </strong>
+                    <span className="text-[10px] text-slate-500 block truncate">
+                      "Stock/Bora unboxing" closes sales
+                    </span>
+                  </button>
+                </div>
+
+                {/* Active Funnel Tier Content Preview */}
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-[#fafcfb] space-y-2.5">
+                  {activeFunnelTier === 'tofu' && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold text-amber-800 uppercase flex items-center gap-1">
+                          <Flame size={12} className="text-amber-600" /> TOP OF FUNNEL (ORGANIC DISCOVERY)
+                        </span>
+                        <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
+                          Algorithm Hook · No Hard Sell
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 leading-relaxed">
+                        <strong>Angle Concept (From Podcast Strategy):</strong> Casual daily life / behind-the-scenes hustle (e.g., <em>"Dukaan jaldi mein kholi"</em> or relatable morning chaos). Hooks viewer attention and drives profile visits (<em>"banda profile kholta hai"</em>).
+                      </p>
+                      <div className="bg-white border border-amber-200/80 rounded-lg p-2.5 text-xs">
+                        <span className="text-[9px] font-extrabold text-slate-400 uppercase block mb-1">Today's Hook Line:</span>
+                        <p className="text-brand-ink font-semibold italic">
+                          {isUrduMarket
+                            ? isTech
+                              ? `“Jab client bole '10 minute mein deliver kardo' aur manual kaam mein 4 ghante lagte hain... Pehle yeh hack dekhein!”`
+                              : `“Dukaan jaldi mein kholi aur subah subah yeh ho gaya... Har kisi ki rozana ki pareshani!”`
+                            : isTech
+                              ? `“POV: You just spent 3 hours copying data manually before realizing this exists...”`
+                              : `“Behind the scenes of our morning rush: When one simple mistake costs you 2 hours!”`}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {activeFunnelTier === 'mofu' && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold text-emerald-800 uppercase flex items-center gap-1">
+                          <Zap size={12} className="text-brand-green" /> MIDDLE OF FUNNEL (CORE DEMO & OFFER)
+                        </span>
+                        <span className="text-[9px] font-bold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded">
+                          Seedhe-Seedhe Call To Action
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 leading-relaxed">
+                        <strong>Angle Concept (From Podcast Strategy):</strong> Direct problem-solution connection: <em>"Agar aapke paas yeh problem hai, toh hamare paas yeh solution aa gaya."</em> 30-sec live feature demonstration solving <em>"{heroProduct.pain_points?.[0] || 'daily manual friction'}"</em> followed by clear order link.
+                      </p>
+                      <div className="bg-white border border-emerald-200/80 rounded-lg p-2.5 text-xs">
+                        <span className="text-[9px] font-extrabold text-slate-400 uppercase block mb-1">Today's Demo Hook & CTA:</span>
+                        <p className="text-brand-ink font-semibold italic">
+                          {isUrduMarket
+                            ? `“Purane tareeqon par paise zaya karna band karein! Yeh ${heroProduct.name} ${heroProduct.features?.[0] || 'advanced feature'} ke sath instant result deta hai — abhi bio link se Cash on Delivery par order karein!”`
+                            : `“Stop wasting hours on ${heroProduct.pain_points?.[0] || 'outdated methods'}. Here is how ${heroProduct.name} solves it in 30 seconds with 20% launch discount!”`}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {activeFunnelTier === 'bofu' && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold text-blue-800 uppercase flex items-center gap-1">
+                          <ShieldCheck size={12} className="text-blue-600" /> BOTTOM OF FUNNEL (TRUST & DISPATCH PROOF)
+                        </span>
+                        <span className="text-[9px] font-bold bg-blue-100 text-blue-900 px-2 py-0.5 rounded">
+                          "Bora Khul Raha Hai" · Stock & Social Proof
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 leading-relaxed">
+                        <strong>Angle Concept (From Podcast Strategy):</strong> Stock unboxing, warehouse parcel packing, shipping labels, and live workflow proof. Eradicates customer skepticism and establishes authentic business credibility (<em>"Yeh ek genuine business seller hai"</em>).
+                      </p>
+                      <div className="bg-white border border-blue-200/80 rounded-lg p-2.5 text-xs">
+                        <span className="text-[9px] font-extrabold text-slate-400 uppercase block mb-1">Today's Proof Script Angle:</span>
+                        <p className="text-brand-ink font-semibold italic">
+                          {isUrduMarket
+                            ? isTech
+                              ? `“Live dashboard proof: Dekhein kaise ek user ne real client ka 2 ghante ka kaam sirf 5 minute mein complete kiya!”`
+                              : `“Naya stock unboxing & dispatch! Aaj ke 50+ parcels pack ho rahe hain — Cash on Delivery & 7 days check warranty ke sath!”`
+                            : isTech
+                              ? `“Behind our live dashboard: Exactly how 500+ active users run this workflow daily with zero errors.”`
+                              : `“Warehouse dispatch day! Packing orders live with proof of delivery and verified quality guarantee.”`}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Explainer Strategy Pill */}
+              <div className="bg-emerald-50/60 border border-emerald-200/70 rounded-xl p-3 flex items-start gap-2.5 text-[11px] text-emerald-950">
+                <Sparkles size={14} className="text-brand-green shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong>Why this 3-tier formula works:</strong> Relying on 1 boring product ad burns budget. High-performing stores publish <strong>5–6 short videos a day</strong>: 2 Relatable Hooks (drive profile visits), 3 Direct Solution Demos (present the offer), and 1 Stock/Proof video (closes sales).
                 </div>
               </div>
             </div>
@@ -355,7 +641,7 @@ export const Overview: React.FC<OverviewProps> = ({
               <Package size={36} className="mx-auto text-emerald-600" />
               <h3 className="font-bold text-base text-brand-ink">👋 Welcome! Let's Add Your First Product</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Add your product with retail & cost price. MarketPilot AI will calculate your margins and tell you exactly what viral video scripts and carousel posts to publish every day!
+                Add your product or SaaS tool. MarketPilot AI will calculate your margins and dynamically schedule your daily 3-tier content funnels!
               </p>
               <button
                 onClick={() => onNavigate('products')}
@@ -367,21 +653,23 @@ export const Overview: React.FC<OverviewProps> = ({
             </div>
           )}
 
-          <footer className="pt-3 border-t border-brand-line flex flex-col sm:flex-row gap-2.5 sm:gap-0 sm:items-center sm:justify-between mt-2">
+          <footer className="pt-3 border-t border-brand-line flex flex-col sm:flex-row gap-2.5 sm:gap-0 sm:items-center sm:justify-between mt-3">
             <button
               onClick={() => onNavigate('products')}
               className="text-xs font-extrabold text-slate-500 hover:text-slate-900 flex items-center gap-1 self-start"
             >
-              <span>Manage Products</span>
+              <span>Manage All {products.length} Products</span>
               <ArrowRight size={13} />
             </button>
-            <button
-              onClick={() => onNavigate('studio')}
-              className="bg-brand-green hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-2 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 w-full sm:w-auto text-center"
-            >
-              <Sparkles size={13} />
-              <span>⚡ Generate & Copy in Studio</span>
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => handleLaunchStudio(activeFunnelTier)}
+                className="bg-brand-green hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-2 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 w-full sm:w-auto text-center"
+              >
+                <Sparkles size={13} />
+                <span>⚡ Generate Tier Script in Studio</span>
+              </button>
+            </div>
           </footer>
         </article>
 
