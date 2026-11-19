@@ -1242,6 +1242,59 @@ class GuardrailValidateResponse(BaseModel):
     safety_message: str
 
 
+class ProductFunnelStage(BaseModel):
+    stageId: str
+    stageName: str
+    badgeLabel: str
+    badgeColor: str
+    channels: list[str] = Field(default_factory=list)
+    objective: str
+    headlineHook: str
+    contentAngle: str
+    leadMagnetOrOffer: str
+    callToAction: str
+    kpi: str
+    sampleScriptOrCopy: str
+
+
+class CompetitorResearchInsight(BaseModel):
+    market_platform: str = "TikTok Creative Center, Reels & Meta Ad Library"
+    winning_hook_style: str
+    creator_video_format: str
+    top_customer_objection: str
+    objection_crusher_proof: str
+    active_trend_signal: str
+    trending_hashtags: list[str] = Field(default_factory=list)
+
+
+class ProductFunnelResearchRequest(BaseModel):
+    product_name: str
+    product_description: str | None = None
+    product_features: list[str] = Field(default_factory=list)
+    product_pain_points: list[str] = Field(default_factory=list)
+    price: float | None = None
+    category: str | None = None
+    industry: str | None = None
+    target_country: str | None = "Pakistan"
+    target_language: str | None = "Urdu"
+    refresh_seed: int = 0
+
+
+class ProductFunnelResearchResponse(BaseModel):
+    productName: str
+    productType: str
+    pricingSummary: str
+    targetAudience: str
+    summary: str
+    coreHook: str
+    growthPlaybook: str
+    recommendedMix: dict = Field(default_factory=lambda: {"organicRatio": 65, "paidRatio": 35})
+    competitorResearch: CompetitorResearchInsight
+    stages: list[ProductFunnelStage]
+    ai_model_used: str = "Google Gemini 3.6 Flash"
+
+
+
 
 
 

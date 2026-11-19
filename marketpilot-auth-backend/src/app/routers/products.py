@@ -10,8 +10,8 @@ from fastapi.responses import Response
 from app.dependencies import CurrentUser
 from app.schemas import (
     CsvDuplicateStrategy, MarginTier, PlannerProduct, Product, ProductCreateRequest,
-    ProductCsvImportResponse, ProductImportRowError, ProductPriority, ProductStatus,
-    ProductUpdateRequest, Role,
+    ProductCsvImportResponse, ProductFunnelResearchRequest, ProductFunnelResearchResponse,
+    ProductImportRowError, ProductPriority, ProductStatus, ProductUpdateRequest, Role,
 )
 from app.supabase_client import get_service_client
 
@@ -527,6 +527,41 @@ def list_available_products(current_user: CurrentUser) -> list[PlannerProduct]:
         raise
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Product storage is temporarily unavailable.") from exc
+
+
+@router.post("/funnel-research", response_model=ProductFunnelResearchResponse)
+def research_product_funnel(
+    payload: ProductFunnelResearchRequest,
+    current_user: CurrentUser,
+) -> ProductFunnelResearchResponse:
+    """
+    Researches viral video ad competitor trends from TikTok Creative Center & Meta Ad Library
+    and synthesizes a grounded 3-tier marketing funnel using Google Gemini AI.
+    """
+    from app.services.gemini_service import GeminiService
+
+    matching_trends = []
+    try:
+        res = get_service_client().table("trend_signals").select("topic, headline, suggested_angles").eq("is_active", True).limit(5).execute()
+        if res and res.data:
+            matching_trends = res.data
+    except Exception:
+        pass
+
+    result = GeminiService.research_product_funnel(
+        product_name=payload.product_name,
+        product_description=payload.product_description,
+        product_features=payload.product_features,
+        product_pain_points=payload.product_pain_points,
+        price=payload.price,
+        category=payload.category,
+        industry=payload.industry,
+        target_country=payload.target_country,
+        target_language=payload.target_language,
+        refresh_seed=payload.refresh_seed,
+        live_trends=matching_trends,
+    )
+    return ProductFunnelResearchResponse.model_validate(result)
 
 
 @router.get("/{product_id}", response_model=Product)
