@@ -540,10 +540,10 @@ export const Overview: React.FC<OverviewProps> = ({
                       <span className="text-[9px] text-slate-400 font-bold">1/day</span>
                     </div>
                     <strong className="text-xs font-bold text-brand-ink block truncate">
-                      📦 Trust & Packing Proof
+                      📦 Trust & Social Proof
                     </strong>
                     <span className="text-[10px] text-slate-500 block truncate">
-                      "Stock/Bora unboxing" closes sales
+                      "Stock unboxing & reviews" closes sales
                     </span>
                   </button>
                 </div>
@@ -606,14 +606,14 @@ export const Overview: React.FC<OverviewProps> = ({
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-extrabold text-blue-800 uppercase flex items-center gap-1">
-                          <ShieldCheck size={12} className="text-blue-600" /> BOTTOM OF FUNNEL (TRUST & DISPATCH PROOF)
+                          <ShieldCheck size={12} className="text-blue-600" /> BOTTOM OF FUNNEL (TRUST & SOCIAL PROOF)
                         </span>
                         <span className="text-[9px] font-bold bg-blue-100 text-blue-900 px-2 py-0.5 rounded">
                           "Bora Khul Raha Hai" · Stock & Social Proof
                         </span>
                       </div>
                       <p className="text-xs text-slate-700 leading-relaxed">
-                        <strong>Angle Concept (From Podcast Strategy):</strong> Stock unboxing, warehouse parcel packing, shipping labels, and live workflow proof. Eradicates customer skepticism and establishes authentic business credibility (<em>"Yeh ek genuine business seller hai"</em>).
+                        <strong>Angle Concept (From Podcast Strategy):</strong> Stock unboxing, live customer review proof, dispatch verification, and quality inspection. Eradicates customer skepticism and establishes authentic business credibility (<em>"Yeh ek genuine business seller hai"</em>).
                       </p>
                       <div className="bg-white border border-blue-200/80 rounded-lg p-2.5 text-xs">
                         <span className="text-[9px] font-extrabold text-slate-400 uppercase block mb-1">Today's Proof Script Angle:</span>
@@ -636,7 +636,7 @@ export const Overview: React.FC<OverviewProps> = ({
               <div className="bg-emerald-50/60 border border-emerald-200/70 rounded-xl p-3 flex items-start gap-2.5 text-[11px] text-emerald-950">
                 <Sparkles size={14} className="text-brand-green shrink-0 mt-0.5" />
                 <div className="leading-relaxed">
-                  <strong>Why this 3-tier formula works:</strong> Relying on 1 boring product ad burns budget. High-performing stores publish <strong>5–6 short videos a day</strong>: 2 Relatable Hooks (drive profile visits), 3 Direct Solution Demos (present the offer), and 1 Stock/Proof video (closes sales).
+                  <strong>Why this 3-tier formula works:</strong> Relying on 1 boring product ad burns budget. High-performing stores publish <strong>5–6 short videos a day</strong>: 2 Relatable Hooks (drive profile visits), 3 Direct Solution Demos (present the offer), and 1 Social Proof / Unboxing video (closes sales).
                 </div>
               </div>
             </div>

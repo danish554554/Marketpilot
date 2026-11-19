@@ -57,7 +57,7 @@ export function generateProductMarketingFunnel(
   const mainPain = rawPains[0] || (desc.length > 20 ? desc.slice(0, 60) : 'manual errors and wasted money');
   const secondaryPain = rawPains[1] || 'slow, fragmented workflows';
   const mainFeature = rawFeats[0] || 'automated real-time workflow';
-  const secondaryFeature = rawFeats[1] || '1-click cloud sync & dispute verification';
+  const secondaryFeature = rawFeats[1] || '1-click cloud sync & automated analytics';
 
   // Infer Target Audience
   let targetAudience = 'Business owners, founders, and operators looking for automation';
@@ -90,9 +90,9 @@ export function generateProductMarketingFunnel(
       productType,
       pricingSummary: `${priceDisplay} / month (SaaS Tier)`,
       targetAudience,
-      summary: `A high-converting 4-stage funnel tailored for ${prodName}. Capitalizes on viral problem demonstration (TOFU), frictionless interactive trials (MOFU), risk-free ROI guarantees (BOFU), and built-in dispute link virality.`,
-      coreHook: `Stop losing thousands to ${mainPain}. ${prodName} automates ${mainFeature} in seconds.`,
-      growthPlaybook: `Deploy LinkedIn founder thought-leadership & 30s TikTok/Reels problem drama to capture cold demand ➔ Convert via a 14-day free trial & interactive demo ➔ Close high-value tiers via 1-click WhatsApp checkout.`,
+      summary: `A high-converting 4-stage funnel tailored specifically for ${prodName}. Capitalizes on viral problem demonstration (TOFU), frictionless interactive trials (MOFU), risk-free ROI guarantees (BOFU), and built-in growth flywheels.`,
+      coreHook: `Stop losing hours and money to ${mainPain}. ${prodName} automates ${mainFeature} in seconds.`,
+      growthPlaybook: `Deploy founder thought-leadership & 30s problem drama to capture cold demand ➔ Convert via a 14-day free trial & interactive demo ➔ Close high-value tiers with quantifiable ROI.`,
       recommendedMix: { organicRatio: 65, paidRatio: 35 },
       stages: [
         {
@@ -101,13 +101,13 @@ export function generateProductMarketingFunnel(
           badgeLabel: 'Cold Traffic Discovery',
           badgeColor: '#0A66C2',
           channels: ['reels_tiktok', 'linkedin_post', 'youtube_video', 'fb_post'],
-          objective: 'Trigger shock & curiosity by exposing the exact cost of the problem.',
+          objective: 'Trigger curiosity and attention by highlighting the cost of manual friction.',
           headlineHook: `Are you still dealing with ${mainPain}? Here is how smart operators fixed it in 60 seconds.`,
-          contentAngle: `Relatable problem dramatization. Contrast the painful, chaotic old way (spreadsheets, manual searches, lost money) with ${prodName}'s seamless ${mainFeature}.`,
+          contentAngle: `Relatable problem dramatization. Contrast the painful, chaotic old way (spreadsheets, manual steps, lost time) with ${prodName}'s seamless ${mainFeature}.`,
           leadMagnetOrOffer: 'Free 60-Second Interactive Demo / Problem Checklist',
           callToAction: 'Watch 45s Walkthrough ➔',
           kpi: 'Video Views (>25k), Hook Retention (>40%), Profile Clicks (>3.5%)',
-          sampleScriptOrCopy: `🚨 E-COMMERCE OWNERS: If you ship over 20 orders a day, you are almost certainly losing money to ${mainPain}.\n\nHere is what happens: a customer claims their package was empty or damaged. You waste 45 minutes searching through CCTV footage or arguing with courier reps, only to end up paying the penalty.\n\nWatch how ${prodName} ends this immediately: scan the order barcode, record a 10-second packing clip, and generate an irrefutable proof link on the spot.\n\nLink in bio to test it on your store today!`,
+          sampleScriptOrCopy: `🚨 OPERATORS & FOUNDERS: If you are still dealing with ${mainPain}, you are wasting budget and valuable hours.\n\nHere is what happens: manual friction delays execution, team members get stuck in repetitive tasks, and small errors compound.\n\nWatch how ${prodName} solves this in seconds: launch the workspace, activate ${mainFeature}, and let the system handle the heavy lifting automatically.\n\nLink in bio to test it for your business today!`,
         },
         {
           stageId: 'MOFU',
@@ -116,12 +116,12 @@ export function generateProductMarketingFunnel(
           badgeColor: '#833AB4',
           channels: ['youtube_video', 'email_newsletter', 'whatsapp_broadcast'],
           objective: 'Deliver the "Aha!" moment with zero upfront risk or friction.',
-          headlineHook: `Test ${prodName} free on your next 50 shipments — no credit card needed.`,
+          headlineHook: `Experience ${prodName} free — no credit card needed.`,
           contentAngle: `Step-by-step product walkthrough demonstrating ${mainFeature} and ${secondaryFeature}. Show how fast setup takes (under 3 minutes).`,
           leadMagnetOrOffer: '14-Day Full-Access Free Trial + Onboarding Concierge',
           callToAction: 'Start Free 14-Day Trial in 30 Seconds ➔',
           kpi: 'Trial Signups (>18%), Account Activation Rate (>50%)',
-          sampleScriptOrCopy: `Want to see how easy it is to protect your business with ${prodName}?\n\n1. Sign up in 30 seconds (zero credit card required).\n2. Connect your store or open the web camera.\n3. Record and verify your first order pack in under 10 seconds.\n\nExperience the peace of mind firsthand. Claim your 14-day free trial right now!`,
+          sampleScriptOrCopy: `Want to see how easy it is to streamline your workflow with ${prodName}?\n\n1. Sign up in 30 seconds (zero credit card required).\n2. Connect your workspace and configure ${mainFeature}.\n3. Experience instant automation and real-time clarity.\n\nClaim your 14-day free trial right now!`,
         },
         {
           stageId: 'BOFU',
@@ -131,11 +131,11 @@ export function generateProductMarketingFunnel(
           channels: ['paid_ad', 'whatsapp_broadcast', 'linkedin_post'],
           objective: 'Overcome objections, highlight quantifiable ROI, and trigger checkout.',
           headlineHook: `Pays for itself on day 1: save at least 3x the ${priceDisplay} cost or get a 100% refund.`,
-          contentAngle: `Direct financial math breakdown: Compare the cost of one single customer return or fraud dispute against the tiny monthly subscription of ${prodName}.`,
+          contentAngle: `Direct financial math breakdown: Compare the cost of manual delays and operational errors against the tiny monthly investment of ${prodName}.`,
           leadMagnetOrOffer: 'Founder Launch Discount: 20% Off Annual Plan + Priority Support',
           callToAction: 'Lock In Pro Workspace at 20% Off ➔',
           kpi: 'Trial-to-Paid Conversion (>12%), Customer Acquisition Cost (CAC)',
-          sampleScriptOrCopy: `A single fraudulent return costs you Rs. 3,500 to Rs. 8,000 in lost merchandise and courier shipping fees.\n\n${prodName} costs only ${priceDisplay} to protect your entire catalog.\n\nIf ${prodName} does not save you more than its cost in the first 30 days, we will refund every single penny. Zero questions asked.\n\nClick below to upgrade your plan today!`,
+          sampleScriptOrCopy: `Manual errors and wasted hours cost you far more than a tiny software subscription.\n\n${prodName} costs only ${priceDisplay} to automate your entire workflow.\n\nIf ${prodName} does not save you more than its cost in the first 30 days, we will refund every single penny. Zero questions asked.\n\nClick below to upgrade your plan today!`,
         },
         {
           stageId: 'VIRALITY',
@@ -143,13 +143,13 @@ export function generateProductMarketingFunnel(
           badgeLabel: 'Organic Virality Loop',
           badgeColor: '#25D366',
           channels: ['whatsapp_broadcast', 'email_newsletter'],
-          objective: 'Turn every active customer and dispute link into a viral B2B lead generator.',
-          headlineHook: `"Powered by ${prodName}" link transforms every dispute into incoming buyer inquiries.`,
-          contentAngle: `Built-in product virality: When the merchant shares a timestamped video link with buyers or courier dispute desks, the page includes a subtle "Verified by ${prodName}" badge.`,
-          leadMagnetOrOffer: 'Refer a Merchant Friend: Both get 1 Month Free Pro Subscription',
-          callToAction: 'Share Proof Link / Invite Warehouse Partner ➔',
+          objective: 'Turn every active user into a brand advocate and referral driver.',
+          headlineHook: `Invite colleagues or partners and unlock free workspace credits.`,
+          contentAngle: `Built-in collaborative virality: When users share exports, reports, or workflow links, their partners discover ${prodName}.`,
+          leadMagnetOrOffer: 'Refer a Colleague: Both get 1 Month Free Pro Subscription',
+          callToAction: 'Invite Team Partner ➔',
           kpi: 'Viral Coefficient (K-factor > 0.25), Net Revenue Retention (>110%)',
-          sampleScriptOrCopy: `💡 PRO GROWTH HACK: Every time you resolve a claim by sending an automated proof link, the recipient sees: "Verified authentic pack by ${prodName} — Protect your store too."\n\nPlus, invite any fellow store owner using your unique link in settings, and you both get a free month added to your account!`,
+          sampleScriptOrCopy: `💡 PRO GROWTH HACK: Every time you share a project report or workflow output, colleagues can access it with one click.\n\nPlus, invite any team or peer using your unique invite link, and you both get a free month credited to your account!`,
         },
       ],
     };

@@ -238,7 +238,7 @@ export const Studio: React.FC<StudioProps> = ({
         format: tab,
         trend_topic: trend || activePillar?.trend_topic || undefined,
         hook_idea: activePillar?.hook_ideas?.[variationSeed % (activePillar?.hook_ideas?.length || 1)] || undefined,
-        custom_instructions: `Business Industry: ${activeProfile.label}. Brand Name: ${businessName}. Offer/Promotion: ${offer || 'Standard Pricing'}. Funnel Tier Strategy: ${stage.toUpperCase()} (${stage === 'tofu' ? 'Tier 1 Top of Funnel: Relatable Lifestyle / Behind the scenes hustle hook without hard sell. Build watch time & profile visits.' : stage === 'mofu' ? 'Tier 2 Middle of Funnel: Direct problem-solution demonstration (Seedhe CTA) showing feature in action with direct order link.' : 'Tier 3 Bottom of Funnel: Authentic social proof, stock unboxing (Bora khul raha hai), live parcel packing, and quality warranty.'}). Ground strictly in offering features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}. Variation Seed: ${variationSeed}`,
+        custom_instructions: `Business Industry: ${activeProfile.label}. Brand Name: ${businessName}. Offer/Promotion: ${offer || 'Standard Pricing'}. Funnel Tier Strategy: ${stage.toUpperCase()} (${stage === 'tofu' ? 'Tier 1 Top of Funnel: Relatable Lifestyle / Behind the scenes hustle hook without hard sell. Build watch time & profile visits.' : stage === 'mofu' ? 'Tier 2 Middle of Funnel: Direct problem-solution demonstration (Seedhe CTA) showing feature in action with direct order link.' : 'Tier 3 Bottom of Funnel: Authentic social proof, stock unboxing (Bora khul raha hai), live dispatch proof, and quality warranty.'}). Ground strictly in offering features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}. Variation Seed: ${variationSeed}`,
         target_country: targetCountry,
         target_language: COUNTRY_DEFAULT_LANG[targetCountry] || (targetCountry?.toLowerCase() === 'pakistan' ? 'Urdu' : 'English'),
         variation_seed: variationSeed,
@@ -391,7 +391,7 @@ export const Studio: React.FC<StudioProps> = ({
           generatedTags = `#${cleanHashtagName} #DispatchDay #StockUnboxing #CashOnDelivery #RealCustomerReviews`;
         } else {
           generatedHook = `Warehouse dispatch day! Packing orders live with verified quality check & ${promo}`;
-          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: High-energy warehouse order packing station.\nVoiceover: "Packing today's orders of ${prodName} — here is why everyone is ordering right now!"\n\n[QUALITY & PACKING PROOF - 0:03 to 0:10]\nVisual: Close-up of careful bubble wrapping and quality seal.\nVoiceover: "Every single unit undergoes thorough quality inspection and comes with our hassle-free warranty."\n\n[CLOSING CTA - 0:10 to 0:15]\nVisual: Stacking sealed boxes with priority shipping label.\nVoiceover: "Grab yours today with free priority shipping and ${promo} using the link below!"`;
+          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: High-energy warehouse order packing station.\nVoiceover: "Packing today's orders of ${prodName} — here is why everyone is ordering right now!"\n\n[QUALITY & SOCIAL PROOF - 0:03 to 0:10]\nVisual: Close-up of careful bubble wrapping and quality seal.\nVoiceover: "Every single unit undergoes thorough quality inspection and comes with our hassle-free warranty."\n\n[CLOSING CTA - 0:10 to 0:15]\nVisual: Stacking sealed boxes with priority shipping label.\nVoiceover: "Grab yours today with free priority shipping and ${promo} using the link below!"`;
           generatedCta = `Order Today with Fast Shipping & ${promo}`;
           generatedTags = `#${cleanHashtagName} #OrderPacking #SmallBusinessProof #FastShipping`;
         }
@@ -1025,8 +1025,8 @@ export const Studio: React.FC<StudioProps> = ({
                       </span>
                       <span className="text-[9px] text-slate-400 font-bold">1/day</span>
                     </div>
-                    <strong className="text-xs font-bold text-brand-ink block truncate">📦 Trust & Packing Proof</strong>
-                    <span className="text-[10px] text-slate-500 block truncate">"Bora Khul Gaya" Proof</span>
+                    <strong className="text-xs font-bold text-brand-ink block truncate">📦 Trust & Social Proof</strong>
+                    <span className="text-[10px] text-slate-500 block truncate">"Stock Unboxing & Reviews"</span>
                   </button>
                 </div>
               </div>

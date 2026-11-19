@@ -702,7 +702,7 @@ ${s.sampleScriptOrCopy}
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder={isTechCurrent ? 'e.g. Packing Proof App / AI Video Copilot' : 'e.g. Ionic Hair Dryer Brush / Travel Jewelry Box'}
+                  placeholder={isTechCurrent ? 'e.g. AI Workflow Copilot / Cloud Billing Platform' : 'e.g. Ionic Hair Dryer Brush / Travel Jewelry Box'}
                   className="w-full text-xs p-3 rounded-xl border border-brand-line focus:outline-none focus:border-brand-green bg-slate-50/50 font-medium"
                 />
               </div>
@@ -832,7 +832,7 @@ ${s.sampleScriptOrCopy}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder={
                     isTechCurrent
-                      ? 'e.g. Packing Proof App is a mobile and web barcode scanner that video-records warehouse packing workers packing orders. It attaches a timestamped 1080p video clip to the order ID so when a customer claims a missing item or fraud return, the merchant sends a 1-click proof link and avoids losing money on COD returns.'
+                      ? 'e.g. An AI-powered workspace copilot that automates daily operational workflows, detects bottlenecks in real time, and synchronizes data with 1-click team sharing.'
                       : 'Briefly describe this product, who it is for, and why customers love it...'
                   }
                   className="w-full text-xs p-3 rounded-xl border border-brand-line focus:outline-none focus:border-brand-green bg-slate-50/50 resize-none font-medium leading-relaxed"
