@@ -140,6 +140,21 @@ export const api = {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   },
+  researchProductFunnel: async (params: {
+    product_name: string;
+    product_description?: string;
+    product_features?: string[];
+    product_pain_points?: string[];
+    price?: number;
+    category?: string;
+    industry?: string;
+    target_country?: string;
+    target_language?: string;
+    refresh_seed?: number;
+  }) => {
+    const res = await apiClient.post('/products/funnel-research', params);
+    return res.data;
+  },
 
   // Offers
   getOffers: async (): Promise<Offer[]> => {

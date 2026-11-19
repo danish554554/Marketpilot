@@ -18,7 +18,7 @@ interface ProductsProps {
 }
 
 export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNavigate }) => {
-  const { user, industry } = useAuth();
+  const { user, industry, targetCountry } = useAuth();
   const activeProfile = getIndustryProfile(industry);
   const isGlobalTech = isTechIndustry(industry);
   const { formatAmount, currencySymbol, currencyConfig } = useCurrency();
@@ -182,11 +182,53 @@ export const Products: React.FC<ProductsProps> = ({ products, setProducts, onNav
     setPreviewFunnel(funnel);
   };
 
+  const [selectedProductForFunnel, setSelectedProductForFunnel] = useState<Product | null>(null);
+  const [researchingFunnel, setResearchingFunnel] = useState(false);
+  const [funnelRefreshSeed, setFunnelRefreshSeed] = useState(0);
+
   const handleInspectFunnel = (prod: Product) => {
+    setSelectedProductForFunnel(prod);
     const isTech = isGlobalTech || prod.category === 'tech' || prod.category === 'saas';
-    const funnel = generateProductMarketingFunnel(prod, isTech ? 'SaaS & Tech Products' : industry);
+    const funnel = generateProductMarketingFunnel(
+      prod,
+      isTech ? 'SaaS & Tech Products' : industry,
+      targetCountry || 'Pakistan',
+      targetCountry?.toLowerCase().includes('pakistan') ? 'Urdu' : 'English'
+    );
     setActiveFunnel(funnel);
     setShowFunnelModal(true);
+  };
+
+  const handleResearchLiveTrends = async () => {
+    if (!selectedProductForFunnel) return;
+    setResearchingFunnel(true);
+    try {
+      const nextSeed = funnelRefreshSeed + 1;
+      setFunnelRefreshSeed(nextSeed);
+      const isTech = isGlobalTech || selectedProductForFunnel.category === 'tech' || selectedProductForFunnel.category === 'saas';
+      const res = await api.researchProductFunnel({
+        product_name: selectedProductForFunnel.name,
+        product_description: selectedProductForFunnel.description,
+        product_features: selectedProductForFunnel.features,
+        product_pain_points: selectedProductForFunnel.pain_points,
+        price: Number(selectedProductForFunnel.price) || undefined,
+        category: selectedProductForFunnel.category,
+        industry: isTech ? 'SaaS & Tech Products' : industry,
+        target_country: targetCountry || 'Pakistan',
+        target_language: targetCountry?.toLowerCase().includes('pakistan') ? 'Urdu' : 'English',
+        refresh_seed: nextSeed,
+      });
+      if (res && res.stages && res.stages.length > 0) {
+        setActiveFunnel({
+          ...res,
+          isAiResearched: true,
+        });
+      }
+    } catch (err) {
+      console.warn('Live trend research error:', err);
+    } finally {
+      setResearchingFunnel(false);
+    }
   };
 
   const copyStageScript = (stageId: string, text: string) => {
@@ -941,13 +983,19 @@ ${s.sampleScriptOrCopy}
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
           <div className="bg-white rounded-3xl p-6 md:p-8 max-w-3xl w-full relative shadow-2xl border border-brand-line my-8 max-h-[92vh] overflow-y-auto space-y-6">
             {/* Header */}
-            <div className="flex items-start justify-between pb-4 border-b border-brand-line">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-4 border-b border-brand-line gap-3">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200 uppercase tracking-wider flex items-center gap-1">
                     <Zap size={11} className="fill-indigo-600 text-indigo-600" />
                     <span>AI Full-Funnel Architecture</span>
                   </span>
+                  {activeFunnel.isAiResearched && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles size={11} className="text-emerald-600" />
+                      <span>Live Trend-Researched</span>
+                    </span>
+                  )}
                   <span className="text-xs text-slate-400 font-mono">• {activeFunnel.productType}</span>
                 </div>
                 <h2 className="text-xl font-display font-extrabold text-brand-ink">
@@ -957,14 +1005,99 @@ ${s.sampleScriptOrCopy}
                   {activeFunnel.summary}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowFunnelModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-all"
-              >
-                <X size={18} />
-              </button>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                <button
+                  type="button"
+                  disabled={researchingFunnel}
+                  onClick={handleResearchLiveTrends}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                  title="Scan TikTok Creative Center & Meta Ad Library for competitor winning angles"
+                >
+                  {researchingFunnel ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin text-white" />
+                      <span>Searching TikTok & Meta...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={13} className="text-amber-300" />
+                      <span>⚡ Research Live Trends</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowFunnelModal(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
+
+            {/* Competitor & Creator Trend Intelligence Callout */}
+            {activeFunnel.competitorResearch && (
+              <div className="bg-slate-900 text-slate-100 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">
+                      Competitor & Creator Trend Intelligence
+                    </span>
+                    <span className="text-[9px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700 font-mono">
+                      {activeFunnel.competitorResearch.market_platform}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    Engine: {activeFunnel.aiModelUsed || 'Gemini 3.6 Flash'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                    <span className="text-[9px] font-extrabold uppercase text-amber-400 block mb-1">
+                      🎯 Winning TikTok / Reels Format
+                    </span>
+                    <p className="font-bold text-slate-200 text-xs leading-snug">
+                      {activeFunnel.competitorResearch.winning_hook_style}
+                    </p>
+                    <small className="text-[10px] text-slate-400 block mt-1">
+                      Format: {activeFunnel.competitorResearch.creator_video_format}
+                    </small>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                    <span className="text-[9px] font-extrabold uppercase text-rose-400 block mb-1">
+                      ⚡ #1 Customer Objection to Crush
+                    </span>
+                    <p className="font-bold text-slate-200 text-xs leading-snug">
+                      "{activeFunnel.competitorResearch.top_customer_objection}"
+                    </p>
+                    <small className="text-[10px] text-emerald-400 block mt-1 leading-snug">
+                      Proof: {activeFunnel.competitorResearch.objection_crusher_proof}
+                    </small>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                    <span className="text-[9px] font-extrabold uppercase text-sky-400 block mb-1">
+                      📈 Active Market Trend Signal
+                    </span>
+                    <p className="font-bold text-slate-200 text-xs leading-snug">
+                      {activeFunnel.competitorResearch.active_trend_signal}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {(activeFunnel.competitorResearch.trending_hashtags || []).map((tag) => (
+                        <span key={tag} className="text-[9px] bg-slate-900 text-slate-300 px-1.5 py-0.5 rounded font-mono">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Core Hook & Target ICP Callout */}
             <div className="p-4 bg-gradient-to-r from-indigo-50/80 via-emerald-50/50 to-indigo-50/80 border border-indigo-200/80 rounded-2xl">
@@ -1053,29 +1186,46 @@ ${s.sampleScriptOrCopy}
 
                     {/* Ready Script / Copy Drawer */}
                     <div className="pt-2">
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           Ready-to-Use Copy / Script Asset:
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => copyStageScript(stage.stageId, stage.sampleScriptOrCopy)}
-                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
-                        >
-                          {copiedStage === stage.stageId ? (
-                            <>
-                              <Check size={12} className="text-emerald-600" />
-                              <span className="text-emerald-600">Copied to Clipboard!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy size={12} />
-                              <span>Copy Script</span>
-                            </>
-                          )}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowFunnelModal(false);
+                              if (selectedProductForFunnel) {
+                                onNavigate?.('studio', selectedProductForFunnel.id);
+                              }
+                            }}
+                            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                            title="Open this stage in Content Studio for multi-channel video generation"
+                          >
+                            <Sparkles size={11} className="text-emerald-600" />
+                            <span>Open in Studio</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => copyStageScript(stage.stageId, stage.sampleScriptOrCopy)}
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                          >
+                            {copiedStage === stage.stageId ? (
+                              <>
+                                <Check size={12} className="text-emerald-600" />
+                                <span className="text-emerald-600">Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={12} />
+                                <span>Copy Script</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <pre className="p-3 bg-slate-900 text-slate-100 rounded-xl text-[11px] font-mono whitespace-pre-wrap leading-relaxed max-h-36 overflow-y-auto border border-slate-800">
+                      <pre className="p-3.5 bg-slate-900 text-slate-100 rounded-xl text-[11px] font-mono whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto border border-slate-800">
                         {stage.sampleScriptOrCopy}
                       </pre>
                     </div>
