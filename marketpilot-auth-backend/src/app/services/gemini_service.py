@@ -1072,7 +1072,7 @@ Provide output matching JSON structure:
             bofu_script = (
                 "[UNBOXING HOOK - 0:00 to 0:03]\n"
                 "Visual: Warehouse packing station with cutter opening branded factory box.\n"
-                "Voiceover (Roman Urdu): \"Bora khul gaya aur fresh batch warehouse mein land ho chuka hai! Nakli aur sasti coils lene ke bajaye yeh original tested piece dekhein!\"\n\n"
+                "Voiceover (Roman Urdu): \"Naya stock unboxing! Fresh verified batch warehouse mein land ho chuka hai! Nakli aur sasti coils lene ke bajaye yeh original tested piece dekhein!\"\n\n"
                 "[QUALITY INSPECTION - 0:03 to 0:10]\n"
                 "Visual: Inspecting heavy cast-iron coil, rubber non-skid feet, and stamped 7-day replacement warranty card.\n"
                 "Voiceover (Roman Urdu): \"Hamari team har parcel dispatch se pehle test karti hai. Rider ke samne parcel khol kar check karein, tassalli hone par payment dein!\"\n\n"
@@ -1160,7 +1160,51 @@ Provide output matching JSON structure:
                 f"Voiceover (Roman Urdu): \"Cash on Delivery poore Pakistan mein. Special launch discount {price_display} hasil karein!\""
             )
 
-        # 4. General Problem-Solving Physical E-Commerce Fallback
+        # 4. Men's Grooming, Electric Shavers, Beard Trimmers & Razors
+        elif any(w in combined for w in ["shaver", "trimmer", "razor", "grooming", "beard", "clipper", "shaving", "sideburn"]):
+            hook_style = "Relatable Morning Rush / Razor Nick & Skin Irritation Hook"
+            video_format = "Live 60-second cordless sideburn fade & zero-irritation skin glide test"
+            objection = "Kiya yeh skin ko cut karta hai aur battery kitni der chalti hai?"
+            proof = "Self-sharpening titanium blades with skin-shield guard & 120-min USB rechargeable battery test"
+            trend_sig = "Men's self-care, cordless beard grooming hacks & quick morning styling"
+            hashtags = ["#MensGrooming", "#BeardTrimmer", "#ShaverPK", "#BarberAtHome", "#DarazFinds", "#DailyEssentials"]
+
+            tofu_script = (
+                "[HOOK - 0:00 to 0:03]\n"
+                "Visual: Man looking in mirror holding tissue to a bleeding neck cut from a disposable razor, groaning in frustration.\n"
+                f"Voiceover (Roman Urdu): \"Subah office ya event ke liye nikalna ho aur purane razor se skin cut lag jaye ya rash nikal aaye? Har mard ki rozana ki pareshani! Yeh 60-second fix pehle dekhein!\"\n"
+                "Voiceover (اردو): \"صبح آفس کے لیے نکلنا ہو اور پرانے ریزر سے کٹ لگ جائے؟ ہر مرد کی روزانہ کی پریشانی! یہ ۶۰ سیکنڈ حل پہلے دیکھیں۔\"\n\n"
+                "[DEMO & BENEFIT - 0:03 to 0:10]\n"
+                f"Visual: Turning on {product_name}; showing ultra-close sideburn and beard edge lineup in one smooth stroke with zero redness.\n"
+                f"Voiceover (Roman Urdu): \"Yeh cordless {product_name} self-sharpening blades ke sath bina pani ya foam ke ultra-clean trim aur sharp beard line deta hai bina kisi cuts ke!\"\n\n"
+                "[CALL TO ACTION - 0:10 to 0:15]\n"
+                "Visual: Smiling with clean sharp beard lineup; pointing to bio link.\n"
+                f"Voiceover (Roman Urdu): \"Barber ke hazaron rupay bachayein! Abhi {price_display} mein Cash on Delivery par order confirm karein!\""
+            )
+            mofu_script = (
+                "[OBJECTION HOOK - 0:00 to 0:04]\n"
+                "Visual: Creator holds up customer comment: 'Kiya yeh baalon ko khainchta hai ya skin ko kat-ta hai?'\n"
+                "Voiceover (Roman Urdu): \"Sab se bara sawaal: 'Kiya yeh skin ko cut karta hai?' Chalein live balloon test karke dekhte hain!\"\n\n"
+                "[PROOF & TEST - 0:04 to 0:10]\n"
+                "Visual: Running running blade firmly across a blown-up balloon with zero popping, then showing 120-minute digital LED battery display.\n"
+                "Voiceover (Roman Urdu): \"Dekha? Zero cuts! Iska skin-protective guard sensitive skin ko 100% safe rakhta hai. Aur USB fast charging se 1 bar charge par poora mahina chalta hai!\"\n\n"
+                "[CALL TO ACTION - 0:10 to 0:15]\n"
+                "Visual: Showing 4 guide combs (1mm, 2mm, 3mm, 4mm) and warranty card.\n"
+                "Voiceover (Roman Urdu): \"7 days check warranty ke sath poore Pakistan mein mangwayein. Bio link se abhi order karein!\""
+            )
+            bofu_script = (
+                "[UNBOXING HOOK - 0:00 to 0:03]\n"
+                "Visual: Unboxing metallic branded box, lifting the heavy silver grooming machine.\n"
+                "Voiceover (Roman Urdu): \"Naya stock unboxing! Sasti plastic copies se bachein — yeh original heavy metallic body cordless machine dekhein!\"\n\n"
+                "[QUALITY & COMPONENT CHECK - 0:03 to 0:10]\n"
+                "Visual: Showing heavy motor running smoothly, 4 guard combs, cleaning oil, USB cable, and stamped warranty card.\n"
+                "Voiceover (Roman Urdu): \"Har parcel dispatch se pehle test hota hai. Rider ke samne parcel khol kar check karein, tassalli hone par payment dein!\"\n\n"
+                "[CLOSING OFFER - 0:10 to 0:15]\n"
+                "Visual: Courier parcels ready for pickup.\n"
+                f"Voiceover (Roman Urdu): \"Special launch discount {price_display} mein poore Pakistan mein Cash on Delivery par abhi mangwayein!\""
+            )
+
+        # 5. General Problem-Solving Physical E-Commerce Fallback
         else:
             hook_style = "Relatable Problem Dramatization & Visual Fix"
             video_format = "15-Second UGC before-and-after demo on TikTok / Reels"
