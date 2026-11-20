@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Package,
   Calendar as CalendarIcon,
@@ -21,6 +21,7 @@ import {
   DollarSign,
   Flame,
   Check,
+  Copy,
   RefreshCw,
   Boxes,
   Truck,
@@ -35,6 +36,7 @@ import { BrandKit, MarketingStrategy, Product, TrendSignal } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { getIndustryProfile, isTechIndustry } from '../utils/industry';
+import { generateProductMarketingFunnel } from '../utils/funnel';
 
 interface OverviewProps {
   onNavigate: (page: string, productId?: string) => void;
@@ -123,6 +125,33 @@ export const Overview: React.FC<OverviewProps> = ({
   const heroProduct = products[activeProductIdx] || products[0];
   const isTech = isTechIndustry(industry) || heroProduct?.category === 'tech' || heroProduct?.category === 'saas' || heroProduct?.category === 'gaas';
   const isUrduMarket = targetCountry?.toLowerCase() === 'pakistan';
+
+  const [copiedScript, setCopiedScript] = useState(false);
+
+  const heroFunnel = useMemo(() => {
+    if (!heroProduct) return null;
+    return generateProductMarketingFunnel(
+      heroProduct,
+      industry,
+      targetCountry || 'Pakistan',
+      isUrduMarket ? 'Urdu' : 'English'
+    );
+  }, [heroProduct, industry, targetCountry, isUrduMarket]);
+
+  const activeStage = useMemo(() => {
+    if (!heroFunnel || !heroFunnel.stages || heroFunnel.stages.length === 0) return null;
+    if (activeFunnelTier === 'tofu') return heroFunnel.stages.find((s) => s.stageId === 'TOFU') || heroFunnel.stages[0];
+    if (activeFunnelTier === 'mofu') return heroFunnel.stages.find((s) => s.stageId === 'MOFU') || heroFunnel.stages[1] || heroFunnel.stages[0];
+    if (activeFunnelTier === 'bofu') return heroFunnel.stages.find((s) => s.stageId === 'BOFU') || heroFunnel.stages[2] || heroFunnel.stages[0];
+    return heroFunnel.stages[0];
+  }, [heroFunnel, activeFunnelTier]);
+
+  const handleCopyScript = () => {
+    if (!activeStage?.sampleScriptOrCopy) return;
+    navigator.clipboard.writeText(activeStage.sampleScriptOrCopy);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 2000);
+  };
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -494,10 +523,10 @@ export const Overview: React.FC<OverviewProps> = ({
                       <span className="text-[9px] text-slate-400 font-bold">2/day</span>
                     </div>
                     <strong className="text-xs font-bold text-brand-ink block truncate">
-                      🎣 Relatable Story Hook
+                      🎣 Relatable Problem Hook
                     </strong>
                     <span className="text-[10px] text-slate-500 block truncate">
-                      Viral watch-time & profile clicks
+                      Viral attention & profile discovery
                     </span>
                   </button>
 
@@ -520,7 +549,7 @@ export const Overview: React.FC<OverviewProps> = ({
                       ⚡ Direct Solution Demo
                     </strong>
                     <span className="text-[10px] text-slate-500 block truncate">
-                      "Seedhe CTA" problem fix
+                      Objection-crusher & core offer
                     </span>
                   </button>
 
@@ -540,92 +569,113 @@ export const Overview: React.FC<OverviewProps> = ({
                       <span className="text-[9px] text-slate-400 font-bold">1/day</span>
                     </div>
                     <strong className="text-xs font-bold text-brand-ink block truncate">
-                      📦 Trust & Social Proof
+                      📦 Trust & Proof of Delivery
                     </strong>
                     <span className="text-[10px] text-slate-500 block truncate">
-                      "Stock unboxing & reviews" closes sales
+                      Unboxing, warranty & COD close
                     </span>
                   </button>
                 </div>
 
                 {/* Active Funnel Tier Content Preview */}
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-[#fafcfb] space-y-2.5">
-                  {activeFunnelTier === 'tofu' && (
+                <div className="p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-[#fafcfb] space-y-3">
+                  {activeStage && (
                     <>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold text-amber-800 uppercase flex items-center gap-1">
-                          <Flame size={12} className="text-amber-600" /> TOP OF FUNNEL (ORGANIC DISCOVERY)
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span
+                          className={`text-[10px] font-extrabold uppercase flex items-center gap-1.5 ${
+                            activeFunnelTier === 'tofu'
+                              ? 'text-amber-800'
+                              : activeFunnelTier === 'mofu'
+                              ? 'text-emerald-800'
+                              : 'text-blue-800'
+                          }`}
+                        >
+                          {activeFunnelTier === 'tofu' && <Flame size={13} className="text-amber-600" />}
+                          {activeFunnelTier === 'mofu' && <Zap size={13} className="text-emerald-600" />}
+                          {activeFunnelTier === 'bofu' && <ShieldCheck size={13} className="text-blue-600" />}
+                          {activeStage.stageName}
                         </span>
-                        <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
-                          Algorithm Hook · No Hard Sell
+                        <span
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded ${
+                            activeFunnelTier === 'tofu'
+                              ? 'bg-amber-100 text-amber-900'
+                              : activeFunnelTier === 'mofu'
+                              ? 'bg-emerald-100 text-emerald-900'
+                              : 'bg-blue-100 text-blue-900'
+                          }`}
+                        >
+                          {activeStage.badgeLabel}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-700 leading-relaxed">
-                        <strong>Angle Concept (From Podcast Strategy):</strong> Casual daily life / behind-the-scenes hustle (e.g., <em>"Dukaan jaldi mein kholi"</em> or relatable morning chaos). Hooks viewer attention and drives profile visits (<em>"banda profile kholta hai"</em>).
-                      </p>
-                      <div className="bg-white border border-amber-200/80 rounded-lg p-2.5 text-xs">
-                        <span className="text-[9px] font-extrabold text-slate-400 uppercase block mb-1">Today's Hook Line:</span>
-                        <p className="text-brand-ink font-semibold italic">
-                          {isUrduMarket
-                            ? isTech
-                              ? `“Jab client bole '10 minute mein deliver kardo' aur manual kaam mein 4 ghante lagte hain... Pehle yeh hack dekhein!”`
-                              : `“Dukaan jaldi mein kholi aur subah subah yeh ho gaya... Har kisi ki rozana ki pareshani!”`
-                            : isTech
-                              ? `“POV: You just spent 3 hours copying data manually before realizing this exists...”`
-                              : `“Behind the scenes of our morning rush: When one simple mistake costs you 2 hours!”`}
-                        </p>
-                      </div>
-                    </>
-                  )}
 
-                  {activeFunnelTier === 'mofu' && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold text-emerald-800 uppercase flex items-center gap-1">
-                          <Zap size={12} className="text-brand-green" /> MIDDLE OF FUNNEL (CORE DEMO & OFFER)
-                        </span>
-                        <span className="text-[9px] font-bold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded">
-                          Seedhe-Seedhe Call To Action
-                        </span>
-                      </div>
                       <p className="text-xs text-slate-700 leading-relaxed">
-                        <strong>Angle Concept (From Podcast Strategy):</strong> Direct problem-solution connection: <em>"Agar aapke paas yeh problem hai, toh hamare paas yeh solution aa gaya."</em> 30-sec live feature demonstration solving <em>"{heroProduct.pain_points?.[0] || 'daily manual friction'}"</em> followed by clear order link.
+                        <strong className="text-brand-ink">Creative Direction & Angle: </strong>
+                        {activeStage.contentAngle || activeStage.objective}
                       </p>
-                      <div className="bg-white border border-emerald-200/80 rounded-lg p-2.5 text-xs">
-                        <span className="text-[9px] font-extrabold text-slate-400 uppercase block mb-1">Today's Demo Hook & CTA:</span>
-                        <p className="text-brand-ink font-semibold italic">
-                          {isUrduMarket
-                            ? `“Purane tareeqon par paise zaya karna band karein! Yeh ${heroProduct.name} ${heroProduct.features?.[0] || 'advanced feature'} ke sath instant result deta hai — abhi bio link se Cash on Delivery par order karein!”`
-                            : `“Stop wasting hours on ${heroProduct.pain_points?.[0] || 'outdated methods'}. Here is how ${heroProduct.name} solves it in 30 seconds with 20% launch discount!”`}
-                        </p>
-                      </div>
-                    </>
-                  )}
 
-                  {activeFunnelTier === 'bofu' && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold text-blue-800 uppercase flex items-center gap-1">
-                          <ShieldCheck size={12} className="text-blue-600" /> BOTTOM OF FUNNEL (TRUST & SOCIAL PROOF)
+                      <div
+                        className={`bg-white border rounded-lg p-2.5 sm:p-3 text-xs ${
+                          activeFunnelTier === 'tofu'
+                            ? 'border-amber-200/90'
+                            : activeFunnelTier === 'mofu'
+                            ? 'border-emerald-200/90'
+                            : 'border-blue-200/90'
+                        }`}
+                      >
+                        <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+                          {activeFunnelTier === 'tofu'
+                            ? "Today's Viral Hook Line (0:00 - 0:03):"
+                            : activeFunnelTier === 'mofu'
+                            ? "Today's Demo & Objection-Crusher Hook:"
+                            : "Today's Social Proof & Unboxing Hook:"}
                         </span>
-                        <span className="text-[9px] font-bold bg-blue-100 text-blue-900 px-2 py-0.5 rounded">
-                          "Bora Khul Raha Hai" · Stock & Social Proof
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-700 leading-relaxed">
-                        <strong>Angle Concept (From Podcast Strategy):</strong> Stock unboxing, live customer review proof, dispatch verification, and quality inspection. Eradicates customer skepticism and establishes authentic business credibility (<em>"Yeh ek genuine business seller hai"</em>).
-                      </p>
-                      <div className="bg-white border border-blue-200/80 rounded-lg p-2.5 text-xs">
-                        <span className="text-[9px] font-extrabold text-slate-400 uppercase block mb-1">Today's Proof Script Angle:</span>
-                        <p className="text-brand-ink font-semibold italic">
-                          {isUrduMarket
-                            ? isTech
-                              ? `“Live dashboard proof: Dekhein kaise ek user ne real client ka 2 ghante ka kaam sirf 5 minute mein complete kiya!”`
-                              : `“Naya stock unboxing & dispatch! Aaj ke 50+ parcels pack ho rahe hain — Cash on Delivery & 7 days check warranty ke sath!”`
-                            : isTech
-                              ? `“Behind our live dashboard: Exactly how 500+ active users run this workflow daily with zero errors.”`
-                              : `“Warehouse dispatch day! Packing orders live with proof of delivery and verified quality guarantee.”`}
+                        <p className="text-brand-ink font-semibold italic text-xs sm:text-sm">
+                          “{activeStage.headlineHook}”
                         </p>
+                      </div>
+
+                      {activeStage.sampleScriptOrCopy && (
+                        <div className="bg-slate-900 text-slate-100 rounded-lg p-3 text-xs font-mono border border-slate-800">
+                          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-sans flex items-center gap-1.5">
+                              <Video size={12} className="text-emerald-400" />
+                              <span>Ready-to-Shoot Creator Video Script</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleCopyScript}
+                              className="text-[10px] text-emerald-400 hover:text-emerald-300 font-sans font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              {copiedScript ? (
+                                <>
+                                  <Check size={11} className="text-emerald-400" />
+                                  <span>Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={11} />
+                                  <span>Copy Script</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <pre className="whitespace-pre-wrap text-[11px] leading-relaxed max-h-36 overflow-y-auto text-slate-200 font-mono">
+                            {activeStage.sampleScriptOrCopy}
+                          </pre>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px]">
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <span className="font-bold text-slate-700">Conversion Offer:</span>
+                          <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded text-[10px] font-semibold">
+                            {activeStage.leadMagnetOrOffer || 'Cash on Delivery + 7 Days Check Warranty'}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-bold">
+                          Channels: {(activeStage.channels || ['reels_tiktok', 'ig_carousel']).map((c) => c.replace('_', ' ').toUpperCase()).join(' · ')}
+                        </div>
                       </div>
                     </>
                   )}

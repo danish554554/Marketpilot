@@ -140,12 +140,12 @@ export function generateProductMarketingFunnel(
           badgeColor: '#10B981',
           channels: ['paid_ad', 'whatsapp_broadcast'],
           objective: 'Eradicate delivery and broken-item skepticism with open-parcel inspection policy.',
-          headlineHook: 'Bora khul gaya aur fresh batch warehouse mein land ho chuka hai! Original tested piece dekhein.',
+          headlineHook: 'Naya verified batch warehouse mein land ho chuka hai! Original tested piece dekhein.',
           contentAngle: 'Warehouse dispatch, parcel open check policy, and money-back guarantee.',
           leadMagnetOrOffer: 'Cash on Delivery + Open Parcel Inspection Policy',
           callToAction: 'Order Now with Cash on Delivery ➔',
           kpi: 'ROAS (>3.5x), Order Conversion Rate (>4%)',
-          sampleScriptOrCopy: `[UNBOXING HOOK - 0:00 to 0:03]\nVisual: Warehouse packing station with cutter opening branded factory box.\nVoiceover (Roman Urdu): "Bora khul gaya aur fresh batch warehouse mein land ho chuka hai! Nakli aur sasti coils lene ke bajaye yeh original tested piece dekhein!"\n\n[QUALITY INSPECTION - 0:03 to 0:10]\nVisual: Inspecting heavy cast-iron coil, rubber non-skid feet, and stamped 7-day replacement warranty card.\nVoiceover (Roman Urdu): "Hamari team har parcel dispatch se pehle test karti hai. Rider ke samne parcel khol kar check karein, tassalli hone par payment dein!"\n\n[CLOSING OFFER - 0:10 to 0:15]\nVisual: Courier rider loading dispatched parcels into van.\nVoiceover (Roman Urdu): "Poore Pakistan mein Cash on Delivery & Free Replacement Warranty available hai. ${priceDisplay} mein abhi order confirm karein!"`,
+          sampleScriptOrCopy: `[UNBOXING HOOK - 0:00 to 0:03]\nVisual: Warehouse packing station with cutter opening branded factory box.\nVoiceover (Roman Urdu): "Naya stock unboxing! Fresh batch warehouse mein land ho chuka hai! Nakli aur sasti coils lene ke bajaye yeh original tested piece dekhein!"\n\n[QUALITY INSPECTION - 0:03 to 0:10]\nVisual: Inspecting heavy cast-iron coil, rubber non-skid feet, and stamped 7-day replacement warranty card.\nVoiceover (Roman Urdu): "Hamari team har parcel dispatch se pehle test karti hai. Rider ke samne parcel khol kar check karein, tassalli hone par payment dein!"\n\n[CLOSING OFFER - 0:10 to 0:15]\nVisual: Courier rider loading dispatched parcels into van.\nVoiceover (Roman Urdu): "Poore Pakistan mein Cash on Delivery & Free Replacement Warranty available hai. ${priceDisplay} mein abhi order confirm karein!"`,
         },
         {
           stageId: 'VIRALITY',
@@ -352,7 +352,101 @@ export function generateProductMarketingFunnel(
     };
   }
 
-  // 4. SaaS & Tech Products
+  // 4. Men's Grooming, Electric Shavers, Beard Trimmers & Razors
+  if (
+    !isTech &&
+    (combined.includes('shaver') ||
+      combined.includes('trimmer') ||
+      combined.includes('razor') ||
+      combined.includes('grooming') ||
+      combined.includes('beard') ||
+      combined.includes('clipper') ||
+      combined.includes('shaving') ||
+      combined.includes('sideburn'))
+  ) {
+    const research: CompetitorResearchInsight = {
+      market_platform: `TikTok Creative Center, Reels & Meta Ad Library (${targetCountry})`,
+      winning_hook_style: 'Relatable Morning Rush / Razor Nick & Skin Irritation Hook',
+      creator_video_format: 'Live 60-second cordless sideburn fade & zero-irritation skin glide test',
+      top_customer_objection: 'Kiya yeh skin ko cut karta hai aur battery kitni der chalti hai?',
+      objection_crusher_proof: 'Self-sharpening titanium blades with skin-shield guard & 120-min USB rechargeable battery test',
+      active_trend_signal: "Men's self-care, cordless beard grooming hacks & quick morning styling (+92% Search Interest)",
+      trending_hashtags: ['#MensGrooming', '#BeardTrimmer', '#ShaverPK', '#BarberAtHome', '#DarazFinds', '#DailyEssentials'],
+    };
+
+    return {
+      productName: prodName,
+      productType: "Physical Men's Grooming Solution",
+      pricingSummary: `${priceDisplay} (Cash on Delivery)`,
+      targetAudience: 'Men seeking fast, zero-irritation beard trimming and clean grooming at home or on the go',
+      summary: `A high-converting 4-stage funnel tailored specifically for ${prodName}. Replaces razor burns and expensive barber trips with a 60-second cordless grooming routine.`,
+      coreHook: `Subah subah razor ke cuts aur irritation se bachna hai? Yeh cordless grooming machine dekhein!`,
+      growthPlaybook: 'Expose morning razor cuts and dull blade frustration (TOFU) ➔ Demonstrate self-sharpening blades and sideburn precision (MOFU) ➔ Close orders with live unboxing, all 4 guard combs, and open-parcel COD guarantee (BOFU).',
+      recommendedMix: { organicRatio: 65, paidRatio: 35 },
+      competitorResearch: research,
+      stages: [
+        {
+          stageId: 'TOFU',
+          stageName: 'Top of Funnel (TOFU) — Viral Problem Hook',
+          badgeLabel: 'Cold Traffic Discovery',
+          badgeColor: '#E1306C',
+          channels: ['reels_tiktok', 'ig_carousel', 'fb_post'],
+          objective: 'Hook scrollers in 3 seconds by exposing the pain of razor cuts and messy morning shaving without hard selling.',
+          headlineHook: 'Subah office ke liye nikalna ho aur purane razor se skin cut lag jaye? Har mard ki rozana ki pareshani!',
+          contentAngle: 'Relatable morning grooming rush. Contrast painful disposable razor nicks and burning aftershave with a smooth 60-second cordless trim.',
+          leadMagnetOrOffer: 'Launch 20% Discount + Free Lubrication Oil & Extra Comb',
+          callToAction: 'Order Today & Save 20% ➔',
+          kpi: 'Video Views (>50k), Hook Retention (>42%)',
+          sampleScriptOrCopy: `[HOOK - 0:00 to 0:03]\nVisual: Man looking in mirror holding tissue to a bleeding neck cut from a disposable razor, groaning in frustration.\nVoiceover (Roman Urdu): "Subah office ya event ke liye nikalna ho aur purane razor se skin cut lag jaye ya rash nikal aaye? Har mard ki rozana ki pareshani! Yeh 60-second fix pehle dekhein!"\nVoiceover (اردو): "صبح آفس کے لیے نکلنا ہو اور پرانے ریزر سے کٹ لگ جائے؟ ہر مرد کی روزانہ کی پریشانی! یہ ۶۰ سیکنڈ حل پہلے دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Turning on ${prodName}; showing ultra-close sideburn and beard edge lineup in one smooth stroke with zero redness.\nVoiceover (Roman Urdu): "Yeh cordless ${prodName} self-sharpening blades ke sath bina pani ya foam ke ultra-clean trim aur sharp beard line deta hai bina kisi cuts ke!"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Smiling with clean sharp beard lineup; pointing to bio link.\nVoiceover (Roman Urdu): "Barber ke hazaron rupay bachayein! Abhi ${priceDisplay} mein Cash on Delivery par order confirm karein!"`,
+        },
+        {
+          stageId: 'MOFU',
+          stageName: 'Middle of Funnel (MOFU) — Objection-Crushing Demo',
+          badgeLabel: 'Proof & Consideration',
+          badgeColor: '#833AB4',
+          channels: ['reels_tiktok', 'fb_post', 'paid_ad'],
+          objective: 'Crush customer doubts: "Does it pinch skin or pull hair?" and "How long does the battery last?" with live proof.',
+          headlineHook: 'Sab ka dar: "Kiya yeh skin ko pinch karta hai aur battery kitni der chalti hai?" Live balloon & skin test dekh lein!',
+          contentAngle: 'Skin-safety balloon test (running running blade across balloon without popping it) and digital battery indicator test.',
+          leadMagnetOrOffer: '7-Day Replacement Guarantee + Free Delivery',
+          callToAction: 'Watch Live Test & Order ➔',
+          kpi: 'CTR (>3.5%), Add to Cart Rate (>10%)',
+          sampleScriptOrCopy: `[OBJECTION HOOK - 0:00 to 0:04]\nVisual: Creator holds up customer comment: 'Kiya yeh baalon ko khainchta hai ya skin ko kat-ta hai?'\nVoiceover (Roman Urdu): "Sab se bara sawaal: 'Kiya yeh skin ko cut karta hai?' Chalein live balloon test karke dekhte hain!"\n\n[PROOF & TEST - 0:04 to 0:10]\nVisual: Running running blade firmly across a blown-up balloon with zero popping, then showing 120-minute digital LED battery display.\nVoiceover (Roman Urdu): "Dekha? Zero cuts! Iska skin-protective guard sensitive skin ko 100% safe rakhta hai. Aur USB fast charging se 1 bar charge par poora mahina chalta hai!"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Showing 4 guide combs (1mm, 2mm, 3mm, 4mm) and warranty card.\nVoiceover (Roman Urdu): "7 days check warranty ke sath poore Pakistan mein mangwayein. Bio link se abhi order karein!"`,
+        },
+        {
+          stageId: 'BOFU',
+          stageName: 'Bottom of Funnel (BOFU) — Social Proof, Unboxing & COD Close',
+          badgeLabel: 'Direct Orders & Trust',
+          badgeColor: '#10B981',
+          channels: ['paid_ad', 'whatsapp_broadcast'],
+          objective: 'Eradicate delivery and counterfeit skepticism with unboxing heavy metal alloy piece and rider open-parcel policy.',
+          headlineHook: 'Fresh batch unboxing! Original heavy cordless machine rider ke samne khol kar check karein.',
+          contentAngle: 'Unboxing heavy metal alloy casing, testing motor vibration, showing all 4 combs, charger, and warranty stamp.',
+          leadMagnetOrOffer: 'Cash on Delivery + Open Parcel Inspection Policy',
+          callToAction: 'Order Now with Cash on Delivery ➔',
+          kpi: 'ROAS (>3.8x), Purchase Conversion (>4.2%)',
+          sampleScriptOrCopy: `[UNBOXING HOOK - 0:00 to 0:03]\nVisual: Unboxing metallic branded box, lifting the heavy silver grooming machine.\nVoiceover (Roman Urdu): "Naya stock unboxing! Sasti plastic copies se bachein — yeh original heavy metallic body cordless machine dekhein!"\n\n[QUALITY & COMPONENT CHECK - 0:03 to 0:10]\nVisual: Showing heavy motor running smoothly, 4 guard combs, cleaning oil, USB cable, and stamped warranty card.\nVoiceover (Roman Urdu): "Har parcel dispatch se pehle test hota hai. Rider ke samne parcel khol kar check karein, tassalli hone par payment dein!"\n\n[CLOSING OFFER - 0:10 to 0:15]\nVisual: Courier parcels ready for pickup.\nVoiceover (Roman Urdu): "Special launch discount ${priceDisplay} mein poore Pakistan mein Cash on Delivery par abhi mangwayein!"`,
+        },
+        {
+          stageId: 'VIRALITY',
+          stageName: 'Growth Loop — VIP WhatsApp Grooming Club & Spare Blades',
+          badgeLabel: 'Repeat Customer Flywheel',
+          badgeColor: '#25D366',
+          channels: ['whatsapp_broadcast'],
+          objective: 'Retain customers with beard styling tutorials and exclusive discounts on replacement blades and beard oils.',
+          headlineHook: 'VIP Grooming Club: Free beard style tutorials & spare blades discount.',
+          contentAngle: 'Post-delivery grooming advice and maintenance care.',
+          leadMagnetOrOffer: '30% Off Replacement Blades + Free Beard Oil Code',
+          callToAction: 'Join VIP Grooming Club ➔',
+          kpi: 'Repeat Purchase Rate (>20%)',
+          sampleScriptOrCopy: `[VIP GROOMING CLUB]\n"Congratulations on upgrading your grooming routine with ${prodName}!\nTap below to join our private VIP WhatsApp Club to receive 2-minute beard fade tutorial videos, maintenance tips, and exclusive 30% discounts on spare blades and styling oils!"`,
+        },
+      ],
+      aiModelUsed: 'MarketPilot Research Engine (Grounded TikTok & Meta Patterns)',
+    };
+  }
+
+  // 5. SaaS & Tech Products
   if (isTech) {
     const research: CompetitorResearchInsight = {
       market_platform: 'LinkedIn, Product Hunt, YouTube & TikTok Tech Creators',

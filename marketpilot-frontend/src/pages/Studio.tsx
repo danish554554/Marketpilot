@@ -39,6 +39,7 @@ import { api } from '../api/endpoints';
 import { useCurrency } from '../context/CurrencyContext';
 import { useAuth } from '../context/AuthContext';
 import { getIndustryProfile, MARKETING_CHANNEL_FORMATS } from '../utils/industry';
+import { generateProductMarketingFunnel } from '../utils/funnel';
 
 export type StudioTabType =
   | 'script'
@@ -238,7 +239,7 @@ export const Studio: React.FC<StudioProps> = ({
         format: tab,
         trend_topic: trend || activePillar?.trend_topic || undefined,
         hook_idea: activePillar?.hook_ideas?.[variationSeed % (activePillar?.hook_ideas?.length || 1)] || undefined,
-        custom_instructions: `Business Industry: ${activeProfile.label}. Brand Name: ${businessName}. Offer/Promotion: ${offer || 'Standard Pricing'}. Funnel Tier Strategy: ${stage.toUpperCase()} (${stage === 'tofu' ? 'Tier 1 Top of Funnel: Relatable Lifestyle / Behind the scenes hustle hook without hard sell. Build watch time & profile visits.' : stage === 'mofu' ? 'Tier 2 Middle of Funnel: Direct problem-solution demonstration (Seedhe CTA) showing feature in action with direct order link.' : 'Tier 3 Bottom of Funnel: Authentic social proof, stock unboxing (Bora khul raha hai), live dispatch proof, and quality warranty.'}). Ground strictly in offering features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}. Variation Seed: ${variationSeed}`,
+        custom_instructions: `Business Industry: ${activeProfile.label}. Brand Name: ${businessName}. Offer/Promotion: ${offer || 'Standard Pricing'}. Funnel Tier Strategy: ${stage.toUpperCase()} (${stage === 'tofu' ? 'Tier 1 Top of Funnel: Relatable Lifestyle / Behind the scenes hustle hook without hard sell. Build watch time & profile visits.' : stage === 'mofu' ? 'Tier 2 Middle of Funnel: Direct problem-solution demonstration (Seedhe CTA) showing feature in action with direct order link.' : 'Tier 3 Bottom of Funnel: Authentic social proof, stock unboxing, live dispatch proof, and quality warranty.'}). Ground strictly in offering features: ${prod.features?.join(', ')}. Target Country: ${targetCountry}. Variation Seed: ${variationSeed}`,
         target_country: targetCountry,
         target_language: COUNTRY_DEFAULT_LANG[targetCountry] || (targetCountry?.toLowerCase() === 'pakistan' ? 'Urdu' : 'English'),
         variation_seed: variationSeed,
@@ -363,78 +364,20 @@ export const Studio: React.FC<StudioProps> = ({
       generatedCta = `Click the 1st Link in Description to Claim ${promo}`;
       generatedTags = `#${cleanHashtagName} #${cleanIndTag} #YouTubeShorts #Walkthrough #Review2026`;
     } else if (tab === 'script') {
-      if (stage === 'tofu') {
-        if (isUrduMarket) {
-          generatedHook = isSaaS
-            ? `Jab client bole '10 minute mein deliver kardo' aur manual kaam mein 4 ghante lagte hain... Pehle yeh hack dekhein!`
-            : `Dukaan kholte hi jab subah subah pehla customer yeh ajeeb masla le aaye... Har kisi ka rozana ka masla!`;
-          generatedCaption = isSaaS
-            ? `[HOOK - 0:00 to 0:03]\nVisual: Relatable developer/founder desk scene with piled up tasks.\nVoiceover (Roman Urdu): "Jab client achanak keh de ke agle adhe ghante mein saara kaam chahiye, toh haath paon phool jaate hain!"\nVoiceover (اردو): "جب کلائنٹ کہے کہ آدھے گھنٹے میں سارا کام چاہیے تو ہاتھ پاؤں پھول جاتے ہیں!"\n\n[RELATABLE STRUGGLE - 0:03 to 0:10]\nVisual: Candid screen-share showing repetitive manual steps causing burnout.\nVoiceover (Roman Urdu): "Pehle main bhi ghanton manual sheets aur copy-paste mein laga rehta tha, phir humne is problem ko permanently automate kiya."\nVoiceover (اردو): "پہلے میں بھی گھنٹوں مینوئل کاپی پیسٹ میں لگا رہتا تھا، پھر ہم نے اس مسئلے کو مستقل حل کیا۔"\n\n[PROFILE VISIT CTA - 0:10 to 0:15]\nVisual: Arrow pointing to profile picture and pinned link.\nVoiceover (Roman Urdu): "Agar aap bhi is frustration se bachna chahte hain, toh abhi profile visit karein aur hamari pinned demo video check karein!"\nVoiceover (اردو): "اگر آپ بھی اس پریشانی سے بچنا چاہتے ہیں تو ابھی پروفائل وزٹ کریں اور پن ویڈیو دیکھیں۔"`
-            : `[HOOK - 0:00 to 0:03]\nVisual: Candid shop scene / morning rush unpacking boxes in a hurry.\nVoiceover (Roman Urdu): "Ghar se nikla tha main dukaan jaldi mein... aur aate hi subah yeh shararat ho gayi!"\nVoiceover (اردو): "گھر سے نکلا تھا میں دکان جلدی میں... اور آتے ہی صبح یہ شوشہ ہو گیا!"\n\n[BEHIND THE SCENES - 0:03 to 0:10]\nVisual: Unscripted moment showing genuine daily e-commerce hustle and dealing with ${pain1}.\nVoiceover (Roman Urdu): "Rozana 100 log aakar yahi masla batate hain ke '${pain1}'... aur humne socha kyun na iska permanent tareeqa nikala jaye!"\nVoiceover (اردو): "روزانہ لوگ آ کر یہی مسئلہ بتاتے ہیں کہ اس کا کوئی پکا حل نہیں مل رہا۔"\n\n[PROFILE VISIT CTA - 0:10 to 0:15]\nVisual: Pointing to profile link with curious smile.\nVoiceover (Roman Urdu): "Aapke paas bhi yeh masla hai? Bio link khol kar dekhein hamara 30-second fix!"\nVoiceover (اردو): "آپ کے پاس بھی یہ مسئلہ ہے؟ بائیو لنک کھول کر دیکھیں ہمارا ۳۰ سیکنڈ فکس!"`;
-          generatedCta = `Check Our Profile Link for the 30-Sec Fix`;
-          generatedTags = `#${cleanHashtagName} #DailyHustlePK #EcommercePakistan #RelatableReels`;
-        } else {
-          generatedHook = `Tell me why nobody talks about how much time is wasted on ${pain1} every single day!`;
-          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: Fast-paced candid routine showing the daily frustration.\nVoiceover: "Tell me why nobody talks about how much time is wasted on ${pain1} every single day!"\n\n[BEHIND THE SCENES - 0:03 to 0:10]\nVisual: Candid reaction showing realization that manual struggle was unnecessary.\nVoiceover: "I thought it was just me until we tested this workflow with ${prodName}."\n\n[PROFILE CTA - 0:10 to 0:15]\nVisual: On-screen arrow to profile.\nVoiceover: "Head over to our profile to see the full 30-second walkthrough!"`;
-          generatedCta = `Visit Profile to Watch the Pinned Walkthrough`;
-          generatedTags = `#${cleanHashtagName} #FounderBTS #RelatableWork #LifeHacks`;
-        }
-      } else if (stage === 'bofu') {
-        if (isUrduMarket) {
-          generatedHook = isSaaS
-            ? `Live dashboard proof: Dekhein kaise ek user ne real client ka 2 ghante ka kaam sirf 5 minute mein complete kiya!`
-            : `Stock unboxing & packing! Aaj ke 50+ parcels live dispatch ho rahe hain — Cash on Delivery proof!`;
-          generatedCaption = isSaaS
-            ? `[HOOK - 0:00 to 0:03]\nVisual: Screen recording showing active user analytics and completed tasks in real time.\nVoiceover (Roman Urdu): "Proof dekhna chahte hain? Yeh live screen recording dekhein jo kal ek user ne share ki!"\nVoiceover (اردو): "ثبوت دیکھنا چاہتے ہیں؟ یہ لائیو اسکرین ریکارڈنگ دیکھیں۔"\n\n[WORKFLOW PROOF - 0:03 to 0:10]\nVisual: Zooming into ${feat1} and timestamp completing a heavy workflow in seconds.\nVoiceover (Roman Urdu): "Jo kaam pehle 2 ghante leta tha, ${prodName} ne usko sirf 5 clicks mein execute kar diya bina kisi error ke."\nVoiceover (اردو): "جو کام پہلے دو گھنٹے لیتا تھا وہ اب چند کلکس میں مکمل ہو گیا۔"\n\n[DIRECT ACTION CTA - 0:10 to 0:15]\nVisual: Free trial dashboard banner with promo code (${promo}).\nVoiceover (Roman Urdu): "Aap bhi abhi apna free trial activate karein aur launch offer mein ${promo} hasil karein!"\nVoiceover (اردو): "آپ بھی ابھی فری ٹرائل شروع کریں اور خصوصی رعایت پائیں!"`
-            : `[HOOK - 0:00 to 0:03]\nVisual: Warehouse cutter opening fresh packing cartons / boxes of ${prodName}.\nVoiceover (Roman Urdu): "Stock unboxing! Bora khul gaya hai aur fresh batch warehouse mein land ho chuka hai!"\nVoiceover (اردو): "اسٹاک ان باکسنگ! نیا فریش بیچ گودام میں پہنچ چکا ہے!"\n\n[DISPATCH & QUALITY PROOF - 0:03 to 0:10]\nVisual: Packing flyers, barcode scanning, and bubble wrapping each unit with quality seal.\nVoiceover (Roman Urdu): "Yeh dekhein aaj ke 80+ customer parcels pack ho rahe hain! Har piece testing ke baad 7 din ki check warranty ke sath dispatch hota hai."\nVoiceover (اردو): "یہ دیکھیں آج کے پارسلز پیک ہو رہے ہیں مکمل کوالٹی ٹیسٹنگ کے بعد۔"\n\n[CASH ON DELIVERY CTA - 0:10 to 0:15]\nVisual: Ready parcels stacked with courier rider waiting.\nVoiceover (Roman Urdu): "Cash on Delivery poore Pakistan mein available hai — abhi neeche diye gaye link se apna order confirm karein aur ${promo} hasil karein!"\nVoiceover (اردو): "کیش آن ڈلیوری پورے پاکستان میں دستیاب ہے — ابھی آرڈر کنفرم کریں اور رعایت پائیں!"`;
-          generatedCta = isSaaS ? `Start Free Trial (${promo})` : `Order Now with Cash on Delivery & Claim ${promo}`;
-          generatedTags = `#${cleanHashtagName} #DispatchDay #StockUnboxing #CashOnDelivery #RealCustomerReviews`;
-        } else {
-          generatedHook = `Warehouse dispatch day! Packing orders live with verified quality check & ${promo}`;
-          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: High-energy warehouse order packing station.\nVoiceover: "Packing today's orders of ${prodName} — here is why everyone is ordering right now!"\n\n[QUALITY & SOCIAL PROOF - 0:03 to 0:10]\nVisual: Close-up of careful bubble wrapping and quality seal.\nVoiceover: "Every single unit undergoes thorough quality inspection and comes with our hassle-free warranty."\n\n[CLOSING CTA - 0:10 to 0:15]\nVisual: Stacking sealed boxes with priority shipping label.\nVoiceover: "Grab yours today with free priority shipping and ${promo} using the link below!"`;
-          generatedCta = `Order Today with Fast Shipping & ${promo}`;
-          generatedTags = `#${cleanHashtagName} #OrderPacking #SmallBusinessProof #FastShipping`;
-        }
-      } else if (isUrduMarket) {
-        if (category === 'hair') {
-          const hairAngles = [
-            {
-              h: 'Frizzy aur unmanageable baalon se tang aa chuke hain? Pehle yeh 30-second hack dekhein!',
-              c: `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing damp, frizzy tangled hair vs. smooth salon blowout transition.\nVoiceover (Roman Urdu): "Har subah baalon ko dry aur style karne mein ghanton zaya karna chhod dein! Pehle yeh 30-second trick dekhein."\nVoiceover (اردو): "ہر صبح بالوں کو ڈرائی اور اسٹائل کرنے میں گھنٹوں ضائع کرنا چھوڑ دیں! پہلے یہ ۳۰ سیکنڈ ہیک دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter effortlessly gliding ${prodName} through hair, showing instant shine and volume (${feat1}).\nVoiceover (Roman Urdu): "Purane bhari dryers aur multiple brushes ka jhanjhat khatam! Yeh ${prodName} baalon ko sukhata bhi hai aur ${feat1} ke sath salon jaisa volumized blowout deta hai sirf chand minutes mein bina kisi heat damage ke!"\nVoiceover (اردو): "پرانے بھاری ڈرائرز کا جھنجھٹ ختم! یہ ${prodName} بالوں کو سکھاتا بھی ہے اور سیلون جیسا باؤنسی بلو آؤٹ دیتا ہے بغیر کسی نقصان کے!"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Smiling presenter showing silky, styled hair holding ${prodName}.\nVoiceover (Roman Urdu): "Salon ke hazaron rupay bachayein! Neeche diye gaye link par click karein aur launch sale mein poora ${promo} hasil karein!"\nVoiceover (اردو): "سیلون کے ہزاروں روپے بچائیں! نیچے دیے گئے لنک پر کلک کریں اور لانچ سیل میں پورا ${promo} حاصل کریں!"`,
-              cta: `Neeche link par click karein aur ${promo} hasil karein`,
-              tags: `#${cleanHashtagName} #HairHacksPK #SalonAtHome #HairStylingUrdu #BeautyPK`
-            },
-            {
-              h: 'Salon ke mehnge blowouts par paise zaya karna band karein!',
-              c: `[HOOK - 0:00 to 0:03]\nVisual: Split-screen comparing expensive salon bill vs. doing it at home with ${prodName}.\nVoiceover (Roman Urdu): "Kiya aap bhi har event ke liye salon ke hazaron rupay kharch karte hain? Yeh video aapke bohot paise bachane wali hai!"\nVoiceover (اردو): "کیا آپ بھی ہر ایونٹ کے لیے سیلون کے ہزاروں روپے خرچ کرتے ہیں؟ یہ ویڈیو آپ کے بہت پیسے بچانے والی ہے!"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Demonstrating ${feat2} on damp hair, instantly creating smooth silky finish.\nVoiceover (Roman Urdu): "Is ${prodName} ka advanced airflow aur ${feat1} frizzy baalon ko instantly tame karta hai aur deta hai super smooth finish bina kisi salon appointment ke."\nVoiceover (اردو): "اس ${prodName} کا جدید ایئر فلو الجھے بالوں کو فوری چمکدار بناتا ہے اور دیتا ہے سیلون جیسی فنشنگ۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Final gorgeous hair flip holding ${prodName} box with Cash on Delivery banner.\nVoiceover (Roman Urdu): "Stock limited hai! Abhi order karein aur Cash on Delivery ke sath ${promo} hasil karein!"\nVoiceover (اردو): "اسٹاک محدود ہے! ابھی آرڈر کریں اور کیش آن ڈلیوری کے ساتھ خصوصی رعایت حاصل کریں!"`,
-              cta: `Order Now with Cash on Delivery & Claim ${promo}`,
-              tags: `#${cleanHashtagName} #BlowoutHacks #PakistaniBeauties #TrendingPK #GlowHair`
-            },
-          ];
-          const choice = hairAngles[angle % hairAngles.length];
-          generatedHook = choice.h;
-          generatedCaption = choice.c;
-          generatedCta = choice.cta;
-          generatedTags = choice.tags;
-        } else if (category === 'skincare') {
-          generatedHook = `Dull aur dry skin se pareshan hain? Watch this 10-second glow hack!`;
-          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: Split-screen close-up showing dull skin vs instant luminous glow.\nVoiceover (Roman Urdu): "Mehnge treatments par paise zaya karna band karein! Pehle yeh natural skin glow hack dekhein."\nVoiceover (اردو): "مہنگے ٹریٹمنٹس پر پیسے ضائع کرنا بند کریں! پہلے یہ قدرتی گلو ہیک دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter applying ${prodName} highlighting ${feat1}.\nVoiceover (Roman Urdu): "Yeh ${prodName} ${feat1} ke sath skin ko deeply hydrate aur brighten karta hai bina kisi chipchipahat ke."\nVoiceover (اردو): "یہ ${prodName} جلد کو گہرائی سے ہائیڈریٹ اور چمکدار بناتا ہے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Clean finished look with product in hand.\nVoiceover (Roman Urdu): "Abhi neeche diye gaye link par click karein aur poora ${promo} hasil karein!"\nVoiceover (اردو): "ابھی نیچے دیے گئے لنک سے آرڈر کریں اور رعایت حاصل کریں!"`;
-          generatedCta = `Shop Now & Claim ${promo}`;
-          generatedTags = `#${cleanHashtagName} #SkincareUrdu #GlowRoutinePK #BeautyHacks`;
-        } else {
-          generatedHook = `Stop struggling with ${pain1} in ${activeProfile.label}! Pehle yeh 30-second fix dekhein.`;
-          generatedCaption = `[HOOK - 0:00 to 0:03]\nVisual: Fast hook showing the daily frustration of ${pain1}.\nVoiceover (Roman Urdu): "Agar aap bhi roz roz ${pain1} se tang hain, toh yeh 30-second reel zaroor dekhein!"\nVoiceover (اردو): "اگر آپ بھی روز کے مسائل سے تنگ ہیں تو یہ ویڈیو دیکھیں۔"\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Showcasing ${prodName} in action highlighting ${feat1} and ${feat2}.\nVoiceover (Roman Urdu): "Purane tareeqon ko chhod dein. Yeh ${prodName} ${feat1} ke sath aapka time aur paisa dono bachata hai."\nVoiceover (اردو): "یہ ${prodName} آپ کا وقت اور پیسے دونوں بچاتا ہے۔"\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Clear CTA overlay with ${promo} offer.\nVoiceover (Roman Urdu): "Abhi bio link par click karein ya message karein aur flat ${promo} hasil karein!"\nVoiceover (اردو): "ابھی لنک پر کلک کریں اور خصوصی رعایت پائیں!"`;
-          generatedCta = isSaaS ? `Start Free Trial & Claim ${promo}` : `Order / Book Now & Claim ${promo}`;
-          generatedTags = `#${cleanHashtagName} #${cleanIndTag} #ReelsPK #ProblemSolved`;
-        }
-      } else {
-        generatedHook = `Still struggling with ${pain1}? Watch this 30-second ${activeProfile.label} fix.`;
-        generatedCaption = (
-          `[HOOK - 0:00 to 0:03]\nVisual: Close-up showing the daily problem with ${pain1}.\nVoiceover: "Tired of ${pain1}? Watch this 15-second fix."\n\n[DEMO & BENEFIT - 0:03 to 0:10]\nVisual: Presenter demonstrating ${prodName} highlighting ${feat1}.\nVoiceover: "The ${prodName} solves this in seconds. Built with ${feat1} and ${feat2} for effortless results."\n\n[CALL TO ACTION - 0:10 to 0:15]\nVisual: Showing final results with ${prodName}.\nVoiceover: "Tap the link in bio to get started with ${promo} today!"`
-        );
-        generatedCta = `Tap link in bio to claim ${promo}`;
-        generatedTags = `#${cleanHashtagName} #${cleanIndTag} #Reels #ProblemSolved`;
-      }
+      const dynamicFunnel = generateProductMarketingFunnel(
+        prod,
+        industry,
+        targetCountry || 'Pakistan',
+        isUrduMarket ? 'Urdu' : 'English'
+      );
+      const targetStageId = stage === 'tofu' ? 'TOFU' : stage === 'bofu' ? 'BOFU' : 'MOFU';
+      const matchedStage =
+        dynamicFunnel.stages.find((s) => s.stageId === targetStageId) || dynamicFunnel.stages[0];
+
+      generatedHook = matchedStage.headlineHook;
+      generatedCaption = matchedStage.sampleScriptOrCopy;
+      generatedCta = matchedStage.callToAction;
+      generatedTags = (dynamicFunnel.competitorResearch?.trending_hashtags || []).join(' ');
     } else if (tab === 'organic') {
       generatedHook = `Why most people struggle with ${pain1} in ${activeProfile.label} (and the 3-step fix).`;
       generatedCaption = (
